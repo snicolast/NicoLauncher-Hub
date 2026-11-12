@@ -48,8 +48,6 @@ A file window opens. Find **your own** ROM file for that game and select it. It 
 
 The launcher downloads the game's source code and builds the game on your PC. The bar at the bottom tells you what it is doing in plain words. It takes a few minutes, and the first game takes longer because the tools are downloaded too. You can keep using your PC meanwhile.
 
-If you change your mind, press **Cancel**. Nothing is left behind.
-
 ### 6. Play
 
 ![A game's page](docs/img/game.jpg)
