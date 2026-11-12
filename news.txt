@@ -12,6 +12,11 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[2] 2026-11-13
+- Launcher 0.3.0: each game's page now lists its achievements, and the library shows how many trophies you have unlocked
+- Games and news refresh on their own every 20 minutes and when you come back to the window. Refresh also checks for a new launcher version
+- On Home, the news an update brings are shown apart from what you already have installed
+
 [1] 2026-11-12
 - Welcome to NicoLauncher: it installs, builds, updates and starts every project from one place
 - Games are now built with the launcher's own tools. Visual Studio is no longer needed, and nothing is installed on your PC
