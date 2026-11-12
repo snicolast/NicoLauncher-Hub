@@ -843,8 +843,8 @@ $('self-update').addEventListener('click', async () => {
   selfUpdate.installing = false;
   render();
 });
-$('lib-refresh').addEventListener('click', () => update('refresh'));
-$('home-refresh').addEventListener('click', () => update('refresh'));
+$('lib-refresh').addEventListener('click', () => refresh());
+$('home-refresh').addEventListener('click', () => refresh());
 $('home-video').addEventListener('click', () => { const u = $('home-video').dataset.url; if (u) T.opener.openUrl(u); });
 $('home-more').addEventListener('click', () => { homeDays = HOME_DAYS_ALL; renderHome(); });
 // The launcher draws its own title bar: these are its three buttons. Dragging
@@ -887,9 +887,35 @@ document.addEventListener('keydown', (e) => {
 // No browser context menu or image dragging: it is an app, not a page
 document.addEventListener('contextmenu', (e) => { if (!e.target.closest('pre, code, dd, .toast')) e.preventDefault(); });
 
+// Project list, news and launcher updates from GitHub. Left open, the
+// launcher asks again every so often, so new versions and news show up
+// without pressing Refresh; never while something is installing or building.
+const AUTO_REFRESH_MS = 20 * 60 * 1000;
+let lastRefresh = 0;
+let refreshing = false;
+const working = () => (task && !task.done) || (snap && snap.busy);
+
+async function refresh() {
+  if (refreshing) return;
+  refreshing = true;
+  try {
+    await update('refresh');
+    lastRefresh = Date.now();
+  } finally { refreshing = false; }
+  if (selfUpdate && selfUpdate.installing) return;
+  try { selfUpdate = await invoke('check_launcher_update'); render(); } catch (e) { /* offline, or no release yet */ }
+}
+
+const refreshDue = () => snap && !working() && Date.now() - lastRefresh >= AUTO_REFRESH_MS;
+setInterval(() => { if (refreshDue()) refresh(); }, 60 * 1000);
+
 // Back in the launcher after doing something else (deleting or moving a
-// folder in Explorer, say): look at the disk again
-window.addEventListener('focus', () => { if (snap && !(task && !task.done)) update('snapshot'); });
+// folder in Explorer, say): look at the disk again, and at GitHub too if
+// the last look is old
+window.addEventListener('focus', () => {
+  if (refreshDue()) refresh();
+  else if (snap && !working()) update('snapshot');
+});
 
 T.event.listen('task', async ({ payload }) => {
   if (!task || task.project !== payload.project || task.done) {
@@ -930,6 +956,5 @@ T.event.listen('task', async ({ payload }) => {
   if (snap && !snap.install_root && view === 'home') show('library');
   if (snap && snap.config_error) toast(`${t('settings_damaged')} ${snap.config_error}`);
   // Project list and news from GitHub; the built-in list shows meanwhile
-  await update('refresh');
-  try { selfUpdate = await invoke('check_launcher_update'); render(); } catch (e) { /* offline, or no release yet */ }
+  await refresh();
 })();
