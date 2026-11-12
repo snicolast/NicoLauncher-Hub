@@ -1,0 +1,73 @@
+name: Release
+
+# Publishes a version of the launcher: push a tag like v0.2.0 whose number is
+# the one in Cargo.toml and src-tauri/tauri.conf.json. Launchers already
+# installed find it through latest.json and update themselves.
+#
+# Only the launcher is ever published. Projects are never built or uploaded by
+# this repository.
+#
+# Needs two repository secrets (docs/releasing.md):
+#   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: The tag is the version in the code
+        shell: bash
+        run: |
+          version=$(grep -m1 '"version"' src-tauri/tauri.conf.json | sed 's/.*: *"\(.*\)".*/\1/')
+          cargo_version=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+          if [ "v$version" != "$GITHUB_REF_NAME" ] || [ "$version" != "$cargo_version" ]; then
+            echo "Tag $GITHUB_REF_NAME, tauri.conf.json $version, Cargo.toml $cargo_version: they must be the same version."
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Engine tests
+        timeout-minutes: 15
+        run: cargo test -p hub-core --locked
+      - name: Build and sign the installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx --yes @tauri-apps/cli@2 build -- --locked
+      - name: Write latest.json
+        shell: bash
+        run: |
+          cd target/release/bundle/nsis
+          installer=$(ls *-setup.exe)
+          cp "$installer" NicoLauncher-setup.exe
+          cp "$installer.sig" NicoLauncher-setup.exe.sig
+          cat > latest.json <<JSON
+          {
+            "version": "$VERSION",
+            "notes": "See https://github.com/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "$(cat NicoLauncher-setup.exe.sig)",
+                "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/NicoLauncher-setup.exe"
+              }
+            }
+          }
+          JSON
+          cat latest.json
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd target/release/bundle/nsis
+          gh release create "$GITHUB_REF_NAME" NicoLauncher-setup.exe NicoLauncher-setup.exe.sig latest.json \
+            --repo "$GITHUB_REPOSITORY" --title "NicoLauncher $VERSION" --generate-notes

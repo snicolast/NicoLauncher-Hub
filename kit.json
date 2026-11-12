@@ -1,0 +1,47 @@
+{
+  "tools": [
+    {
+      "name": "llvm-mingw",
+      "version": "20251104",
+      "about": "C and C++ compiler for Windows: clang, lld, libc++ and the MinGW-w64 headers and libraries",
+      "license": "Apache-2.0 with LLVM exceptions (LLVM), ZPL-2.1 and others (MinGW-w64)",
+      "url": "https://github.com/mstorsjo/llvm-mingw/releases/download/20251104/llvm-mingw-20251104-ucrt-x86_64.zip",
+      "sha256": "171b298f46fa4b5653dc7b01cc5e709caca645991be8e1b0724466c4a282a1ac",
+      "strip": 1,
+      "skip": ["aarch64-w64-mingw32/", "arm64ec-w64-mingw32/", "armv7-w64-mingw32/", "i686-w64-mingw32/", "python/"],
+      "path": ["bin"]
+    },
+    {
+      "name": "cmake",
+      "version": "3.31.9",
+      "about": "CMake",
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/Kitware/CMake/releases/download/v3.31.9/cmake-3.31.9-windows-x86_64.zip",
+      "sha256": "dc16867d0c0ffb35026976aff119335d5b47def44e76ae82ffafdc1f98b3d59d",
+      "strip": 1,
+      "skip": ["doc/", "man/"],
+      "path": ["bin"],
+      "provides": { "cmake": "bin/cmake.exe" }
+    },
+    {
+      "name": "ninja",
+      "version": "1.13.1",
+      "about": "Ninja",
+      "license": "Apache-2.0",
+      "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.1/ninja-win.zip",
+      "sha256": "26a40fa8595694dec2fad4911e62d29e10525d2133c9a4230b66397774ae25bf",
+      "path": [""]
+    },
+    {
+      "name": "python",
+      "version": "3.12.16",
+      "about": "Python (python-build-standalone)",
+      "license": "PSF-2.0",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "sha256": "355ee61b8207b91574491b1c6dc9b0ebb4408fc56bfafe498f3ef439314b52dc",
+      "strip": 1,
+      "path": [""],
+      "provides": { "python": "python.exe" }
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+# Example: StarWarsTrilogyNative built with the launcher's own build kit
+# instead of Visual Studio. Nothing is installed on the PC: the compiler
+# (llvm-mingw), CMake, Ninja and Python are downloaded once into the
+# launcher's folder and used only from there.
+# Not in use yet: the game's repository has to build with clang first.
+# Format: docs/manifest.md
+
+schema = 1
+exe = "StarWarsTrilogy.exe"
+news = "news.txt"
+
+[requires]
+kit = ["llvm-mingw", "cmake", "ninja", "python"]
+python = "3.10"   # "int | None" annotations in the build scripts
+cmake = "3.27"    # glslang asks for it
+
+# The user's own file. The launcher only asks where it is on their disk.
+[input]
+label = "swtrilgy.zip (Rev. A)"
+done_when = ["data/crom.bin", "data/drive_program.bin"]
+
+[[fetch]]
+name = "SDL3"
+url = "https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18.tar.gz"
+sha256 = "9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3"
+to = "third_party/downloads/SDL3-3.4.18.tar.gz"
+
+[[fetch]]
+name = "miniz"
+url = "https://github.com/richgel999/miniz/releases/download/3.0.2/miniz-3.0.2.zip"
+sha256 = "ada38db0b703a56d3dd6d57bf84a9c5d664921d870d8fea4db153979fb5332c5"
+to = "third_party/downloads/miniz-3.0.2.zip"
+
+# NVIDIA's own signed DLSS runtime, from NVIDIA's repository. The game's
+# dlss_bridge.dll (its DLSS code, built once with MSVC) would be one more
+# [[fetch]] here once the game's repository publishes it.
+[[fetch]]
+name = "NVIDIA DLSS runtime"
+url = "https://raw.githubusercontent.com/NVIDIA/DLSS/v310.9.16/lib/Windows_x86_64/rel/nvngx_dlss.dll"
+sha256 = "d00b5b0ab29c3ca101b70c3a5ecb3a01b7ef33766a3383a28a18623083e6123e"
+to = "nvngx_dlss.dll"
+
+[[step]]
+name = "Extracting the ROM"
+run = ["{python}", "tools/romtool.py", "{input}", "data"]
+skip_if_exists = ["data/crom.bin", "data/drive_program.bin"]
+
+[[step]]
+name = "Recompiling the PowerPC code"
+run = ["{python}", "tools/recomp.py", "data/crom.bin", "build/gen"]
+
+# A build folder of its own, apart from the one build.bat uses with Visual
+# Studio. The compiler and Python are named: CMake is not left to find others
+[[step]]
+name = "Configuring"
+run = [
+    "{cmake}", "-S", ".", "-B", "build/kit", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+    "-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++", "-DPython3_EXECUTABLE={python}",
+]
+
+[[step]]
+name = "Compiling"
+run = ["{cmake}", "--build", "build/kit", "--target", "StarWarsTrilogy"]
+
+[[step]]
+name = "Copying the game"
+copy = { from = "build/kit/StarWarsTrilogy.exe", to = "StarWarsTrilogy.exe" }
+
+# After the game is in place: a test that fails is a warning, not a lost build
+[[step]]
+name = "Compiling the tests"
+run = ["{cmake}", "--build", "build/kit"]
+optional = true
+
+[[step]]
+name = "Testing"
+run = ["{ctest}", "--test-dir", "build/kit", "--output-on-failure"]
+optional = true

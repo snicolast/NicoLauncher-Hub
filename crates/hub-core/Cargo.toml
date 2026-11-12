@@ -1,0 +1,20 @@
+[package]
+name = "hub-core"
+description = "NicoLauncher engine: project registry, source install, script runner and news"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+flate2 = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tar = { version = "0.4", default-features = false }
+toml = "0.8"
+# native-certs: trust what Windows trusts (antivirus and company proxies add their
+# own certificates there). proxy-from-env: honour HTTPS_PROXY.
+ureq = { version = "2.12", features = ["native-certs", "proxy-from-env"] }
+zip = { version = "2.6", default-features = false, features = ["deflate"] }
