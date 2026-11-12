@@ -408,6 +408,9 @@ function primaryButton(p, large) {
   }
 }
 
+// Something new is waiting for an installed project
+const hasUpdate = (p) => p.can_update && p.new_entries.length > 0;
+
 function stateLine(p) {
   const working = snap.busy === p.id;
   return [el('span', { class: 'dot ' + (working ? 'busy' : p.state) }), working ? t('st_busy') : t('st_' + p.state)];
@@ -573,7 +576,7 @@ function renderHome() {
     line('', 'count_missing', count('not_installed')),
     ...fresh.map((p) => el('div', { class: 'fresh' },
       el('span', {}, el('strong', {}, p.name.replace(/ Native$/, '')), el('span', { class: 'chip new' }, t('update_available'))),
-      el('button', { class: 'btn small', disabled: !!snap.busy, onclick: () => startTask(p, 'update') }, icon('up'), t('do_update')))),
+      el('button', { class: 'btn small attn', disabled: !!snap.busy, onclick: () => startTask(p, 'update') }, icon('up'), t('do_update')))),
     el('button', { class: 'btn ghost small', onclick: () => show('library') }, t('home_open_library')),
   ].filter(Boolean));
 
@@ -596,7 +599,7 @@ function renderHome() {
     el('button', { class: 'side-game' + (view === 'project' && current === p.id ? ' on' : ''), title: p.name, onclick: () => open(p) },
       el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, p.hero ? picture(p.hero) : null),
       el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
-      el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : p.state) }))));
+      el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) }))));
   const behind = view === 'project' ? snap.projects.find((p) => p.id === current) : lead;
   backdrop($('ambient'), behind && behind.hero);
 }
@@ -662,7 +665,7 @@ function renderProject() {
 
   const btn = (ic, label, fn, cls = '') => el('button', { class: 'btn ' + cls, disabled: busy, onclick: fn }, ic ? icon(ic) : null, label);
   const actions = [primaryButton(p, true)];
-  if (p.can_update) actions.push(btn('up', t('do_update'), () => startTask(p, 'update'), 'lg' + (p.new_entries.length ? ' attn' : '')));
+  if (p.can_update) actions.push(btn('up', t('do_update'), () => startTask(p, 'update'), 'lg' + (hasUpdate(p) ? ' attn' : ' idle')));
   // In sight beside Play, but quiet: it is not what one comes here for
   if (p.state !== 'not_installed') actions.push(btn('trash', t('do_uninstall'), () => uninstall(p), 'ghost danger'));
   $('p-actions').replaceChildren(...actions);
