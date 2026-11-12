@@ -107,16 +107,22 @@
             </div>
           </div>
         </div>
+        <div class="ach-strip" id="p-ach-strip" hidden>
+          <div class="ach-sum">
+            <span class="ach-sum-ico" data-icon="trophy"></span>
+            <div class="ach-sum-text">
+              <h2 data-i18n="ach_title"></h2>
+              <div class="ach-sum-count"><strong id="p-ach-got"></strong><span id="p-ach-total" class="dim"></span></div>
+            </div>
+          </div>
+          <div class="ach-row" id="p-ach-row"></div>
+          <button class="btn ghost small" id="p-ach-all"></button>
+        </div>
         <div class="body">
           <div class="col-main">
             <section class="block">
               <h2 id="p-news-title"></h2>
               <div id="p-news" class="timeline"></div>
-            </section>
-            <section class="block" id="p-ach-block" hidden>
-              <div class="block-head"><h2 data-i18n="ach_title"></h2><span id="p-ach-count" class="dim small"></span></div>
-              <div class="ach-meter"><div id="p-ach-bar"></div></div>
-              <div id="p-ach" class="ach-grid"></div>
             </section>
           </div>
           <div class="col-side">
@@ -216,7 +222,17 @@
 </div>
 
 <div id="toasts" class="toasts"></div>
-<div id="lightbox" class="lightbox" hidden><img id="lightbox-img" alt=""></div>
+<div id="ach-modal" class="modal" role="dialog" aria-modal="true" hidden>
+    <div class="modal-box ach-box">
+      <div class="ach-box-head">
+        <div><h2 id="ach-modal-title"></h2><span id="ach-modal-count" class="dim small"></span></div>
+        <button class="btn ghost small" id="ach-modal-close"></button>
+      </div>
+      <div class="ach-meter"><div id="ach-modal-bar"></div></div>
+      <div id="ach-modal-grid" class="ach-grid"></div>
+    </div>
+  </div>
+  <div id="lightbox" class="lightbox" hidden><img id="lightbox-img" alt=""></div>
 <script src="app.js"></script>
 </body>
 </html>
