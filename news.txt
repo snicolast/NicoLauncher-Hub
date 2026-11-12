@@ -1,0 +1,17 @@
+# NicoLauncher: general news, shown on the launcher's Home page above the
+# news of each project. For announcements that are not about one game: a new
+# project in the launcher, a change that reaches all of them, a notice.
+#
+# The launcher reads this file from GitHub (main branch) when it starts and
+# on Refresh.
+#
+# Format (the same as the projects' news.txt):
+#   [N] title      starts entry N (a number one higher than the last; the
+#                  title is the date, YYYY-MM-DD, so Home can sort by it)
+#   - text         a line of the entry
+#   # ...          a comment, never shown
+# Newest entry at the top.
+
+[1] 2026-11-12
+- Welcome to NicoLauncher: it installs, builds, updates and starts every project from one place
+- Games are now built with the launcher's own tools. Visual Studio is no longer needed, and nothing is installed on your PC

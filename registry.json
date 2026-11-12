@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "projects": [
+    {
+      "id": "swtrilogy",
+      "name": "Star Wars Trilogy Native",
+      "tagline": "Sega's 1998 arcade game, running natively on PC.",
+      "description": "Not an emulator: the original code, recompiled to C++, with a modern Vulkan renderer. True widescreen, ray-traced shadows, HD text and modern controls.",
+      "tags": ["Sega Model 3", "1998", "Vulkan", "Widescreen"],
+      "repo": "snicolast/StarWarsTrilogyNative",
+      "branch": "main",
+      "exe": "StarWarsTrilogy.exe",
+      "news": "news.txt",
+      "input": {
+        "label": "swtrilgy.zip (Rev. A)"
+      },
+      "scripts": {
+        "install": "install.bat",
+        "build": "build.bat",
+        "update": "update.bat"
+      },
+      "requires": { "python": "3.10", "cmake": "3.27", "msvc": true },
+      "update_state": "save/update",
+      "art": {
+        "hero": "docs/img/death_star.jpg",
+        "logo": "res/menu/logo.png",
+        "screens": ["docs/img/menu.jpg", "docs/img/death_star.jpg", "docs/img/hoth.jpg", "docs/img/endor.jpg", "docs/img/yavin.jpg"]
+      }
+    },
+    {
+      "id": "lostworld",
+      "name": "The Lost World Native",
+      "tagline": "Sega's 1997 arcade light-gun game, running natively on PC.",
+      "description": "Not an emulator: the original code, recompiled to C++, with a modern Vulkan renderer. True widescreen, ray-traced shadows, HD text and modern controls.",
+      "tags": ["Sega Model 3", "1997", "Vulkan", "Light gun"],
+      "repo": "snicolast/LostWorldNative",
+      "branch": "master",
+      "exe": "LostWorld.exe",
+      "news": "news.txt",
+      "input": {
+        "label": "lostwsga.zip"
+      },
+      "scripts": {
+        "install": "install.bat",
+        "build": "build.bat",
+        "update": "update.bat"
+      },
+      "requires": { "python": "3.10", "cmake": "3.27", "msvc": true },
+      "update_state": "save/update",
+      "art": {
+        "hero": "docs/img/hero.jpg",
+        "logo": "res/menu/logo.png",
+        "screens": ["docs/img/hero.jpg", "docs/img/main_menu.jpg", "docs/img/stage_select.jpg", "docs/img/widescreen.jpg"]
+      }
+    },
+    {
+      "id": "segarally2",
+      "name": "Sega Rally 2 Native",
+      "tagline": "Sega's 1998 arcade rally game, running natively on PC.",
+      "description": "Not an emulator: the original code, recompiled to C++, with a modern Vulkan renderer. True widescreen, ray tracing, real dust, HD liveries and modern controls.",
+      "tags": ["Sega Model 3", "1998", "Vulkan", "Racing"],
+      "repo": "snicolast/SegaRally2Native",
+      "branch": "main",
+      "exe": "SegaRally2.exe",
+      "news": "news.txt",
+      "input": {
+        "label": "srally2.zip"
+      },
+      "scripts": {
+        "install": "install.bat",
+        "build": "build.bat",
+        "update": "update.bat"
+      },
+      "requires": { "python": "3.10", "cmake": "3.27", "msvc": true },
+      "update_state": "save/update",
+      "art": {
+        "hero": "docs/img/village.jpg",
+        "logo": "res/menu/logo.png",
+        "screens": ["docs/img/village.jpg", "docs/img/menu.jpg", "docs/img/forest.jpg", "docs/img/snow.jpg"]
+      }
+    }
+  ]
+}
