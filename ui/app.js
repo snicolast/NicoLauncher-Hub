@@ -706,14 +706,18 @@ function renderProject() {
   const news = $('p-news');
   const entry = (e) => el('div', { class: 'entry' + (e.isNew ? ' new' : '') },
     el('h3', {}, dayLabel(e.title), e.isNew ? el('span', { class: 'chip new' }, t('news_new')) : null),
-    el('ul', {}, ...e.lines.map((l) => el('li', {}, l))));
-  // Entries with the same title (several on one date) show as one, and what
-  // is new is never mixed with what is already installed
+    el('ul', {}, ...e.lines.map((l) => el('li', {}, l))),
+    e.had.length ? el('div', { class: 'feed-had' }, el('span', { class: 'feed-had-label' }, icon('check'), t('news_installed'))) : null,
+    e.had.length ? el('ul', { class: 'had' }, ...e.had.map((l) => el('li', {}, l))) : null);
+  // Entries with the same title (several on one date) show as one day. On a
+  // day that mixes both, what the waiting update brings goes first and what
+  // is already installed below it, dimmed (as on the home page)
   const groups = [];
   for (const e of [...p.new_entries.map((n) => ({ ...n, isNew: true })), ...p.news.slice(0, 10).map((n) => ({ ...n, isNew: false }))]) {
-    const last = groups[groups.length - 1];
-    if (last && last.title === e.title && last.isNew === e.isNew) last.lines.push(...e.lines);
-    else groups.push({ title: e.title, isNew: e.isNew, lines: [...e.lines] });
+    let g = groups.find((x) => x.title === e.title);
+    if (!g) groups.push(g = { title: e.title, isNew: false, lines: [], had: [] });
+    (g.isNew && !e.isNew ? g.had : g.lines).push(...e.lines);
+    g.isNew = g.isNew || e.isNew;
   }
   // The three latest show (and everything not installed yet); the rest
   // waits behind a button, so the page does not open as a wall of text
