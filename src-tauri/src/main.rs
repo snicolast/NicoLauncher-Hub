@@ -299,6 +299,14 @@ fn launch(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     project::launch(&p, &dir)
 }
 
+/// A shortcut to the built game on the desktop.
+#[tauri::command]
+fn desktop_shortcut(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
+    let p = find_project(&hub, &id)?;
+    let dir = hub.config.lock().unwrap().project_dir(&id).ok_or("Not installed.")?;
+    project::desktop_shortcut(&p, &dir)
+}
+
 #[tauri::command]
 fn open_folder(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     let dir = hub.config.lock().unwrap().project_dir(&id).ok_or("Not installed.")?;
@@ -489,6 +497,7 @@ fn main() {
             set_project_dir,
             launch,
             open_folder,
+            desktop_shortcut,
             uninstall,
             cancel_task,
             start_task

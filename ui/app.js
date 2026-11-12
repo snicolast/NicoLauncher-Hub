@@ -26,7 +26,9 @@ const STR = {
     ask_3: 'When it ends, the button turns into Play.',
     ask_go: 'Choose the file', ask_later: 'Not now', ask_cancel: 'Cancel the install', install_cancelled: 'Install of {name} cancelled. What had been downloaded was removed.', do_build: 'Build', do_play: 'Play',
     do_update: 'Update', do_rebuild: 'Rebuild', do_change_file: 'Change file',
-    do_open_folder: 'Open folder', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
+    do_open_folder: 'Open folder', do_shortcut: 'Desktop shortcut', shortcut_done: 'Shortcut to {name} added to your desktop.',
+    installed_title: 'All installed!', installed_body: 'You have just built {name} on your own PC, and it is ready to play. Press Play whenever you want.',
+    installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
     not_chosen: 'not chosen', not_found: 'not found', not_installed_yet: 'not installed',
     news: 'What is new', news_new: 'New', no_news: 'No news yet.',
@@ -91,7 +93,9 @@ const STR = {
     ask_3: 'Cuando termine, el botón pasa a ser Jugar.',
     ask_go: 'Elegir el archivo', ask_later: 'Ahora no', ask_cancel: 'Cancelar la instalación', install_cancelled: 'Instalación de {name} cancelada. Se ha borrado lo que se había descargado.', do_build: 'Compilar', do_play: 'Jugar',
     do_update: 'Actualizar', do_rebuild: 'Recompilar', do_change_file: 'Cambiar archivo',
-    do_open_folder: 'Abrir carpeta', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
+    do_open_folder: 'Abrir carpeta', do_shortcut: 'Acceso directo', shortcut_done: 'Acceso directo a {name} añadido a tu escritorio.',
+    installed_title: '¡Todo instalado!', installed_body: 'Acabas de montar {name} en tu propio PC, y ya está listo para jugar. Pulsa Jugar cuando quieras.',
+    installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
     not_chosen: 'sin elegir', not_found: 'no encontrada', not_installed_yet: 'sin instalar',
     news: 'Novedades', news_new: 'Nuevo', no_news: 'Aún no hay novedades.',
@@ -245,6 +249,8 @@ async function startTask(p, action) {
   newTask(p, action);
   task.own = true;
   task.fresh = action === 'setup' && p.state === 'not_installed';
+  // Not playable before this task: if it ends playable, the install is over
+  task.wasReady = p.state === 'ready';
   const started = await call('start_task', { id: p.id, action });
   if (started === undefined) { task = null; clearInterval(timer); }
   await update('snapshot');
@@ -252,6 +258,19 @@ async function startTask(p, action) {
 
 // The file dialog for a project's own file: titled with what is asked for and
 // showing that kind of file first ("swtrilgy.zip (Rev. A)" -> .zip)
+async function addShortcut(p) {
+  if ((await call('desktop_shortcut', { id: p.id })) !== undefined) toast(t('shortcut_done', { name: p.name }), true);
+}
+
+async function celebrate(p) {
+  const yes = await ask({
+    title: t('installed_title'),
+    body: [el('p', {}, t('installed_body', { name: p.name })), el('p', { class: 'dim' }, t('installed_ask'))],
+    go: [t('shortcut_yes')], later: t('shortcut_no'),
+  });
+  if (yes) addShortcut(p);
+}
+
 // A question over the whole window. Resolves to true when the user goes on;
 // Escape and the quiet button resolve to false.
 let closeAsk = null;
@@ -661,6 +680,7 @@ function renderProject() {
   if (p.can_rebuild) more.push(btn('hammer', t('do_rebuild'), () => startTask(p, 'build')));
   if (p.input_label) more.push(btn('file', t('do_change_file'), () => chooseInput(p, false)));
   if (installed) more.push(btn('folder', t('do_open_folder'), () => call('open_folder', { id: p.id })));
+  if (p.state === 'ready') more.push(btn('play', t('do_shortcut'), () => addShortcut(p)));
   else more.push(btn('folder', t('do_existing'), () => chooseExisting(p)));
   more.push(el('button', { class: 'btn', onclick: () => T.opener.openUrl(p.url) }, icon('github'), 'GitHub'));
   $('p-more').replaceChildren(...more);
@@ -892,6 +912,8 @@ T.event.listen('task', async ({ payload }) => {
     const p = snap && snap.projects.find((x) => x.id === payload.project);
     if (payload.ok && finished.own && finished.action === 'setup' && p && p.state === 'needs_input') chooseInput(p, true, finished.fresh);
     // Cancelled while it was still downloading: the same clean way out
+    // The game can be played for the first time: say so, and offer a shortcut
+    else if (payload.ok && finished.own && !finished.wasReady && p && p.state === 'ready') celebrate(p);
     else if (!payload.ok && finished.own && finished.fresh && finished.cancelled && p && p.state !== 'not_installed' && p.state !== 'ready') abandon(p);
   }
 });
