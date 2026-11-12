@@ -31,7 +31,7 @@ const STR = {
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
     not_chosen: 'not chosen', not_found: 'not found', not_installed_yet: 'not installed',
-    news: 'What is new', news_new: 'New', no_news: 'No news yet.',
+    news: 'What is new', news_new: 'New', news_installed: 'Already installed', no_news: 'No news yet.',
     input_note: 'The launcher never downloads this file. It only reads the copy you choose from your own disk.',
     install_folder: 'Install folder',
     install_folder_help: 'Projects already installed stay where they are if you change it.',
@@ -98,7 +98,7 @@ const STR = {
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
     not_chosen: 'sin elegir', not_found: 'no encontrada', not_installed_yet: 'sin instalar',
-    news: 'Novedades', news_new: 'Nuevo', no_news: 'Aún no hay novedades.',
+    news: 'Novedades', news_new: 'Nuevo', news_installed: 'Ya instalado', no_news: 'Aún no hay novedades.',
     input_note: 'El launcher nunca descarga este archivo. Solo lee la copia que elijas de tu propio disco.',
     install_folder: 'Carpeta de instalación',
     install_folder_help: 'Los proyectos ya instalados se quedan donde están si la cambias.',
@@ -168,6 +168,7 @@ const ICONS = {
   file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   hammer: '<path d="M14 6l4 4M3 21l9-9M12 4l8 8-3 3-8-8z"/>',
   up: '<path d="M12 20V8M7 13l5-5 5 5M5 4h14"/>',
+  check: '<path d="M5 12.5l4.500 4.500L19 7"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
 };
 const icon = (name) => {
@@ -503,8 +504,11 @@ function renderHome() {
       days.push(day = { key, title: e.title, blocks: [] });
     }
     let block = day.blocks.find((b) => b.from === e.from);
-    if (!block) day.blocks.push(block = { from: e.from, lines: [], isNew: false });
-    block.lines.push(...e.lines);
+    if (!block) day.blocks.push(block = { from: e.from, lines: [], had: [], isNew: false });
+    // What the waiting update brings is kept apart from what the installed
+    // copy already has, so a day half installed does not look all new
+    // (entries come newest first, so the new ones are always met first)
+    (block.isNew && !e.isNew ? block.had : block.lines).push(...e.lines);
     block.isNew = block.isNew || !!e.isNew;
   }
   // One day more than shown was gathered, to know whether there are earlier ones
@@ -547,7 +551,9 @@ function renderHome() {
       b.from && b.from.logo ? picture(b.from.logo, 'feed-logo') : el('span', { class: 'mark', 'aria-hidden': 'true' }),
       el('strong', {}, b.from ? b.from.name : 'NicoLauncher'),
       b.isNew ? el('span', { class: 'chip new' }, t('update_available')) : null),
-    el('ul', {}, ...b.lines.map((l) => el('li', {}, l))));
+    el('ul', {}, ...b.lines.map((l) => el('li', {}, l))),
+    b.had.length ? el('div', { class: 'feed-had' }, el('span', { class: 'feed-had-label' }, icon('check'), t('news_installed'))) : null,
+    b.had.length ? el('ul', { class: 'had' }, ...b.had.map((l) => el('li', {}, l))) : null);
   $('home-feed').replaceChildren(...(days.length
     ? days.map((d) => el('div', { class: 'entry' }, el('h3', {}, dayLabel(d.title)), ...d.blocks.map(block)))
     : [el('p', { class: 'dim' }, t('home_empty'))]));

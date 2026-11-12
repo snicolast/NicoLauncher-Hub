@@ -352,6 +352,11 @@ dt { color: var(--dim); } dd { margin: 0; user-select: text; overflow-wrap: anyw
 .feed-logo { height: 26px; max-width: 60px; object-fit: contain; flex: none; }
 .feed-block ul { margin: 0; padding-left: 18px; color: #c5cce0; line-height: 1.5; }
 .feed-block li { margin-bottom: 4px; }
+.feed-had { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--dim); }
+.feed-had::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.feed-had-label { display: inline-flex; align-items: center; gap: 5px; }
+.feed-had .ico { width: 13px; height: 13px; }
+.feed-block ul.had { color: #8b93a8; }
 
 /* The sidebar's shortcuts to each project */
 .side-games { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); min-height: 0; overflow-y: auto; }
