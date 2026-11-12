@@ -73,7 +73,7 @@ const STR = {
     home_empty: 'No news could be loaded. Check your connection and press Refresh.',
     today: 'Today', yesterday: 'Yesterday',
     settings_damaged: 'The settings file could not be read:',
-    ach_title: 'Achievements', ach_count: '{n} of {total} unlocked', ach_unlocked_on: 'Unlocked {date}', ach_locked: 'Locked',
+    ach_title: 'Achievements', ach_view_all: 'View all', ach_count: '{n} of {total} unlocked', ach_unlocked_on: 'Unlocked {date}', ach_locked: 'Locked',
     ach_toast_one: '{name}: achievement unlocked, {ach}', ach_toast_many: '{name}: {n} achievements unlocked',
   },
   es: {
@@ -142,7 +142,7 @@ const STR = {
     home_empty: 'No se han podido cargar las noticias. Comprueba la conexión y pulsa Actualizar lista.',
     today: 'Hoy', yesterday: 'Ayer',
     settings_damaged: 'No se pudo leer el archivo de ajustes:',
-    ach_title: 'Logros', ach_count: '{n} de {total} desbloqueados', ach_unlocked_on: 'Desbloqueado el {date}', ach_locked: 'Bloqueado',
+    ach_title: 'Logros', ach_view_all: 'Ver todos', ach_count: '{n} de {total} desbloqueados', ach_unlocked_on: 'Desbloqueado el {date}', ach_locked: 'Bloqueado',
     ach_toast_one: '{name}: logro desbloqueado, {ach}', ach_toast_many: '{name}: {n} logros desbloqueados',
   },
 };
@@ -756,32 +756,76 @@ function achDate(unix) {
   return new Date(unix * 1000).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// Card of one achievement, in the full list
+function achCard(a) {
+  const on = a.unlocked > 0;
+  const fresh = on && achSeen > 0 && a.unlocked > achSeen;
+  let foot;
+  if (on) foot = [icon('check'), t('ach_unlocked_on', { date: achDate(a.unlocked) })];
+  else if (a.goal > 1) foot = [el('div', { class: 'ach-mini' }, el('div', { style: `width:${achPct(a)}%` })), el('span', {}, achProgress(a))];
+  else foot = [t('ach_locked')];
+  return el('div', { class: 'ach' + (on ? ' on' : '') + (fresh ? ' fresh' : '') },
+    el('div', { class: 'ach-icon' }, icon(on ? 'trophy' : 'lock')),
+    el('div', { class: 'ach-body' },
+      el('div', { class: 'ach-name' }, a.name, fresh ? el('span', { class: 'chip new' }, t('news_new')) : null),
+      a.description ? el('div', { class: 'ach-desc' }, a.description) : null,
+      el('div', { class: 'ach-foot' }, ...foot)));
+}
+const achPct = (a) => (100 * a.progress) / a.goal;
+const achProgress = (a) => a.progress_text || `${a.progress.toLocaleString('en-US')} / ${a.goal.toLocaleString('en-US')}`;
+// Unlocked first, newest first; then the rest in the project's own order
+const achOrder = (p) => [...unlockedOf(p)].sort((a, b) => b.unlocked - a.unlocked).concat(p.achievements.filter((a) => !a.unlocked));
+
+// One row under the page's header: a tile per achievement, as many as fit,
+// each with its details on hover; the whole list is one click away
+const TILE = 44, TILE_GAP = 8;
 function renderAchievements(p) {
   const list = p.achievements;
-  $('p-ach-block').hidden = !list.length;
+  $('p-ach-strip').hidden = !list.length;
   if (!list.length) return;
-  const got = unlockedOf(p);
-  $('p-ach-count').textContent = t('ach_count', { n: got.length, total: list.length });
-  $('p-ach-bar').style.width = `${(100 * got.length) / list.length}%`;
-  // Unlocked first, newest on top; then the rest in the project's own order
-  const order = [...got].sort((a, b) => b.unlocked - a.unlocked).concat(list.filter((a) => !a.unlocked));
-  $('p-ach').replaceChildren(...order.map((a) => {
+  const got = unlockedOf(p).length;
+  $('p-ach-got').textContent = got;
+  $('p-ach-total').textContent = ` / ${list.length}`;
+  $('p-ach-all').textContent = t('ach_view_all');
+  $('p-ach-all').onclick = () => openAchievements(p);
+  const row = $('p-ach-row');
+  const order = achOrder(p);
+  const fits = Math.max(1, Math.floor((row.clientWidth + TILE_GAP) / (TILE + TILE_GAP)));
+  const shown = order.length > fits ? order.slice(0, fits - 1) : order;
+  const tiles = shown.map((a) => {
     const on = a.unlocked > 0;
     const fresh = on && achSeen > 0 && a.unlocked > achSeen;
-    let foot;
-    if (on) foot = [icon('check'), t('ach_unlocked_on', { date: achDate(a.unlocked) })];
-    else if (a.goal > 1) {
-      foot = [el('div', { class: 'ach-mini' }, el('div', { style: `width:${(100 * a.progress) / a.goal}%` })),
-        el('span', {}, a.progress_text || `${a.progress.toLocaleString('en-US')} / ${a.goal.toLocaleString('en-US')}`)];
-    } else foot = [t('ach_locked')];
-    return el('div', { class: 'ach' + (on ? ' on' : '') + (fresh ? ' fresh' : '') },
-      el('div', { class: 'ach-icon' }, icon(on ? 'trophy' : 'lock')),
-      el('div', { class: 'ach-body' },
-        el('div', { class: 'ach-name' }, a.name, fresh ? el('span', { class: 'chip new' }, t('news_new')) : null),
-        a.description ? el('div', { class: 'ach-desc' }, a.description) : null,
-        el('div', { class: 'ach-foot' }, ...foot)));
-  }));
+    const detail = on ? t('ach_unlocked_on', { date: achDate(a.unlocked) }) : a.goal > 1 ? achProgress(a) : t('ach_locked');
+    return el('div', { class: 'ach-tile' + (on ? ' on' : '') + (fresh ? ' fresh' : ''), tabindex: '0' },
+      icon(on ? 'trophy' : 'lock'),
+      !on && a.goal > 1 ? el('div', { class: 'ach-tile-bar' }, el('div', { style: `width:${achPct(a)}%` })) : null,
+      el('div', { class: 'ach-tip' },
+        el('strong', {}, a.name),
+        a.description ? el('span', {}, a.description) : null,
+        el('em', { class: on ? 'on' : '' }, detail)));
+  });
+  if (shown.length < order.length) {
+    tiles.push(el('button', { class: 'ach-tile more', onclick: () => openAchievements(p) }, `+${order.length - shown.length}`));
+  }
+  row.replaceChildren(...tiles);
 }
+
+function openAchievements(p) {
+  const list = p.achievements, got = unlockedOf(p).length;
+  $('ach-modal-title').textContent = `${t('ach_title')} · ${p.name}`;
+  $('ach-modal-count').textContent = t('ach_count', { n: got, total: list.length });
+  $('ach-modal-bar').style.width = `${(100 * got) / list.length}%`;
+  $('ach-modal-close').textContent = t('close');
+  $('ach-modal-grid').replaceChildren(...achOrder(p).map(achCard));
+  $('ach-modal').hidden = false;
+}
+$('ach-modal-close').addEventListener('click', () => { $('ach-modal').hidden = true; });
+$('ach-modal').addEventListener('click', (e) => { if (e.target === $('ach-modal')) $('ach-modal').hidden = true; });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('ach-modal').hidden = true; });
+window.addEventListener('resize', () => {
+  const p = view === 'project' && snap && snap.projects.find((x) => x.id === current);
+  if (p) renderAchievements(p);
+});
 
 // A toast when a refresh finds achievements unlocked since the last one (the
 // launcher refreshes when its window comes back, as after closing a game)

@@ -375,8 +375,6 @@ main { isolation: isolate; }
 @media (max-width: 1100px) { .spot-picks:not(.dots) { display: none; } }
 
 /* ----------------------------------------------------------- achievements */
-.block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-.block-head h2 { margin: 0; }
 .ach-meter { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, .07); overflow: hidden; margin-bottom: 16px; }
 .ach-meter div { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #d9a531, #ffd56b); transition: width .5s var(--ease); }
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
@@ -396,3 +394,33 @@ main { isolation: isolate; }
 .ach.fresh { border-color: rgba(255, 207, 90, .5); box-shadow: 0 0 18px rgba(255, 207, 90, .12); }
 .ach-badge { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #ffd56b; background: rgba(8, 11, 20, .6); border: 1px solid rgba(255, 207, 90, .3); backdrop-filter: blur(8px); }
 .ach-badge .ico { width: 13px; height: 13px; }
+
+/* The row of achievements under a game's header */
+.ach-strip { display: flex; align-items: center; gap: 22px; margin: 4px 36px 26px; padding: 12px 16px 12px 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.ach-sum { display: flex; align-items: center; gap: 12px; flex: none; padding-right: 22px; border-right: 1px solid var(--line); }
+.ach-sum-ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; color: #ffcf5a; background: linear-gradient(145deg, rgba(255, 207, 90, .22), rgba(217, 165, 49, .06)); box-shadow: inset 0 0 0 1px rgba(255, 207, 90, .3); }
+.ach-sum-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ach-sum-text h2 { font-size: 11px; margin: 0 0 1px; }
+.ach-sum-count { font-size: 18px; line-height: 1.1; }
+.ach-sum-count strong { font-weight: 600; color: #ffd56b; }
+.ach-row { flex: 1; min-width: 0; display: flex; gap: 8px; }
+.ach-tile { position: relative; flex: none; width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); color: #4f5872; cursor: default; transition: transform .15s var(--ease), border-color .15s; }
+.ach-tile .ico { width: 20px; height: 20px; }
+.ach-tile:hover, .ach-tile:focus-visible { transform: translateY(-2px); border-color: var(--line-2); outline: none; z-index: 2; }
+.ach-tile.on { color: #ffcf5a; background: linear-gradient(145deg, rgba(255, 207, 90, .24), rgba(217, 165, 49, .06)); border-color: rgba(255, 207, 90, .35); }
+.ach-tile.fresh { box-shadow: 0 0 0 2px var(--accent), 0 0 14px rgba(79, 140, 255, .5); }
+.ach-tile.more { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--dim); cursor: pointer; }
+.ach-tile.more:hover { color: var(--text); }
+.ach-tile-bar { position: absolute; left: 6px; right: 6px; bottom: 5px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.ach-tile-bar div { height: 100%; background: var(--accent); }
+.ach-tip { position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translate(-50%, 4px); width: 230px; padding: 10px 12px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--line-2); box-shadow: 0 14px 34px rgba(0, 0, 0, .55); display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--dim); text-align: left; opacity: 0; pointer-events: none; transition: opacity .12s, transform .12s; }
+.ach-tile:hover .ach-tip, .ach-tile:focus-visible .ach-tip { opacity: 1; transform: translate(-50%, 0); }
+.ach-tip strong { color: var(--text); font-size: 12.5px; letter-spacing: .02em; }
+.ach-tip em { font-style: normal; margin-top: 4px; color: var(--accent-2); }
+.ach-tip em.on { color: #e8c463; }
+.ach-row .ach-tile:first-child .ach-tip { left: 0; transform: translate(0, 4px); }
+.ach-row .ach-tile:first-child:hover .ach-tip { transform: none; }
+.ach-box { width: min(900px, calc(100vw - 48px)); max-height: calc(100vh - 80px); display: flex; flex-direction: column; }
+.ach-box-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.ach-box-head h2 { margin-bottom: 2px; }
+.ach-box .ach-grid { overflow-y: auto; padding-right: 4px; }
