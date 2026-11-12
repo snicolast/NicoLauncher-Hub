@@ -73,6 +73,8 @@ const STR = {
     home_empty: 'No news could be loaded. Check your connection and press Refresh.',
     today: 'Today', yesterday: 'Yesterday',
     settings_damaged: 'The settings file could not be read:',
+    ach_title: 'Achievements', ach_count: '{n} of {total} unlocked', ach_unlocked_on: 'Unlocked {date}', ach_locked: 'Locked',
+    ach_toast_one: '{name}: achievement unlocked, {ach}', ach_toast_many: '{name}: {n} achievements unlocked',
   },
   es: {
     nav_library: 'Biblioteca', nav_settings: 'Ajustes', nav_credits: 'Créditos',
@@ -140,6 +142,8 @@ const STR = {
     home_empty: 'No se han podido cargar las noticias. Comprueba la conexión y pulsa Actualizar lista.',
     today: 'Hoy', yesterday: 'Ayer',
     settings_damaged: 'No se pudo leer el archivo de ajustes:',
+    ach_title: 'Logros', ach_count: '{n} de {total} desbloqueados', ach_unlocked_on: 'Desbloqueado el {date}', ach_locked: 'Bloqueado',
+    ach_toast_one: '{name}: logro desbloqueado, {ach}', ach_toast_many: '{name}: {n} logros desbloqueados',
   },
 };
 
@@ -170,6 +174,8 @@ const ICONS = {
   up: '<path d="M12 20V8M7 13l5-5 5 5M5 4h14"/>',
   check: '<path d="M5 12.5l4.500 4.500L19 7"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4.500M16 6h3a3 3 0 0 1-3 4.500"/><path d="M12 13v4M9 20h6M10 17h4"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
 };
 const icon = (name) => {
   const s = document.createElement('span');
@@ -635,7 +641,8 @@ function renderLibrary() {
     cards.append(el('div', card,
       art, top,
       el('div', { class: 'card-foot' },
-        el('div', {}, el('h3', {}, p.name), el('div', { class: 'state' }, ...stateLine(p))))));
+        el('div', {}, el('h3', {}, p.name), el('div', { class: 'state' }, ...stateLine(p))),
+        achBadge(p))));
   }
 }
 
@@ -660,6 +667,7 @@ function renderProject() {
       return img;
     }));
     $('view-project').scrollTop = 0;
+    achSeen = markAchievementsSeen(p);
   }
   $('p-screens-block').hidden = !p.screens.length;
   $('p-name').textContent = p.name;
@@ -714,6 +722,76 @@ function renderProject() {
   if (groups.length > shown) rows.push(el('button', { class: 'btn ghost small news-more', onclick: () => { projectNewsAll = true; renderProject(); } }, t('home_more')));
   news.replaceChildren(...(rows.length ? rows : [el('p', { class: 'dim' }, t('no_news'))]));
   news.classList.toggle('timeline', rows.length > 0);
+  renderAchievements(p);
+}
+
+// ------------------------------------------------------------ achievements
+// Each project writes its own list (save/achievements.json in its folder);
+// the launcher only shows it. Achievements unlocked since the page was last
+// opened are marked as new for that visit.
+let achSeen = 0;
+const achKnown = new Map();   // project id -> ids unlocked, while the launcher runs
+const unlockedOf = (p) => p.achievements.filter((a) => a.unlocked > 0);
+
+function achBadge(p) {
+  if (!p.achievements.length) return null;
+  return el('span', { class: 'ach-badge', title: t('ach_title') }, icon('trophy'), `${unlockedOf(p).length}/${p.achievements.length}`);
+}
+
+function markAchievementsSeen(p) {
+  const key = 'ach-seen-' + p.id;
+  let seen = 0;
+  try { seen = Number(localStorage.getItem(key)) || 0; } catch (e) { /* no storage: nothing is marked */ }
+  const newest = Math.max(0, ...p.achievements.map((a) => a.unlocked));
+  try { if (newest > seen) localStorage.setItem(key, String(newest)); } catch (e) { /* ignore */ }
+  // The first visit marks nothing: everything would be new
+  return seen;
+}
+
+function achDate(unix) {
+  return new Date(unix * 1000).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function renderAchievements(p) {
+  const list = p.achievements;
+  $('p-ach-block').hidden = !list.length;
+  if (!list.length) return;
+  const got = unlockedOf(p);
+  $('p-ach-count').textContent = t('ach_count', { n: got.length, total: list.length });
+  $('p-ach-bar').style.width = `${(100 * got.length) / list.length}%`;
+  // Unlocked first, newest on top; then the rest in the project's own order
+  const order = [...got].sort((a, b) => b.unlocked - a.unlocked).concat(list.filter((a) => !a.unlocked));
+  $('p-ach').replaceChildren(...order.map((a) => {
+    const on = a.unlocked > 0;
+    const fresh = on && achSeen > 0 && a.unlocked > achSeen;
+    let foot;
+    if (on) foot = [icon('check'), t('ach_unlocked_on', { date: achDate(a.unlocked) })];
+    else if (a.goal > 1) {
+      foot = [el('div', { class: 'ach-mini' }, el('div', { style: `width:${(100 * a.progress) / a.goal}%` })),
+        el('span', {}, a.progress_text || `${a.progress.toLocaleString('en-US')} / ${a.goal.toLocaleString('en-US')}`)];
+    } else foot = [t('ach_locked')];
+    return el('div', { class: 'ach' + (on ? ' on' : '') + (fresh ? ' fresh' : '') },
+      el('div', { class: 'ach-icon' }, icon(on ? 'trophy' : 'lock')),
+      el('div', { class: 'ach-body' },
+        el('div', { class: 'ach-name' }, a.name, fresh ? el('span', { class: 'chip new' }, t('news_new')) : null),
+        a.description ? el('div', { class: 'ach-desc' }, a.description) : null,
+        el('div', { class: 'ach-foot' }, ...foot)));
+  }));
+}
+
+// A toast when a refresh finds achievements unlocked since the last one (the
+// launcher refreshes when its window comes back, as after closing a game)
+function noticeAchievements() {
+  for (const p of snap.projects) {
+    if (!p.achievements.length) continue;
+    const got = unlockedOf(p);
+    const before = achKnown.get(p.id);
+    achKnown.set(p.id, new Set(got.map((a) => a.id)));
+    if (!before) continue;
+    const fresh = got.filter((a) => !before.has(a.id));
+    if (fresh.length === 1) toast(t('ach_toast_one', { name: p.name, ach: fresh[0].name }), true);
+    else if (fresh.length > 1) toast(t('ach_toast_many', { name: p.name, n: fresh.length }), true);
+  }
 }
 
 function renderSettings() {
@@ -804,6 +882,7 @@ function render() {
     $('self-update').disabled = !!selfUpdate.installing || !!snap.busy;
     $('self-update').title = selfUpdate.notes || '';
   }
+  noticeAchievements();
   renderHome();
   renderLibrary();
   if (view === 'project') renderProject();

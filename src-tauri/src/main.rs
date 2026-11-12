@@ -1,6 +1,7 @@
 // No console window behind the launcher in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use hub_core::achievements::{self, Achievement};
 use hub_core::build;
 use hub_core::config::Config;
 use hub_core::news::{self, Entry};
@@ -87,6 +88,8 @@ struct ProjectView {
     /// The news as GitHub has them now (the home page); what the installed
     /// copy has when GitHub was not reached.
     latest_news: Vec<Entry>,
+    /// What the installed copy has written of its achievements.
+    achievements: Vec<Achievement>,
 }
 
 #[derive(Clone, Serialize)]
@@ -135,6 +138,10 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 latest_news: remote.get(&p.id).cloned().unwrap_or_else(|| local.clone()),
                 news: if installed { local } else { remote.get(&p.id).cloned().unwrap_or_default() },
                 new_entries,
+                achievements: match (&dir, installed) {
+                    (Some(d), true) => achievements::read(d),
+                    _ => Vec::new(),
+                },
                 can_update: installed && p.scripts.update.is_some(),
                 can_rebuild: state == State::Ready && p.scripts.build.is_some(),
                 is_clone: dir.as_ref().is_some_and(|d| d.join(".git").exists()),

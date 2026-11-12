@@ -182,3 +182,43 @@ and `}}` for literal braces.
 
 A step can run one of the project's own scripts (`run = ["cmd", "/c", "tools\\get_dlss.bat"]`)
 for anything the format does not cover.
+
+## Achievements
+
+Not part of `hub.toml`: a project that has achievements writes the file
+`save/achievements.json` in its own folder, and the launcher shows it on the
+project's page (and a count on its card in the Library). The launcher knows
+nothing of any project's achievements; the file says everything, so it can be
+written by any program, in any language. Without the file, nothing is shown.
+
+The project writes it whenever its achievements or their progress change (the
+games do it every time they save, and once at start). Replace it in one step
+(write a temporary file and rename it over the old one), so the launcher never
+reads half of it.
+
+```json
+{
+  "schema": 1,
+  "achievements": [
+    {"id": "ace", "name": "ACE PILOT", "description": "Destroy 100 enemies", "goal": 100, "progress": 37, "unlocked": 0},
+    {"id": "veteran", "name": "VETERAN", "description": "Play for 5 hours", "goal": 1035432, "progress": 312000,
+     "progress_text": "1h 30m / 5h", "unlocked": 0},
+    {"id": "yavin", "name": "GREAT SHOT, KID", "description": "Clear the Battle of Yavin", "goal": 1, "progress": 1, "unlocked": 1762900000}
+  ]
+}
+```
+
+| Key | | |
+| --- | --- | --- |
+| `schema` | required | Format version. This document describes `1`. A launcher that meets another one shows nothing. |
+| `id` | required | Stays the same across versions of the project. |
+| `name` | required | As the project shows it. |
+| `description` | optional | What it asks for. |
+| `goal` | optional | Progress needed, 1 (the default) for those that are done or not. |
+| `progress` | optional | How far the player is, up to `goal`. Shown as a bar when `goal` is more than 1. |
+| `progress_text` | optional | The progress as the project wants it written, when the plain numbers do not read well (time counted in frames, say). |
+| `unlocked` | optional | When it was unlocked, in Unix time (seconds, UTC). 0 or missing: still locked. |
+
+The list is shown in the file's order, with the unlocked ones first, newest on
+top. Unknown keys are ignored, so a project can add more without breaking older
+launchers.

@@ -6,6 +6,7 @@
 //! path on the user's disk, picked by the user and handed to the project's
 //! own scripts.
 
+pub mod achievements;
 pub mod build;
 pub mod config;
 pub mod kit;
