@@ -1,6 +1,15 @@
-# NicoLauncher
+<p align="center">
+  <img src="docs/img/banner.png" alt="NicoLauncher" width="820">
+</p>
 
-One program to install, update and play [snicolast](https://github.com/snicolast)'s native PC ports of arcade games. You press **Install**, you wait, you press **Play**. That is all there is to it.
+<p align="center">
+  One program to install, update and play <a href="https://github.com/snicolast">snicolast</a>'s native PC ports of arcade games.<br>
+  You press <b>Install</b>, you wait, you press <b>Play</b>. That is all there is to it.
+</p>
+
+<p align="center">
+  <a href="https://github.com/snicolast/NicoLauncher-Hub/releases/latest"><b>Download for Windows</b></a>
+</p>
 
 ![NicoLauncher's home screen](docs/img/home.jpg)
 
