@@ -113,6 +113,46 @@ pub fn launch(project: &Project, dir: &Path) -> Result<()> {
         .map_err(|e| format!("Could not start {}: {e}", path.display()))
 }
 
+/// Puts a shortcut to the built program on the user's desktop, replacing one
+/// of the same name. Windows only: the shell writes the .lnk, so the desktop
+/// is found wherever the user keeps it (OneDrive moves it).
+pub fn desktop_shortcut(project: &Project, dir: &Path) -> Result<()> {
+    let exe = project.exe.as_ref().ok_or("This project has nothing to start.")?;
+    let path = dir.join(exe);
+    if !path.is_file() {
+        return Err(format!("{} is not built yet.", project.name));
+    }
+    if !cfg!(windows) {
+        return Err("Desktop shortcuts are only made on Windows.".into());
+    }
+    // The values travel in the environment, so nothing in a name or a path
+    // is ever read as part of the script
+    const SCRIPT: &str = "$ErrorActionPreference = 'Stop'; \
+        $name = $env:NICO_LNK_NAME.Split([IO.Path]::GetInvalidFileNameChars()) -join ' '; \
+        $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) ($name + '.lnk'); \
+        $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); \
+        $s.TargetPath = $env:NICO_LNK_EXE; \
+        $s.WorkingDirectory = $env:NICO_LNK_DIR; \
+        $s.IconLocation = $env:NICO_LNK_EXE + ',0'; \
+        $s.Save()";
+    let mut cmd = Command::new("powershell");
+    cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", SCRIPT])
+        .env("NICO_LNK_NAME", &project.name)
+        .env("NICO_LNK_EXE", &path)
+        .env("NICO_LNK_DIR", dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    crate::runner::no_window(&mut cmd);
+    let out = cmd.output().map_err(|e| format!("Could not make the shortcut: {e}"))?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        let why = String::from_utf8_lossy(&out.stderr);
+        Err(format!("Could not make the shortcut: {}", why.lines().next().unwrap_or("unknown error").trim()))
+    }
+}
+
 /// Whether the copy of the game in this folder is running. Only this copy:
 /// the same game started from another folder (a developer's own build, say)
 /// is none of the launcher's business. Windows keeps the file of a running
