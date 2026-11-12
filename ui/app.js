@@ -491,13 +491,20 @@ function renderHome() {
     const fresh = new Set(p.new_entries.map((e) => e.number));
     for (const e of p.latest_news || []) items.push({ ...e, day: dayKey(e.title), order, from: p, isNew: fresh.has(e.number) });
   });
-  // By day, newest first (a title that is not a date goes last); within a day
-  // the launcher's own news go first, then the projects in their order
-  items.sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : a.order - b.order || b.number - a.number));
+  // The launcher's latest news stay on top, whatever the projects have said
+  // since: their day is pinned above the rest
+  const pinned = items.filter((e) => !e.from).reduce((top, e) => (e.day > top ? e.day : top), '');
+  for (const e of items) e.pin = !e.from && !!pinned && e.day === pinned;
+  // Then by day, newest first (a title that is not a date goes last); within
+  // a day the launcher's own news go first, then the projects in their order
+  items.sort((a, b) => (b.pin - a.pin) || (a.day < b.day ? 1 : a.day > b.day ? -1 : a.order - b.order || b.number - a.number));
+  const newestDay = items.reduce((top, e) => (e.day > top ? e.day : top), '');
   const days = [];
   for (const e of items) {
     let day = days[days.length - 1];
-    const key = e.day || e.title;
+    // Pinned above a newer day, it is a group of its own; on the newest day
+    // it simply leads that day
+    const key = (e.pin && pinned !== newestDay ? 'pin:' : '') + (e.day || e.title);
     if (!day || day.key !== key) {
       if (days.length === homeDays + 1) break;
       days.push(day = { key, title: e.title, blocks: [] });
