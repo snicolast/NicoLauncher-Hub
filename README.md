@@ -94,6 +94,33 @@ Yes, and it always will be. If you want to say thanks there is a coffee button i
 - It does not download or share built games. Each one is built on your PC from its source code.
 - These are unofficial fan projects, not affiliated with the owners of the original games, and they come with no obligation of support.
 
-## This repository
+## Problems
 
-It holds what installed launchers read from the internet: the launcher's news (`news.txt`), the list of games (`registry.json`) and the releases of the launcher itself. Problems with a game go to that game's repository. Problems with the launcher go to [Issues](https://github.com/snicolast/NicoLauncher-Hub/issues) here.
+Problems with a game go to that game's repository. Problems with the launcher go to [Issues](https://github.com/snicolast/NicoLauncher-Hub/issues) here.
+
+## For developers
+
+The launcher is open source: a Rust engine and a [Tauri 2](https://tauri.app) app with a plain HTML, CSS and JavaScript interface.
+
+| Path | What |
+| --- | --- |
+| `crates/hub-core` | The engine, no interface: registry, source download, build kit, build steps, updates, news, settings |
+| `src-tauri` | The app: the commands the interface calls, window, icons |
+| `ui` | The interface. No build step |
+| `registry.json` | The projects the launcher offers. Read from `main`, so adding one needs no release |
+| `news.txt` | The launcher's own news |
+| `kit.json` | The build tools the launcher downloads, each pinned by SHA-256 |
+| `docs/manifest.md` | The `hub.toml` format a project uses to say how it is built |
+
+To build it you need [Rust](https://rustup.rs) and Node.js, on Windows:
+
+```
+cargo test -p hub-core
+npx @tauri-apps/cli@2 build --no-bundle
+```
+
+The exe is `target\release\nicolauncher.exe`. `npx @tauri-apps/cli@2 dev` runs it while you work on it. Releases are described in [docs/releasing.md](docs/releasing.md).
+
+## License
+
+MIT with additional terms: see [LICENSE](LICENSE). In short: keep the credit to snicolast, do not sell it, and do not change it to share built games or ROM data.

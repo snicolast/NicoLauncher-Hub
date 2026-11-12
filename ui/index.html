@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NicoLauncher</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="titlebar" data-tauri-drag-region>
+  <span class="titlebar-name" data-tauri-drag-region>NicoLauncher</span>
+  <div class="win-buttons">
+    <button class="win" id="win-min" tabindex="-1" aria-label="Minimize"><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></button>
+    <button class="win" id="win-max" tabindex="-1" aria-label="Maximize"><svg viewBox="0 0 10 10"><path id="win-max-icon" d="M.5.5h9v9h-9z"/></svg></button>
+    <button class="win close" id="win-close" tabindex="-1" aria-label="Close"><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></button>
+  </div>
+</header>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <img class="brand-logo" src="img/logo.png" alt="NicoLauncher" draggable="false">
+    </div>
+    <nav id="nav">
+      <span class="nav-pill" id="nav-pill" hidden></span>
+      <button class="nav" data-view="home"><span class="ico" data-icon="home"></span><span data-i18n="nav_home"></span></button>
+      <button class="nav" data-view="library"><span class="ico" data-icon="grid"></span><span data-i18n="nav_library"></span></button>
+      <button class="nav" data-view="settings"><span class="ico" data-icon="sliders"></span><span data-i18n="nav_settings"></span></button>
+      <button class="nav" data-view="credits"><span class="ico" data-icon="heart"></span><span data-i18n="nav_credits"></span></button>
+    </nav>
+    <div class="side-games">
+      <h2 data-i18n="side_games"></h2>
+      <div id="side-games"></div>
+    </div>
+    <div class="side-foot">
+      <button class="self-update" id="self-update" hidden></button>
+      <div class="by"><span data-i18n="by_author"></span> <button class="by-link" data-url="https://github.com/snicolast" title="github.com/snicolast"><img src="img/snicolast.png" alt="snicolast" draggable="false"></button></div>
+      <div id="version" class="dim"></div>
+    </div>
+  </aside>
+
+  <div class="stage">
+    <main id="main">
+      <div class="ambient" id="ambient" aria-hidden="true"></div>
+      <section id="view-home" class="view flush">
+        <div class="spot">
+          <div class="spot-bg" id="spot-bg"></div>
+          <div class="hero-scrim"></div>
+          <button class="back spot-refresh" id="home-refresh"><span class="ico" data-icon="refresh"></span><span data-i18n="refresh"></span></button>
+          <div class="hero-content" id="spot-content"></div>
+          <div class="spot-picks" id="spot-picks"></div>
+        </div>
+        <div class="home">
+          <div class="home-main">
+            <h2 data-i18n="home_news"></h2>
+            <div id="home-feed"></div>
+            <button class="btn ghost small" id="home-more" data-i18n="home_more" hidden></button>
+          </div>
+          <aside class="home-side">
+            <section class="panel">
+              <h2 id="shots-title"></h2>
+              <div id="home-shots" class="shots"></div>
+            </section>
+            <section class="panel">
+              <h2 data-i18n="home_library"></h2>
+              <div id="home-library"></div>
+            </section>
+            <section class="panel" id="home-video-panel" hidden>
+              <h2 data-i18n="home_video"></h2>
+              <button class="video" id="home-video"></button>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="view-library" class="view" hidden>
+        <header class="page-head">
+          <div>
+            <h1 data-i18n="nav_library"></h1>
+            <p id="lib-sub" class="dim"></p>
+          </div>
+          <button class="btn ghost" id="lib-refresh"><span class="ico" data-icon="refresh"></span><span data-i18n="refresh"></span></button>
+        </header>
+        <div id="first-run" class="callout" hidden>
+          <span class="ico big" data-icon="folder"></span>
+          <div>
+            <h2 id="first-run-title" data-i18n="first_run_title"></h2>
+            <p class="dim" id="first-run-text" data-i18n="first_run"></p>
+          </div>
+          <button class="btn primary" id="first-run-pick" data-i18n="choose_folder"></button>
+        </div>
+        <div id="cards" class="cards"></div>
+      </section>
+
+      <section id="view-project" class="view flush" hidden>
+        <div class="hero" id="p-hero">
+          <div class="hero-bg" id="p-bg"></div>
+          <div class="hero-scrim"></div>
+          <button class="back" id="back"><span class="ico" data-icon="back"></span><span id="back-label"></span></button>
+          <div class="hero-content">
+            <div class="hero-logo" id="p-logo"></div>
+            <h1 id="p-name"></h1>
+            <p id="p-tagline" class="tagline"></p>
+            <div class="chips" id="p-tags"></div>
+            <div class="hero-actions">
+              <div id="p-actions" class="actions"></div>
+              <div id="p-status" class="state"></div>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="col-main">
+            <section class="block">
+              <h2 id="p-news-title"></h2>
+              <div id="p-news" class="timeline"></div>
+            </section>
+          </div>
+          <div class="col-side">
+            <section class="block">
+              <h2 data-i18n="about"></h2>
+              <p id="p-desc" class="dim"></p>
+            </section>
+            <section class="block" id="p-screens-block">
+              <h2 data-i18n="screenshots"></h2>
+              <div id="p-screens" class="screens"></div>
+            </section>
+            <section class="block">
+              <h2 data-i18n="details"></h2>
+              <dl id="p-details"></dl>
+              <div class="actions wrap" id="p-more"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view narrow" hidden>
+        <header class="page-head"><h1 data-i18n="nav_settings"></h1></header>
+        <div class="rows">
+          <div class="row">
+            <div>
+              <h2 data-i18n="install_folder"></h2>
+              <p class="dim" data-i18n="install_folder_help"></p>
+              <code id="s-root"></code>
+            </div>
+            <button class="btn" id="s-pick" data-i18n="choose_folder"></button>
+          </div>
+          <div class="row">
+            <div>
+              <h2 data-i18n="language"></h2>
+              <p class="dim" data-i18n="language_help"></p>
+            </div>
+            <div class="seg" id="s-lang">
+              <button data-lang="en">English</button>
+              <button data-lang="es">Español</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-credits" class="view narrow" hidden>
+        <header class="page-head"><h1 data-i18n="nav_credits"></h1></header>
+        <div class="author">
+          <span class="mark xl" aria-hidden="true"></span>
+          <div>
+            <h2><img class="author-logo" src="img/snicolast.png" alt="snicolast" draggable="false"></h2>
+            <p class="dim" data-i18n="credits_author"></p>
+            <div class="actions wrap">
+              <button class="btn brand yt" data-url="https://www.youtube.com/@snicolast"><span class="ico" data-icon="youtube"></span>YouTube</button>
+              <button class="btn brand gh" data-url="https://github.com/snicolast"><span class="ico" data-icon="github"></span>GitHub</button>
+              <button class="btn brand bmc" data-url="https://buymeacoffee.com/snicolast8u"><span class="ico" data-icon="coffee"></span><span data-i18n="support_title"></span></button>
+            </div>
+            <p class="dim small" data-i18n="support_text"></p>
+          </div>
+        </div>
+        <section class="block">
+          <h2 data-i18n="credits_projects"></h2>
+          <div id="c-repos" class="links"></div>
+        </section>
+        <section class="block">
+          <h2 data-i18n="license_title"></h2>
+          <p class="dim" data-i18n="license_credits"></p>
+          <div class="actions wrap"><button class="btn" id="c-license"><span class="ico" data-icon="shield"></span><span data-i18n="license_read"></span></button></div>
+        </section>
+        <section class="block">
+          <h2 data-i18n="credits_rules_title"></h2>
+          <ul class="rules">
+            <li><span class="ico" data-icon="shield"></span><span data-i18n="credits_rule_roms"></span></li>
+            <li><span class="ico" data-icon="shield"></span><span data-i18n="credits_rule_builds"></span></li>
+            <li><span class="ico" data-icon="shield"></span><span data-i18n="credits_rule_affiliation"></span></li>
+          </ul>
+        </section>
+      </section>
+    </main>
+
+    <section id="dock" class="dock" hidden>
+      <div class="dock-bar">
+        <span class="spinner" id="dock-spin"></span>
+        <div class="dock-text">
+          <strong id="dock-title"></strong>
+          <span id="dock-step" class="dim"></span>
+        </div>
+        <span id="dock-time" class="dim mono"></span>
+        <button class="btn small ghost" id="dock-toggle"></button>
+        <button class="btn small ghost" id="dock-copy" data-i18n="copy_log"></button>
+        <button class="btn small danger" id="dock-cancel" data-i18n="cancel"></button>
+        <button class="btn small" id="dock-close" data-i18n="close"></button>
+      </div>
+      <div class="progress"><div id="dock-fill"></div></div>
+      <pre id="dock-log"></pre>
+    </section>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+<div id="lightbox" class="lightbox" hidden><img id="lightbox-img" alt=""></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+# Example: what hub.toml would look like at the top of StarWarsTrilogyNative.
+# It says what build.bat, tools\get_deps.bat and third_party\deps.txt do today.
+# Not in use yet: the launcher still runs the project's own scripts.
+# Format: docs/manifest.md
+
+schema = 1
+exe = "StarWarsTrilogy.exe"
+news = "news.txt"
+
+[requires]
+python = "3.10"   # "int | None" annotations in the build scripts
+cmake = "3.27"    # glslang asks for it
+msvc = true       # Visual Studio 2022+ with the x64 C++ tools, and a Windows SDK
+
+# The user's own file. The launcher only asks where it is on their disk.
+[input]
+label = "swtrilgy.zip (Rev. A)"
+done_when = ["data/crom.bin", "data/drive_program.bin"]
+
+[[fetch]]
+name = "SDL3"
+url = "https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18.tar.gz"
+sha256 = "9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3"
+to = "third_party/downloads/SDL3-3.4.18.tar.gz"
+
+[[fetch]]
+name = "miniz"
+url = "https://github.com/richgel999/miniz/releases/download/3.0.2/miniz-3.0.2.zip"
+sha256 = "ada38db0b703a56d3dd6d57bf84a9c5d664921d870d8fea4db153979fb5332c5"
+to = "third_party/downloads/miniz-3.0.2.zip"
+
+[[step]]
+name = "Extracting the ROM"
+run = ["{python}", "tools/romtool.py", "{input}", "data"]
+skip_if_exists = ["data/crom.bin", "data/drive_program.bin"]
+
+[[step]]
+name = "Recompiling the PowerPC code"
+run = ["{python}", "tools/recomp.py", "data/crom.bin", "build/gen"]
+
+# The project's own script, as it is: the DLSS SDK files come from NVIDIA's
+# repository and are not in this one
+[[step]]
+name = "Downloading the NVIDIA DLSS SDK"
+run = ["cmd", "/c", "tools\\get_dlss.bat"]
+skip_if_exists = [
+    "third_party/ngx/include/nvsdk_ngx.h",
+    "third_party/ngx/include/nvsdk_ngx_defs.h",
+    "third_party/ngx/include/nvsdk_ngx_defs_vk.h",
+    "third_party/ngx/include/nvsdk_ngx_helpers.h",
+    "third_party/ngx/include/nvsdk_ngx_helpers_vk.h",
+    "third_party/ngx/include/nvsdk_ngx_loader.h",
+    "third_party/ngx/include/nvsdk_ngx_params.h",
+    "third_party/ngx/include/nvsdk_ngx_vk.h",
+    "third_party/ngx/lib/nvsdk_ngx_d.lib",
+    "third_party/ngx/bin/nvngx_dlss.dll",
+]
+
+[[step]]
+name = "Configuring"
+run = ["{cmake}", "-S", ".", "-B", "build/cmake", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"]
+msvc_env = true
+
+[[step]]
+name = "Compiling"
+run = ["{cmake}", "--build", "build/cmake"]
+msvc_env = true
+
+[[step]]
+name = "Testing"
+run = ["{ctest}", "--test-dir", "build/cmake", "--output-on-failure"]
+msvc_env = true
+
+[[step]]
+name = "Copying the game"
+copy = { from = "build/cmake/StarWarsTrilogy.exe", to = "StarWarsTrilogy.exe" }
+
+[[step]]
+name = "Copying the DLSS runtime"
+copy = { from = "third_party/ngx/bin/nvngx_dlss.dll", to = "nvngx_dlss.dll" }
+optional = true

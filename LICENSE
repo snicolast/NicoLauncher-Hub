@@ -1,0 +1,54 @@
+NicoLauncher
+Copyright (c) 2026 snicolast
+
+The source code in this repository is made available under the MIT License
+below, together with the Additional Terms that follow it. Where the two
+disagree, the Additional Terms win. Third-party libraries, fonts and assets
+keep their own licenses.
+
+-------------------------------------------------------------------------------
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+ADDITIONAL TERMS
+
+1. Credit. You may share the source code and builds of this launcher, modified
+   or not, under these same terms. Keep this file whole, keep the credit to the
+   original author (snicolast), and say clearly that your version is a modified
+   one. Do not present the launcher, or a version of it, as your own work.
+
+2. The projects it lists. Each project the launcher installs has its own
+   license, which applies to that project and to anything built from it. This
+   license grants nothing over them. In particular, the launcher must not be
+   changed to download, bundle or share compiled builds of those projects, or
+   ROMs or any data made from them.
+
+3. Not affiliated. This is an unofficial fan project. It is not affiliated
+   with, endorsed or sponsored by the owners of any game the listed projects
+   relate to.
+
+4. Free, not for sale. The launcher is offered free of charge. You may not
+   sell it, or a version of it, or charge for access to it, alone or as part
+   of anything else.
+
+5. No obligations. The launcher is a hobby project, provided as it is. The
+   author owes no support, fixes, updates or continued availability, and may
+   change or stop the project at any time.

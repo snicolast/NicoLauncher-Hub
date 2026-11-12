@@ -1,0 +1,24 @@
+[package]
+name = "nicolauncher"
+description = "NicoLauncher: installs, builds, updates and starts snicolast's projects"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+hub-core = { path = "../crates/hub-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-updater = "2"
+
+[features]
+# Set by the Tauri CLI for release builds: serve the bundled interface
+custom-protocol = ["tauri/custom-protocol"]
