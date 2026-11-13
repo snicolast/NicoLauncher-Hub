@@ -17,6 +17,7 @@ pub mod registry;
 pub mod requirements;
 pub mod runner;
 pub mod source;
+pub mod system;
 pub mod update;
 pub mod video;
 
