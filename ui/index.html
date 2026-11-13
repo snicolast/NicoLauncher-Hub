@@ -26,6 +26,7 @@
       <button class="nav" data-view="library"><span class="ico" data-icon="grid"></span><span data-i18n="nav_library"></span></button>
       <button class="nav" data-view="settings"><span class="ico" data-icon="sliders"></span><span data-i18n="nav_settings"></span></button>
       <button class="nav" data-view="credits"><span class="ico" data-icon="heart"></span><span data-i18n="nav_credits"></span></button>
+      <button class="nav" data-view="feedback"><span class="ico" data-icon="chat"></span><span data-i18n="nav_feedback"></span></button>
     </nav>
     <div class="side-games">
       <h2 data-i18n="side_games"></h2>
@@ -200,6 +201,33 @@
           </ul>
         </section>
       </section>
+
+      <section id="view-feedback" class="view" hidden>
+        <header class="page-head">
+          <div>
+            <h1 data-i18n="nav_feedback"></h1>
+            <p class="dim" data-i18n="fb_sub"></p>
+          </div>
+          <button class="btn ghost" id="fb-open-list"><span class="ico" data-icon="github"></span><span data-i18n="fb_see_all"></span></button>
+        </header>
+        <div class="fb-grid" id="fb-cards"></div>
+        <div class="fb-bottom">
+          <section class="panel">
+            <h2 data-i18n="fb_sent_title"></h2>
+            <p class="dim small" data-i18n="fb_sent_text"></p>
+            <dl id="fb-system"></dl>
+          </section>
+          <section class="panel">
+            <h2 data-i18n="fb_rules_title"></h2>
+            <ul class="rules">
+              <li class="bad"><span class="ico" data-icon="ban"></span><span data-i18n="fb_rule_roms"></span></li>
+              <li><span class="ico" data-icon="search"></span><span data-i18n="fb_rule_search"></span></li>
+              <li><span class="ico" data-icon="check"></span><span data-i18n="fb_rule_one"></span></li>
+              <li><span class="ico" data-icon="github"></span><span data-i18n="fb_rule_account"></span></li>
+            </ul>
+          </section>
+        </div>
+      </section>
     </main>
 
     <section id="dock" class="dock" hidden>
@@ -212,6 +240,7 @@
         <span id="dock-time" class="dim mono"></span>
         <button class="btn small ghost" id="dock-toggle"></button>
         <button class="btn small ghost" id="dock-copy" data-i18n="copy_log"></button>
+        <button class="btn small report" id="dock-report" hidden><span class="ico" data-icon="bug"></span><span data-i18n="fb_report_this"></span></button>
         <button class="btn small danger" id="dock-cancel" data-i18n="cancel"></button>
         <button class="btn small" id="dock-close" data-i18n="close"></button>
       </div>
