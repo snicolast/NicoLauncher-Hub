@@ -31,6 +31,7 @@ const STR = {
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
     version: 'Version', version_short: 'Version {n}', version_out: 'version {n} is out', commit_title: 'The exact code installed, on GitHub',
+    link_failed: 'Could not open {url}: {error}',
     not_chosen: 'not chosen', not_found: 'not found', not_installed_yet: 'not installed',
     news: 'What is new', news_new: 'New', news_installed: 'Already installed', no_news: 'No news yet.',
     input_note: 'The launcher never downloads this file. It only reads the copy you choose from your own disk.',
@@ -132,6 +133,7 @@ const STR = {
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
     version: 'Versión', version_short: 'Versión {n}', version_out: 'ya está la versión {n}', commit_title: 'El código exacto instalado, en GitHub',
+    link_failed: 'No se pudo abrir {url}: {error}',
     not_chosen: 'sin elegir', not_found: 'no encontrada', not_installed_yet: 'sin instalar',
     news: 'Novedades', news_new: 'Nuevo', news_installed: 'Ya instalado', no_news: 'Aún no hay novedades.',
     input_note: 'El launcher nunca descarga este archivo. Solo lee la copia que elijas de tu propio disco.',
@@ -286,6 +288,12 @@ function picture(src, cls) {
 
 // A message in the corner: something went wrong, or (good) something the
 // user asked for is done
+// A web page in the user's browser. A failure says so instead of leaving the
+// click without any effect
+function openLink(url) {
+  T.opener.openUrl(url).catch((e) => toast(t('link_failed', { url, error: e })));
+}
+
 function toast(text, good) {
   const node = el('div', { class: 'toast' + (good ? ' good' : ''), onclick: () => node.remove() }, text);
   $('toasts').append(node);
@@ -519,7 +527,7 @@ function versionDetail(p) {
   if (v.commit) {
     if (dd.textContent) dd.append(' · ');
     dd.append(el('a', { class: 'commit', href: '#', title: t('commit_title'),
-      onclick: (e) => { e.preventDefault(); T.opener.openUrl(`${p.url}/commit/${v.commit}`); } }, v.commit.slice(0, 7)));
+      onclick: (e) => { e.preventDefault(); openLink(`${p.url}/commit/${v.commit}`); } }, v.commit.slice(0, 7)));
   }
   const newest = Math.max(0, ...p.new_entries.map((e) => e.number));
   if (newest > (v.number ?? 0)) dd.append(el('span', { class: 'version-out' }, ' · ' + t('version_out', { n: newest })));
@@ -805,7 +813,7 @@ function renderProject() {
   if (installed) more.push(btn('folder', t('do_open_folder'), () => call('open_folder', { id: p.id })));
   if (p.state === 'ready') more.push(btn('play', t('do_shortcut'), () => addShortcut(p)));
   else more.push(btn('folder', t('do_existing'), () => chooseExisting(p)));
-  more.push(el('button', { class: 'btn', onclick: () => T.opener.openUrl(p.url) }, icon('github'), 'GitHub'));
+  more.push(el('button', { class: 'btn', onclick: () => openLink(p.url) }, icon('github'), 'GitHub'));
   more.push(btn('bug', t('fb_report_game'), () => feedback('bug', p.id)));
   $('p-more').replaceChildren(...more);
 
@@ -956,7 +964,7 @@ function renderSettings() {
 
 function renderCredits() {
   $('c-repos').replaceChildren(...snap.projects.map((p) =>
-    el('button', { onclick: () => T.opener.openUrl(p.url) }, icon('github'), p.name,
+    el('button', { onclick: () => openLink(p.url) }, icon('github'), p.name,
       el('span', { class: 'dim' }, p.url.replace('https://github.com/', '')))));
 }
 
@@ -1040,7 +1048,7 @@ function feedback(kind, projectId, withLog) {
   }
   const go = el('button', { class: 'btn primary', disabled: true, onclick: () => {
     const log = failHere() && logBox.checked ? lastFail.log : null;
-    T.opener.openUrl(feedbackUrl(kind, where, { title: title.value.trim(), system: system.value.trim(), text: text.value.trim(), log }));
+    openLink(feedbackUrl(kind, where, { title: title.value.trim(), system: system.value.trim(), text: text.value.trim(), log }));
     close();
   } }, icon('external'), t('fb_go'));
   // Nothing to send without a title (or the game's name)
@@ -1213,7 +1221,7 @@ function goBack() { show(cameFrom); }
 
 for (const n of document.querySelectorAll('[data-icon]')) n.innerHTML = `<svg viewBox="0 0 24 24">${ICONS[n.dataset.icon]}</svg>`;
 for (const n of document.querySelectorAll('.nav')) n.addEventListener('click', () => show(n.dataset.view));
-for (const n of document.querySelectorAll('[data-url]')) n.addEventListener('click', () => T.opener.openUrl(n.dataset.url));
+for (const n of document.querySelectorAll('[data-url]')) n.addEventListener('click', () => openLink(n.dataset.url));
 $('back').addEventListener('click', goBack);
 $('first-run-pick').addEventListener('click', pickInstallRoot);
 $('s-pick').addEventListener('click', pickInstallRoot);
@@ -1231,7 +1239,7 @@ $('self-update').addEventListener('click', async () => {
 });
 $('lib-refresh').addEventListener('click', () => refresh());
 $('home-refresh').addEventListener('click', () => refresh());
-$('home-video').addEventListener('click', () => { const u = $('home-video').dataset.url; if (u) T.opener.openUrl(u); });
+$('home-video').addEventListener('click', () => { const u = $('home-video').dataset.url; if (u) openLink(u); });
 $('home-more').addEventListener('click', () => { homeDays = HOME_DAYS_ALL; renderHome(); });
 // The launcher draws its own title bar: these are its three buttons. Dragging
 // and the double click to maximize come from data-tauri-drag-region.
@@ -1261,7 +1269,7 @@ $('dock-copy').addEventListener('click', async () => {
   setTimeout(() => { b.textContent = t('copy_log'); }, 1200);
 });
 $('dock-report').addEventListener('click', () => feedback('bug', task.project, true));
-$('fb-open-list').addEventListener('click', () => T.opener.openUrl(HUB + '/discussions'));
+$('fb-open-list').addEventListener('click', () => openLink(HUB + '/discussions'));
 $('lightbox').addEventListener('click', () => { $('lightbox').hidden = true; });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {

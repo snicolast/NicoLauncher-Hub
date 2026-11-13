@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the launcher's own window may ask for: pick a file or folder, open a web page, and move, minimize, maximize or close itself from its own title bar.",
+  "description": "What the launcher's own window may ask for: pick a file or folder, open a web page (https only), and move, minimize, maximize or close itself from its own title bar.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open", "opener:allow-open-url", "core:window:allow-start-dragging", "core:window:allow-minimize", "core:window:allow-toggle-maximize", "core:window:allow-is-maximized", "core:window:allow-close"]
+  "permissions": ["core:default", "dialog:allow-open", { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://*" }] }, "core:window:allow-start-dragging", "core:window:allow-minimize", "core:window:allow-toggle-maximize", "core:window:allow-is-maximized", "core:window:allow-close"]
 }
