@@ -12,6 +12,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[3] 2026-11-14
+- Launcher 0.3.3: each game's page shows the version you have installed, beside its state
+- In Details, the version comes with its date and a link to the exact code it was built from, and tells you when a newer one is out
+
 [2] 2026-11-13
 - Launcher 0.3.0: each game's page now lists its achievements, and the library shows how many trophies you have unlocked
 - Games and news refresh on their own every 20 minutes and when you come back to the window. Refresh also checks for a new launcher version
