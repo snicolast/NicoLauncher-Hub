@@ -30,6 +30,7 @@ const STR = {
     installed_title: 'All installed!', installed_body: 'You have just built {name} on your own PC, and it is ready to play. Press Play whenever you want.',
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
+    version: 'Version', version_short: 'Version {n}', version_out: 'version {n} is out', commit_title: 'The exact code installed, on GitHub',
     not_chosen: 'not chosen', not_found: 'not found', not_installed_yet: 'not installed',
     news: 'What is new', news_new: 'New', news_installed: 'Already installed', no_news: 'No news yet.',
     input_note: 'The launcher never downloads this file. It only reads the copy you choose from your own disk.',
@@ -99,6 +100,7 @@ const STR = {
     installed_title: '¡Todo instalado!', installed_body: 'Acabas de montar {name} en tu propio PC, y ya está listo para jugar. Pulsa Jugar cuando quieras.',
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
+    version: 'Versión', version_short: 'Versión {n}', version_out: 'ya está la versión {n}', commit_title: 'El código exacto instalado, en GitHub',
     not_chosen: 'sin elegir', not_found: 'no encontrada', not_installed_yet: 'sin instalar',
     news: 'Novedades', news_new: 'Nuevo', news_installed: 'Ya instalado', no_news: 'Aún no hay novedades.',
     input_note: 'El launcher nunca descarga este archivo. Solo lee la copia que elijas de tu propio disco.',
@@ -423,6 +425,38 @@ function stateLine(p) {
   return [el('span', { class: 'dot ' + (working ? 'busy' : p.state) }), working ? t('st_busy') : t('st_' + p.state)];
 }
 
+// The installed version: the number of the newest news entry the installed
+// copy has (each entry is a version), its date, and the commit it was made
+// from. "Version 14 · 14 Nov 2026"
+function dateLabel(title) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey(title || ''));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' }) : (title || '');
+}
+
+function versionText(p) {
+  const v = p.version;
+  if (!v) return '';
+  const parts = [];
+  if (v.number != null) parts.push(t('version_short', { n: v.number }));
+  if (v.title) parts.push(dateLabel(v.title));
+  return parts.join(' · ');
+}
+
+// The Details row: the version, a link to its commit, and the number waiting
+// on GitHub when there is a newer one
+function versionDetail(p) {
+  const v = p.version;
+  const dd = el('dd', {}, versionText(p));
+  if (v.commit) {
+    if (dd.textContent) dd.append(' · ');
+    dd.append(el('a', { class: 'commit', href: '#', title: t('commit_title'),
+      onclick: (e) => { e.preventDefault(); T.opener.openUrl(`${p.url}/commit/${v.commit}`); } }, v.commit.slice(0, 7)));
+  }
+  const newest = Math.max(0, ...p.new_entries.map((e) => e.number));
+  if (newest > (v.number ?? 0)) dd.append(el('span', { class: 'version-out' }, ' · ' + t('version_out', { n: newest })));
+  return dd;
+}
+
 // Home: everything that is new, from the launcher itself and from every
 // project, as one page to read. A date is shown once, with what each
 // project brought that day under it.
@@ -675,7 +709,9 @@ function renderProject() {
   $('p-tagline').textContent = p.tagline;
   $('p-desc').textContent = p.description;
   $('p-tags').replaceChildren(...p.tags.map((tag) => el('span', { class: 'chip' }, tag)));
-  $('p-status').replaceChildren(...stateLine(p));
+  // Beside the state, the number only; the date and commit are in Details
+  const vn = p.version?.number;
+  $('p-status').replaceChildren(...stateLine(p), ...(vn != null ? [el('span', { class: 'sep' }, '·'), el('span', { class: 'nowrap' }, t('version_short', { n: vn }))] : []));
 
   const btn = (ic, label, fn, cls = '') => el('button', { class: 'btn ' + cls, disabled: busy, onclick: fn }, ic ? icon(ic) : null, label);
   const actions = [primaryButton(p, true)];
@@ -689,6 +725,7 @@ function renderProject() {
   details.replaceChildren(
     el('dt', {}, t('folder')), el('dd', {}, installed ? p.dir : t('not_installed_yet')),
     el('dt', {}, t('source')), el('dd', {}, p.url.replace('https://', '')));
+  if (installed && p.version) details.append(el('dt', {}, t('version')), versionDetail(p));
   if (p.input_label) {
     details.append(el('dt', {}, t('your_file')), el('dd', {}, p.input || `${p.input_label} · ${t('not_chosen')}`));
     details.append(el('div', { class: 'note' }, icon('shield'), t('input_note')));
