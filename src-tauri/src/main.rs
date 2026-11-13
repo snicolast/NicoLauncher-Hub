@@ -90,6 +90,8 @@ struct ProjectView {
     latest_news: Vec<Entry>,
     /// What the installed copy has written of its achievements.
     achievements: Vec<Achievement>,
+    /// Which version is installed.
+    version: Option<project::Version>,
 }
 
 #[derive(Clone, Serialize)]
@@ -123,6 +125,10 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 (true, Some(r)) => news::newer_than(r, &local),
                 _ => Vec::new(),
             };
+            let version = match (&dir, installed) {
+                (Some(d), true) => project::installed_version(p, d, &local),
+                _ => None,
+            };
             ProjectView {
                 id: p.id.clone(),
                 name: p.name.clone(),
@@ -138,6 +144,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 latest_news: remote.get(&p.id).cloned().unwrap_or_else(|| local.clone()),
                 news: if installed { local } else { remote.get(&p.id).cloned().unwrap_or_default() },
                 new_entries,
+                version,
                 achievements: match (&dir, installed) {
                     (Some(d), true) => achievements::read(d),
                     _ => Vec::new(),

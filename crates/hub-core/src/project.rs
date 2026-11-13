@@ -199,6 +199,57 @@ pub fn local_news(project: &Project, dir: &Path) -> Vec<news::Entry> {
         .unwrap_or_default()
 }
 
+/// Which version of the project is installed, for the user to see and quote.
+/// The projects have no version number of their own: each entry of their
+/// `news.txt` is one, so the newest entry the installed copy has is its
+/// version. The commit says exactly which code it is.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct Version {
+    /// Number of the newest entry in the installed `news.txt`.
+    pub number: Option<u32>,
+    /// That entry's title, usually its date.
+    pub title: Option<String>,
+    /// The commit the installed copy was made from, in full.
+    pub commit: Option<String>,
+}
+
+/// The installed copy's version, from its news (see `local_news`) and the
+/// commit the launcher or `update.bat` recorded, or the commit checked out
+/// in a git working copy. None when none of them is there.
+pub fn installed_version(project: &Project, dir: &Path, news: &[news::Entry]) -> Option<Version> {
+    let newest = news.iter().max_by_key(|e| e.number);
+    let commit = project
+        .update_state
+        .as_deref()
+        .filter(|state| is_plain_relative(state))
+        .and_then(|state| crate::update::installed_version(&dir.join(state)))
+        .or_else(|| git_head(dir))
+        .filter(|sha| sha.len() >= 7 && sha.chars().all(|c| c.is_ascii_hexdigit()));
+    let version = Version { number: newest.map(|e| e.number), title: newest.map(|e| e.title.clone()), commit };
+    (version.number.is_some() || version.commit.is_some()).then_some(version)
+}
+
+/// The commit checked out in a git working copy: `.git/HEAD`, followed to
+/// its branch (a file of its own, or a line of `packed-refs`).
+fn git_head(dir: &Path) -> Option<String> {
+    let git = dir.join(".git");
+    let head = std::fs::read_to_string(git.join("HEAD")).ok()?;
+    let head = head.trim();
+    let Some(name) = head.strip_prefix("ref:").map(str::trim) else { return Some(head.to_lowercase()) };
+    if !name.starts_with("refs/") || !is_plain_relative(name) {
+        return None;
+    }
+    if let Ok(sha) = std::fs::read_to_string(git.join(name)) {
+        return Some(sha.trim().to_lowercase());
+    }
+    let packed = std::fs::read_to_string(git.join("packed-refs")).ok()?;
+    packed
+        .lines()
+        .filter_map(|line| line.split_once(' '))
+        .find(|(_, r)| r.trim() == name)
+        .map(|(sha, _)| sha.to_lowercase())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -267,6 +318,40 @@ mod tests {
 
         fs::write(dir.join("news.txt"), "[3] t\n- a\n").unwrap();
         assert_eq!(news::latest(&local_news(p, &dir)), 3);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn tells_the_installed_version() {
+        let reg = Registry::bundled();
+        let p = reg.find("swtrilogy").unwrap();
+        let dir = std::env::temp_dir().join(format!("nl-version-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        assert_eq!(installed_version(p, &dir, &[]), None);
+
+        fs::write(dir.join("news.txt"), "[4] 14 November 2026\n- b\n[3] 13 November 2026\n- a\n").unwrap();
+        let v = installed_version(p, &dir, &local_news(p, &dir)).unwrap();
+        assert_eq!((v.number, v.title.as_deref(), v.commit), (Some(4), Some("14 November 2026"), None));
+
+        // What the launcher or update.bat recorded
+        let sha = "0123456789abcdef0123456789abcdef01234567";
+        fs::create_dir_all(dir.join("save/update")).unwrap();
+        fs::write(dir.join("save/update/version.txt"), format!("{}\r\n", sha.to_uppercase())).unwrap();
+        assert_eq!(installed_version(p, &dir, &[]).unwrap().commit.as_deref(), Some(sha));
+        fs::remove_dir_all(dir.join("save")).unwrap();
+
+        // A git working copy: its branch, loose or packed
+        let other = "89abcdef0123456789abcdef0123456789abcdef";
+        fs::create_dir_all(dir.join(".git/refs/heads")).unwrap();
+        fs::write(dir.join(".git/HEAD"), "ref: refs/heads/main\n").unwrap();
+        fs::write(dir.join(".git/packed-refs"), format!("# pack-refs\n{other} refs/heads/main\n")).unwrap();
+        assert_eq!(installed_version(p, &dir, &[]).unwrap().commit.as_deref(), Some(other));
+        fs::write(dir.join(".git/refs/heads/main"), format!("{sha}\n")).unwrap();
+        assert_eq!(installed_version(p, &dir, &[]).unwrap().commit.as_deref(), Some(sha));
+        // Detached
+        fs::write(dir.join(".git/HEAD"), other).unwrap();
+        assert_eq!(installed_version(p, &dir, &[]).unwrap().commit.as_deref(), Some(other));
         fs::remove_dir_all(&dir).unwrap();
     }
 }
