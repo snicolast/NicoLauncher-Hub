@@ -1048,7 +1048,7 @@ function feedback(kind, projectId, withLog) {
   }
   const go = el('button', { class: 'btn primary', disabled: true, onclick: () => {
     const log = failHere() && logBox.checked ? lastFail.log : null;
-    T.opener.openUrl(feedbackUrl(kind, where, { title: title.value.trim(), system: system.value.trim(), text: text.value.trim(), log }));
+    openLink(feedbackUrl(kind, where, { title: title.value.trim(), system: system.value.trim(), text: text.value.trim(), log }));
     close();
   } }, icon('external'), t('fb_go'));
   // Nothing to send without a title (or the game's name)
@@ -1269,7 +1269,7 @@ $('dock-copy').addEventListener('click', async () => {
   setTimeout(() => { b.textContent = t('copy_log'); }, 1200);
 });
 $('dock-report').addEventListener('click', () => feedback('bug', task.project, true));
-$('fb-open-list').addEventListener('click', () => T.opener.openUrl(HUB + '/discussions'));
+$('fb-open-list').addEventListener('click', () => openLink(HUB + '/discussions'));
 $('lightbox').addEventListener('click', () => { $('lightbox').hidden = true; });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
