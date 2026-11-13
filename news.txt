@@ -12,6 +12,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[4] 2026-11-14
+- Launcher 0.3.4: a new Feedback page to report a problem, suggest an improvement, propose a recomp or ask a question on GitHub. When an install fails, "Report this problem" fills in the details for you
+- Links open in your web browser again: the version link, the GitHub buttons, the video on Home and the credits
+
 [3] 2026-11-14
 - Launcher 0.3.3: each game's page shows the version you have installed, beside its state
 - In Details, the version comes with its date and a link to the exact code it was built from, and tells you when a newer one is out
