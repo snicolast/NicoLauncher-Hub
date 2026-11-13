@@ -10,6 +10,7 @@ use hub_core::registry::{Project, Registry};
 use hub_core::requirements::{self, Check, Requires};
 use hub_core::runner::{self, Cancel};
 use hub_core::source;
+use hub_core::system::{self, SystemInfo};
 use hub_core::update::{self, Outcome};
 use hub_core::video::{self, Video};
 use serde::Serialize;
@@ -321,6 +322,12 @@ fn desktop_shortcut(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     project::desktop_shortcut(&p, &dir)
 }
 
+/// Windows version and graphics card, for the Feedback page's reports
+#[tauri::command(async)]
+fn system_info() -> SystemInfo {
+    system::info()
+}
+
 #[tauri::command]
 fn open_folder(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     let dir = hub.config.lock().unwrap().project_dir(&id).ok_or("Not installed.")?;
@@ -511,6 +518,7 @@ fn main() {
             set_project_dir,
             launch,
             open_folder,
+            system_info,
             desktop_shortcut,
             uninstall,
             cancel_task,

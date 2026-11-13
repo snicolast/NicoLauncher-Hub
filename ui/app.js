@@ -77,6 +77,37 @@ const STR = {
     settings_damaged: 'The settings file could not be read:',
     ach_title: 'Achievements', ach_view_all: 'View all', ach_count: '{n} of {total} unlocked', ach_unlocked_on: 'Unlocked {date}', ach_locked: 'Locked',
     ach_toast_one: '{name}: achievement unlocked, {ach}', ach_toast_many: '{name}: {n} achievements unlocked',
+    act_setup: 'install', act_build: 'build', act_update: 'update',
+    nav_feedback: 'Feedback', fb_sub: 'Something broken, an idea, or a game you would love to see next? Every message is read.',
+    fb_see_all: 'See what others sent',
+    fb_bug_title: 'Report a problem', fb_bug_text: 'A game or the launcher does not work as it should: it closes, looks wrong, or an install fails.',
+    fb_idea_title: 'Suggest an improvement', fb_idea_text: 'A change you would like in a game or in the launcher: a setting, a control, a new feature.',
+    fb_recomp_title: 'Propose a recomp', fb_recomp_text: 'Which arcade or console game would you love to see running natively next? Others can vote for it.',
+    fb_recomp_warn: 'Name the game only: no ROMs, game files or links to them.',
+    fb_talk_title: 'Ask or comment', fb_talk_text: 'A question, a thank-you, or anything else that is not a problem or an idea.',
+    fb_where_issue: 'Opens a report on GitHub', fb_where_disc: 'Opens GitHub Discussions', fb_where_vote: 'Public, with votes',
+    fb_sent_title: 'What goes with your message', fb_sent_text: 'Added for you, so nobody has to ask. You see all of it on GitHub before sending, and can remove anything.',
+    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Graphics',
+    fb_rules_title: 'Before you write',
+    fb_rule_roms: 'Never share ROMs, game files or links to them. Messages that do are deleted.',
+    fb_rule_search: 'Look at what others sent first: maybe it is already there, and a vote helps more than a copy.',
+    fb_rule_one: 'One problem or idea per message, so each one can be followed and closed.',
+    fb_rule_account: 'Sending needs a free GitHub account. Without one, you can still read everything.',
+    fb_report_this: 'Report this problem', fb_report_game: 'Report a problem',
+    fb_bug_lead: 'Tell what happened in your own words. The versions and the log are added for you.',
+    fb_idea_lead: 'Tell what you would change, and why it would be better.',
+    fb_talk_lead: 'Ask or tell whatever you want.',
+    fb_recomp_lead: 'Tell which game you would like to see recompiled for PC.',
+    fb_where: 'Where is it?', fb_title_label: 'Title', fb_title_ph: 'In a few words, what goes wrong',
+    fb_what: 'What happened?', fb_what_ph: 'What you did, what you expected, and what happened instead.',
+    fb_idea_ph: 'In a few words, your idea', fb_idea_what: 'Your idea', fb_idea_what_ph: 'What it would do, and how you would use it.',
+    fb_attach: 'Added for you', fb_attach_log: 'Log of the last {action}, failed {when}', fb_attach_shot: 'Add a screenshot (you can paste it on GitHub)',
+    fb_go: 'Continue on GitHub',
+    fb_go_note: 'GitHub opens in your browser with all of this filled in. Nothing is sent until you press Submit there.',
+    fb_recomp_name: 'Game', fb_recomp_name_ph: 'Name of the game', fb_recomp_system: 'Original system', fb_recomp_system_ph: 'Arcade board or console, e.g. Sega Model 2',
+    fb_recomp_why: 'Why this one?', fb_recomp_why_ph: 'What makes it special, and what you would like it to have on PC.',
+    fb_recomp_public: 'Proposals are public and others can vote for them. The most voted are looked at first, but no game is promised.',
+    fb_launcher_name: 'The launcher', fb_not_installed: 'not installed', fb_general: 'General',
   },
   es: {
     nav_library: 'Biblioteca', nav_settings: 'Ajustes', nav_credits: 'Créditos',
@@ -148,6 +179,37 @@ const STR = {
     settings_damaged: 'No se pudo leer el archivo de ajustes:',
     ach_title: 'Logros', ach_view_all: 'Ver todos', ach_count: '{n} de {total} desbloqueados', ach_unlocked_on: 'Desbloqueado el {date}', ach_locked: 'Bloqueado',
     ach_toast_one: '{name}: logro desbloqueado, {ach}', ach_toast_many: '{name}: {n} logros desbloqueados',
+    act_setup: 'instalación', act_build: 'compilación', act_update: 'actualización',
+    nav_feedback: 'Opiniones', fb_sub: '¿Algo falla, tienes una idea o un juego que te encantaría ver? Se leen todos los mensajes.',
+    fb_see_all: 'Ver lo que otros enviaron',
+    fb_bug_title: 'Informar de un fallo', fb_bug_text: 'Un juego o el launcher no funciona como debe: se cierra, se ve mal o falla una instalación.',
+    fb_idea_title: 'Proponer una mejora', fb_idea_text: 'Un cambio que te gustaría en un juego o en el launcher: un ajuste, un control, algo nuevo.',
+    fb_recomp_title: 'Proponer un recomp', fb_recomp_text: '¿Qué juego de recreativa o consola te gustaría ver funcionando de forma nativa? Otros pueden votarlo.',
+    fb_recomp_warn: 'Solo el nombre del juego: nada de ROMs, archivos del juego ni enlaces a ellos.',
+    fb_talk_title: 'Preguntar o comentar', fb_talk_text: 'Una pregunta, un agradecimiento o cualquier otra cosa que no sea un fallo ni una idea.',
+    fb_where_issue: 'Abre un informe en GitHub', fb_where_disc: 'Abre GitHub Discussions', fb_where_vote: 'Público, con votos',
+    fb_sent_title: 'Lo que va con tu mensaje', fb_sent_text: 'Se añade solo, para que nadie tenga que preguntarlo. Lo ves todo en GitHub antes de enviarlo y puedes quitar lo que quieras.',
+    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Gráfica',
+    fb_rules_title: 'Antes de escribir',
+    fb_rule_roms: 'Nunca compartas ROMs, archivos del juego ni enlaces a ellos. Los mensajes que lo hagan se borran.',
+    fb_rule_search: 'Mira primero lo que otros enviaron: quizá ya está, y un voto ayuda más que una copia.',
+    fb_rule_one: 'Un fallo o una idea por mensaje, para poder seguir y cerrar cada uno.',
+    fb_rule_account: 'Para enviar hace falta una cuenta gratuita de GitHub. Sin ella puedes leerlo todo igualmente.',
+    fb_report_this: 'Informar de este fallo', fb_report_game: 'Informar de un fallo',
+    fb_bug_lead: 'Cuenta con tus palabras qué pasó. Las versiones y el registro se añaden solos.',
+    fb_idea_lead: 'Cuenta qué cambiarías y por qué sería mejor.',
+    fb_talk_lead: 'Pregunta o cuenta lo que quieras.',
+    fb_recomp_lead: 'Di qué juego te gustaría ver recompilado para PC.',
+    fb_where: '¿Dónde está?', fb_title_label: 'Título', fb_title_ph: 'En pocas palabras, qué falla',
+    fb_what: '¿Qué pasó?', fb_what_ph: 'Qué hiciste, qué esperabas y qué pasó en cambio.',
+    fb_idea_ph: 'En pocas palabras, tu idea', fb_idea_what: 'Tu idea', fb_idea_what_ph: 'Qué haría y cómo la usarías.',
+    fb_attach: 'Se añade solo', fb_attach_log: 'Registro de la última {action}, falló {when}', fb_attach_shot: 'Añadir una captura (puedes pegarla en GitHub)',
+    fb_go: 'Seguir en GitHub',
+    fb_go_note: 'GitHub se abre en tu navegador con todo esto rellenado. No se envía nada hasta que pulses Submit allí.',
+    fb_recomp_name: 'Juego', fb_recomp_name_ph: 'Nombre del juego', fb_recomp_system: 'Sistema original', fb_recomp_system_ph: 'Placa de recreativa o consola, p. ej. Sega Model 2',
+    fb_recomp_why: '¿Por qué este?', fb_recomp_why_ph: 'Qué lo hace especial y qué te gustaría que tuviera en PC.',
+    fb_recomp_public: 'Las propuestas son públicas y otros pueden votarlas. Las más votadas se miran antes, pero no se promete ningún juego.',
+    fb_launcher_name: 'El launcher', fb_not_installed: 'sin instalar', fb_general: 'General',
   },
 };
 
@@ -180,6 +242,13 @@ const ICONS = {
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4.500M16 6h3a3 3 0 0 1-3 4.500"/><path d="M12 13v4M9 20h6M10 17h4"/>',
   lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  chat: '<path d="M4 5.5A1.500 1.500 0 0 1 5.500 4h13A1.500 1.500 0 0 1 20 5.500v9a1.500 1.500 0 0 1-1.500 1.500H10l-4.500 4v-4h0A1.500 1.500 0 0 1 4 14.500z"/><path d="M8.500 9h7M8.500 12h4"/>',
+  bug: '<rect x="7" y="8" width="10" height="12" rx="5"/><path d="M9 8a3 3 0 0 1 6 0M12 12v8M3 13h4M17 13h4M4 7l3 2.500M20 7l-3 2.500M4 19l3-2.500M20 19l-3-2.500"/>',
+  bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.500 10.900c.6.5 1 1.200 1 2.100h5c0-.9.4-1.600 1-2.100A6 6 0 0 0 12 3z"/>',
+  joystick: '<rect x="3" y="15" width="18" height="6" rx="2"/><path d="M12 15V9"/><circle cx="12" cy="6" r="3"/><path d="M7 18h2"/>',
+  ban: '<circle cx="12" cy="12" r="8.500"/><path d="M6 6l12 12"/>',
+  search: '<circle cx="11" cy="11" r="6.500"/><path d="M16 16l4.500 4.500"/>',
+  external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 };
 const icon = (name) => {
   const s = document.createElement('span');
@@ -745,6 +814,7 @@ function renderProject() {
   if (p.state === 'ready') more.push(btn('play', t('do_shortcut'), () => addShortcut(p)));
   else more.push(btn('folder', t('do_existing'), () => chooseExisting(p)));
   more.push(el('button', { class: 'btn', onclick: () => openLink(p.url) }, icon('github'), 'GitHub'));
+  more.push(btn('bug', t('fb_report_game'), () => feedback('bug', p.id)));
   $('p-more').replaceChildren(...more);
 
   $('p-news-title').textContent = t('news');
@@ -898,6 +968,150 @@ function renderCredits() {
       el('span', { class: 'dim' }, p.url.replace('https://github.com/', '')))));
 }
 
+// ---------------------------------------------------------------- feedback
+// Nothing is sent from the launcher: each kind of message opens GitHub in the
+// browser with a form already filled in (the versions, and the log when an
+// install or build failed). The user reads it there and sends it.
+const HUB = 'https://github.com/snicolast/NicoLauncher-Hub';
+const FB_KINDS = [
+  { id: 'bug', icon: 'bug', where: 'fb_where_issue' },
+  { id: 'idea', icon: 'bulb', where: 'fb_where_disc' },
+  { id: 'recomp', icon: 'joystick', where: 'fb_where_vote', warn: 'fb_recomp_warn' },
+  { id: 'talk', icon: 'chat', where: 'fb_where_disc' },
+];
+let sysInfo = null;      // Windows and graphics card, asked once
+let lastFail = null;     // { project, action, when, log } of the last task that failed
+
+function versionLine(p, say = t) {
+  if (p.state === 'not_installed') return say('fb_not_installed');
+  const v = p.version || {};
+  return [v.number != null ? say('version_short', { n: v.number }) : null, v.commit ? v.commit.slice(0, 7) : null].filter(Boolean).join(' · ');
+}
+
+function renderFeedback() {
+  $('fb-cards').replaceChildren(...FB_KINDS.map((k) =>
+    el('button', { class: 'fb-card ' + k.id, onclick: () => feedback(k.id) },
+      el('span', { class: 'fb-badge' }, icon(k.icon)),
+      el('h3', {}, t(`fb_${k.id}_title`)),
+      el('p', { class: 'dim' }, t(`fb_${k.id}_text`)),
+      k.warn ? el('div', { class: 'note warn' }, icon('ban'), t(k.warn)) : null,
+      el('div', { class: 'fb-foot' }, el('span', {}, icon('github'), t(k.where)), el('span', { class: 'fb-go' }, icon('external'))))));
+  const sys = $('fb-system');
+  sys.replaceChildren(
+    el('dt', {}, t('fb_launcher')), el('dd', {}, 'v' + snap.version),
+    el('dt', {}, t('fb_system')), el('dd', {}, sysInfo ? sysInfo.os : '...'),
+    el('dt', {}, t('fb_gpu')), el('dd', {}, sysInfo ? sysInfo.gpu : '...'));
+  for (const p of snap.projects) sys.append(el('dt', {}, shortName(p)), el('dd', { class: p.state === 'not_installed' ? 'dim' : '' }, versionLine(p)));
+}
+
+function field(label, control) {
+  return el('label', { class: 'field' }, el('span', {}, label), control);
+}
+
+// The form of one kind of message, then GitHub with it filled in
+function feedback(kind, projectId, withLog) {
+  const box = el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => { closeAsk = null; box.remove(); };
+  const bug = kind === 'bug';
+  const body = [];
+  let where = projectId || (bug ? (snap.projects.find((p) => p.state !== 'not_installed') || {}).id : null) || 'launcher';
+  const targets = [{ id: 'launcher', name: t('fb_launcher_name') }, ...snap.projects.map((p) => ({ id: p.id, name: shortName(p) }))];
+  const seg = el('div', { class: 'seg wide' });
+  const drawSeg = () => seg.replaceChildren(...targets.map((x) => el('button', { type: 'button', class: x.id === where ? 'on' : '', onclick: () => { where = x.id; drawSeg(); drawAttach(); } }, x.name)));
+  const attach = el('div', { class: 'fb-attach' });
+  const logBox = el('input', { type: 'checkbox' });
+  logBox.checked = withLog !== false;
+  const failHere = () => bug && lastFail && lastFail.project === where;
+  const drawAttach = () => {
+    const items = details(where).map(([k, v]) => el('div', { class: 'fb-attach-row' }, icon('check'), el('span', {}, k), el('span', { class: 'dim' }, v)));
+    if (failHere()) items.push(el('label', { class: 'fb-attach-row toggle' }, logBox, icon('file'),
+      el('span', {}, t('fb_attach_log', { action: t('act_' + lastFail.action), when: lastFail.when }))));
+    attach.replaceChildren(el('h3', {}, t('fb_attach')), ...items);
+  };
+  const input = (ph) => el('input', { type: 'text', placeholder: t(ph), maxlength: 140 });
+  const title = input(kind === 'recomp' ? 'fb_recomp_name_ph' : bug ? 'fb_title_ph' : 'fb_idea_ph');
+  const system = input('fb_recomp_system_ph');
+  const text = el('textarea', { rows: bug ? 4 : 5, placeholder: t(kind === 'recomp' ? 'fb_recomp_why_ph' : bug ? 'fb_what_ph' : 'fb_idea_what_ph') });
+  if (kind === 'recomp') {
+    body.push(el('p', { class: 'dim' }, t('fb_recomp_lead')),
+      el('div', { class: 'fb-two' }, field(t('fb_recomp_name'), title), field(t('fb_recomp_system'), system)),
+      field(t('fb_recomp_why'), text),
+      el('div', { class: 'fb-warn' }, icon('ban'), el('span', {}, t('fb_rule_roms'))),
+      el('div', { class: 'note' }, icon('chat'), t('fb_recomp_public')));
+  } else {
+    body.push(el('p', { class: 'dim' }, t(`fb_${kind}_lead`)),
+      field(t('fb_where'), seg),
+      field(t('fb_title_label'), title),
+      field(t(bug ? 'fb_what' : 'fb_idea_what'), text));
+    if (bug) body.push(attach);
+    drawSeg(); drawAttach();
+  }
+  const go = el('button', { class: 'btn primary', disabled: true, onclick: () => {
+    const log = failHere() && logBox.checked ? lastFail.log : null;
+    T.opener.openUrl(feedbackUrl(kind, where, { title: title.value.trim(), system: system.value.trim(), text: text.value.trim(), log }));
+    close();
+  } }, icon('external'), t('fb_go'));
+  // Nothing to send without a title (or the game's name)
+  title.addEventListener('input', () => { go.disabled = !title.value.trim(); });
+  box.append(el('div', { class: 'modal-box fb-box' },
+    el('div', { class: 'fb-box-head' }, el('span', { class: 'fb-badge ' + kind }, icon(FB_KINDS.find((k) => k.id === kind).icon)), el('h2', {}, t(`fb_${kind}_title`))),
+    ...body,
+    el('p', { class: 'fb-go-note dim small' }, t('fb_go_note')),
+    el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: close }, t('cancel')), go)));
+  closeAsk = close;
+  document.body.append(box);
+  title.focus();
+}
+
+const shortName = (p) => p.name.replace(/ Native$/, '');
+
+// What goes with a message about `where` (a project id, or 'launcher'), as
+// [label, value] rows. Always in English: it is read on GitHub.
+function details(where, english) {
+  const say = (key, vars) => (english ? STR.en[key].replace(/\{(\w+)\}/g, (_, k) => vars?.[k] ?? '') : t(key, vars));
+  const p = snap.projects.find((x) => x.id === where);
+  const rows = [[say('fb_launcher'), 'v' + snap.version]];
+  if (p) {
+    rows.push([shortName(p), versionLine(p, say)]);
+  }
+  if (sysInfo) rows.push([say('fb_system'), sysInfo.os], [say('fb_gpu'), sysInfo.gpu]);
+  return rows;
+}
+
+// Problems go to the issues of the repository they are about; ideas, recomp
+// proposals and the rest to the launcher's Discussions, where they get votes.
+// GitHub fills its form from the address: the user reads it there and sends it.
+const URL_MAX = 7500;
+function feedbackUrl(kind, where, { title, system, text, log }) {
+  const p = snap.projects.find((x) => x.id === where);
+  const base = kind === 'bug' ? `${p ? p.url : HUB}/issues/new`
+    : `${HUB}/discussions/new?category=${{ idea: 'ideas', recomp: 'recomp-proposals', talk: 'general' }[kind]}`;
+  const sep = base.includes('?') ? '&' : '?';
+  const facts = details(where, true).map(([k, v]) => `- **${k}:** ${v}`).join('\n');
+  // The user's name in their own paths stays out of a public page
+  let lines = log ? log.split('\n').filter((l) => l.trim()).map((l) => l.replace(/([A-Za-z]:\\Users\\)[^\\\r\n]+/gi, '$1<user>')) : [];
+  const make = () => {
+    let md;
+    if (kind === 'recomp') {
+      md = `**Game:** ${title}\n**Original system:** ${system || '?'}\n\n**Why this one?**\n\n${text}\n\n---\n_Sent from NicoLauncher v${snap.version}_`;
+    } else if (kind === 'bug') {
+      md = `**What happened?**\n\n${text}\n\n**Details**\n\n${facts}`;
+      if (lines.length) md += `\n\n<details><summary>Log of the last ${STR.en['act_' + lastFail.action]} (failed)</summary>\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n</details>`;
+    } else {
+      md = `${text}\n\n---\n**About:** ${p ? shortName(p) : 'the launcher'}\n\n${facts}`;
+    }
+    const name = kind === 'recomp' && system ? `${title} (${system})` : title;
+    return `${base}${sep}title=${encodeURIComponent(name)}&body=${encodeURIComponent(md)}`;
+  };
+  // A long log does not fit in an address: its last lines, where the error is
+  let url = make();
+  while (url.length > URL_MAX && lines.length > 1) {
+    lines = lines.slice(Math.ceil(lines.length / 4));
+    url = make();
+  }
+  return url;
+}
+
 function clock(ms) {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -921,6 +1135,7 @@ function renderDock() {
   $('dock-toggle').textContent = t(logOpen ? 'hide_log' : 'show_log');
   $('dock-cancel').hidden = task.done;
   $('dock-close').hidden = !task.done;
+  $('dock-report').hidden = !(task.done && !task.ok);
 }
 
 function appendLog(text) {
@@ -967,7 +1182,7 @@ function render() {
   const on = document.querySelector('.nav.on');
   $('nav-pill').hidden = !on;
   if (on) { $('nav-pill').style.transform = `translateY(${on.offsetTop}px)`; $('nav-pill').style.height = on.offsetHeight + 'px'; }
-  for (const v of ['home', 'library', 'project', 'settings', 'credits']) $('view-' + v).hidden = v !== view;
+  for (const v of ['home', 'library', 'project', 'settings', 'credits', 'feedback']) $('view-' + v).hidden = v !== view;
   $('version').textContent = 'v' + snap.version;
   $('self-update').hidden = !selfUpdate;
   if (selfUpdate) {
@@ -981,6 +1196,7 @@ function render() {
   if (view === 'project') renderProject();
   renderSettings();
   renderCredits();
+  renderFeedback();
   renderDock();
 }
 
@@ -1052,6 +1268,8 @@ $('dock-copy').addEventListener('click', async () => {
   b.textContent = t('copied');
   setTimeout(() => { b.textContent = t('copy_log'); }, 1200);
 });
+$('dock-report').addEventListener('click', () => feedback('bug', task.project, true));
+$('fb-open-list').addEventListener('click', () => T.opener.openUrl(HUB + '/discussions'));
 $('lightbox').addEventListener('click', () => { $('lightbox').hidden = true; });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -1063,7 +1281,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && document.activeElement.classList.contains('card')) document.activeElement.click();
 });
 // No browser context menu or image dragging: it is an app, not a page
-document.addEventListener('contextmenu', (e) => { if (!e.target.closest('pre, code, dd, .toast')) e.preventDefault(); });
+document.addEventListener('contextmenu', (e) => { if (!e.target.closest('pre, code, dd, .toast, input, textarea')) e.preventDefault(); });
 
 // Project list, news and launcher updates from GitHub. Left open, the
 // launcher asks again every so often, so new versions and news show up
@@ -1110,6 +1328,8 @@ T.event.listen('task', async ({ payload }) => {
     task.ended = Date.now();
     clearInterval(timer);
     if (payload.message) appendLog(payload.message);
+    // For a problem report: which task, when, and what it wrote
+    if (!payload.ok) lastFail = { project: payload.project, action: task.action, when: new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }), log: $('dock-log').textContent };
     if (!payload.ok) logOpen = true;
     const finished = task;
     await update('snapshot');
@@ -1129,6 +1349,8 @@ T.event.listen('task', async ({ payload }) => {
   // English is the base language; another one is the user's choice in Settings
   await update('snapshot');
   if (snap && !snap.license_accepted) await showLicense(true);
+  // Windows and graphics card, for the feedback forms
+  invoke('system_info').then((x) => { sysInfo = x; render(); }).catch(() => {});
   // Nothing can be done until there is a folder to install into: start where
   // that is asked for
   if (snap && !snap.install_root && view === 'home') show('library');
