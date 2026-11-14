@@ -171,16 +171,18 @@ mod tests {
         let path = dir.join("config.json");
         assert_eq!(Config::load(&path).unwrap(), Config { base: dir.clone(), ..Default::default() });
 
-        let mut c = Config { install_root: Some(PathBuf::from("/games")), ..Default::default() };
-        c.projects.entry("b".into()).or_default().dir = Some(PathBuf::from("/elsewhere/b"));
-        c.projects.entry("a".into()).or_default().input = Some(PathBuf::from("/roms/a.zip"));
+        // Full paths on any system: "/games" has no drive letter on Windows
+        let full = |p: &str| std::env::temp_dir().join(p);
+        let mut c = Config { install_root: Some(full("games")), ..Default::default() };
+        c.projects.entry("b".into()).or_default().dir = Some(full("elsewhere/b"));
+        c.projects.entry("a".into()).or_default().input = Some(full("roms/a.zip"));
         c.save(&path).unwrap();
         let back = Config::load(&path).unwrap();
         assert_eq!(back.base, dir);
         assert_eq!(back, Config { base: dir.clone(), ..c.clone() });
-        assert_eq!(back.project_dir("a").unwrap(), PathBuf::from("/games/a"));
-        assert_eq!(back.project_dir("b").unwrap(), PathBuf::from("/elsewhere/b"));
-        assert_eq!(back.input("a").unwrap(), PathBuf::from("/roms/a.zip"));
+        assert_eq!(back.project_dir("a").unwrap(), full("games").join("a"));
+        assert_eq!(back.project_dir("b").unwrap(), full("elsewhere/b"));
+        assert_eq!(back.input("a").unwrap(), full("roms/a.zip"));
 
         std::fs::write(&path, "{ not json").unwrap();
         assert!(Config::load(&path).is_err());
