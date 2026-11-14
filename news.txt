@@ -18,6 +18,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[9] 2026-11-15
+- Launcher 0.3.9: pressing Update on a game or on the launcher now shows what the update brings first, so you can read the changes and choose to update now or later
+
 [8] 2026-11-15
 - Launcher 0.3.8: fixes downloads failing on some PCs with "invalid peer certificate: UnknownIssuer". The launcher now carries its own list of trusted certificates, so it no longer depends on Windows having installed the one GitHub uses
 - Portable version: NicoLauncher-portable.zip on the Releases page. Unzip it anywhere and the launcher keeps its settings, build tools and data in that folder, nothing in AppData. It updates itself too. Paths in its config.json can be relative to that folder
