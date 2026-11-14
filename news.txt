@@ -19,6 +19,8 @@
 
 [8] 2026-11-15
 - Launcher 0.3.8: fixes downloads failing on some PCs with "invalid peer certificate: UnknownIssuer". The launcher now carries its own list of trusted certificates, so it no longer depends on Windows having installed the one GitHub uses
+- Portable version: NicoLauncher-portable.zip on the Releases page. Unzip it anywhere and the launcher keeps its settings, build tools and data in that folder, nothing in AppData. It updates itself too. Paths in its config.json can be relative to that folder
+- The launcher pauses its animations while you play, so it takes less from your PC behind the game
 
 [7] 2026-11-14
 - Launcher 0.3.7: fixes 0.3.6, which stopped responding with an empty window as soon as it started
