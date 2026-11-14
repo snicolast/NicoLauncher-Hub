@@ -192,6 +192,9 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
         .filter(|a| announcements::shown(a, &today, installed))
         .map(|a| AnnouncementView { seen: config.seen_announcements.contains(&a.id), announcement: a.clone() })
         .collect();
+    // Each lock once: a second lock of the same mutex in this expression would
+    // never be granted, and the window would wait for its snapshot forever
+    let launcher_news = hub.launcher_news.lock().unwrap().clone();
     Snapshot {
         version: env!("CARGO_PKG_VERSION"),
         install_root: config.install_root.clone(),
@@ -200,23 +203,29 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
         license_accepted: config.license_accepted.is_some_and(|v| v >= LICENSE_VERSION),
         config_error: hub.config_error.lock().unwrap().clone(),
         busy: hub.task.lock().unwrap().as_ref().map(|t| t.project.clone()),
-        launcher_news: hub.launcher_news.lock().unwrap().clone(),
+        launcher_update: launcher_update(&config, &launcher_news),
+        launcher_news,
         latest_video: hub.latest_video.lock().unwrap().clone(),
         announcements,
-        launcher_update: launcher_update(&config, &hub.launcher_news.lock().unwrap()),
         projects,
     }
 }
 
-/// What a launcher update brought, while the user has not seen it. A user
-/// with no version recorded who accepted the license came from a launcher
-/// older than the record: they see what this version brought.
+/// The last launcher version that did not record which one the user had seen:
+/// a user with no version recorded who accepted the license came from it or
+/// from an older one (0.3.6 never got to record it).
+const BEFORE_RECORD: &str = "0.3.5";
+
+/// What a launcher update brought, while the user has not seen it.
 fn launcher_update(config: &Config, news: &[Entry]) -> Option<LauncherNews> {
     let current = env!("CARGO_PKG_VERSION");
     match config.last_version.as_deref() {
         Some(v) if v == current => None,
         None if config.license_accepted.is_none() => None,
-        from => Some(LauncherNews { from: from.map(str::to_string), changes: news::launcher_changes(news, from, current) }),
+        from => {
+            let from = from.unwrap_or(BEFORE_RECORD);
+            Some(LauncherNews { from: Some(from.to_string()), changes: news::launcher_changes(news, Some(from), current) })
+        }
     }
 }
 
@@ -616,4 +625,33 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("could not start NicoLauncher");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Every command answers with a snapshot: one that never comes back leaves
+    // the window empty. It takes each lock once.
+    #[test]
+    fn a_snapshot_comes_back() {
+        let hub = Hub {
+            config_path: PathBuf::from("config.json"),
+            config: Mutex::new(Config { license_accepted: Some(LICENSE_VERSION), ..Config::default() }),
+            config_error: Mutex::new(None),
+            registry: Mutex::new(Registry::bundled()),
+            remote_news: Mutex::new(HashMap::new()),
+            launcher_news: Mutex::new(news::parse("[1] 2026-11-14\n- Launcher 0.3.6: something\n")),
+            latest_video: Mutex::new(None),
+            announcements: Mutex::new(Vec::new()),
+            task: Mutex::new(None),
+        };
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let snap = snapshot_of(&hub);
+            tx.send(snap.launcher_update.is_some()).unwrap();
+        });
+        let update = rx.recv_timeout(std::time::Duration::from_secs(10)).expect("the snapshot never came back");
+        assert!(update);
+    }
 }

@@ -22,6 +22,10 @@ jobs:
       - name: Build kit test
         timeout-minutes: 15
         run: cargo test -p hub-core --locked -- --ignored builds_with_the_real_kit
+      # The app's own tests: every command answers (no lock taken twice)
+      - name: App tests
+        timeout-minutes: 15
+        run: cargo test -p nicolauncher --locked
       - name: Build NicoLauncher.exe
         run: npx --yes @tauri-apps/cli@2 build --no-bundle -- --locked
       # A convenience for trying a build, not a check: the account's artifact
