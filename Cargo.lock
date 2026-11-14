@@ -1576,12 +1576,15 @@ name = "hub-core"
 version = "0.3.7"
 dependencies = [
  "flate2",
+ "rustls",
+ "rustls-native-certs 0.7.3",
  "serde",
  "serde_json",
  "sha2",
  "tar",
  "toml 0.8.2",
  "ureq",
+ "webpki-roots 0.26.11",
  "zip 2.6.1",
 ]
 
@@ -4655,7 +4658,6 @@ dependencies = [
  "log",
  "once_cell",
  "rustls",
- "rustls-native-certs 0.7.3",
  "rustls-pki-types",
  "url",
  "webpki-roots 0.26.11",
