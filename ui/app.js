@@ -88,7 +88,7 @@ const STR = {
     fb_talk_title: 'Ask or comment', fb_talk_text: 'A question, a thank-you, or anything else that is not a problem or an idea.',
     fb_where_issue: 'Opens a report on GitHub', fb_where_disc: 'Opens GitHub Discussions', fb_where_vote: 'Public, with votes',
     fb_sent_title: 'What goes with your message', fb_sent_text: 'Added for you, so nobody has to ask. You see all of it on GitHub before sending, and can remove anything.',
-    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Graphics',
+    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Graphics', portable: 'portable',
     fb_rules_title: 'Before you write',
     fb_rule_roms: 'Never share ROMs, game files or links to them. Messages that do are deleted.',
     fb_rule_search: 'Look at what others sent first: maybe it is already there, and a vote helps more than a copy.',
@@ -195,7 +195,7 @@ const STR = {
     fb_talk_title: 'Preguntar o comentar', fb_talk_text: 'Una pregunta, un agradecimiento o cualquier otra cosa que no sea un fallo ni una idea.',
     fb_where_issue: 'Abre un informe en GitHub', fb_where_disc: 'Abre GitHub Discussions', fb_where_vote: 'Público, con votos',
     fb_sent_title: 'Lo que va con tu mensaje', fb_sent_text: 'Se añade solo, para que nadie tenga que preguntarlo. Lo ves todo en GitHub antes de enviarlo y puedes quitar lo que quieras.',
-    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Gráfica',
+    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Gráfica', portable: 'portátil',
     fb_rules_title: 'Antes de escribir',
     fb_rule_roms: 'Nunca compartas ROMs, archivos del juego ni enlaces a ellos. Los mensajes que lo hagan se borran.',
     fb_rule_search: 'Mira primero lo que otros enviaron: quizá ya está, y un voto ayuda más que una copia.',
@@ -1020,7 +1020,7 @@ function renderFeedback() {
       el('div', { class: 'fb-foot' }, el('span', {}, icon('github'), t(k.where)), el('span', { class: 'fb-go' }, icon('external'))))));
   const sys = $('fb-system');
   sys.replaceChildren(
-    el('dt', {}, t('fb_launcher')), el('dd', {}, 'v' + snap.version),
+    el('dt', {}, t('fb_launcher')), el('dd', {}, launcherVersion(t)),
     el('dt', {}, t('fb_system')), el('dd', {}, sysInfo ? sysInfo.os : '...'),
     el('dt', {}, t('fb_gpu')), el('dd', {}, sysInfo ? sysInfo.gpu : '...'));
   for (const p of snap.projects) sys.append(el('dt', {}, shortName(p)), el('dd', { class: p.state === 'not_installed' ? 'dim' : '' }, versionLine(p)));
@@ -1087,12 +1087,17 @@ function feedback(kind, projectId, withLog) {
 
 const shortName = (p) => p.name.replace(/ Native$/, '');
 
+// The launcher's version, and whether it runs portable
+function launcherVersion(say) {
+  return 'v' + snap.version + (snap.portable ? ` (${say('portable')})` : '');
+}
+
 // What goes with a message about `where` (a project id, or 'launcher'), as
 // [label, value] rows. Always in English: it is read on GitHub.
 function details(where, english) {
   const say = (key, vars) => (english ? STR.en[key].replace(/\{(\w+)\}/g, (_, k) => vars?.[k] ?? '') : t(key, vars));
   const p = snap.projects.find((x) => x.id === where);
-  const rows = [[say('fb_launcher'), 'v' + snap.version]];
+  const rows = [[say('fb_launcher'), launcherVersion(say)]];
   if (p) {
     rows.push([shortName(p), versionLine(p, say)]);
   }
@@ -1381,7 +1386,8 @@ function render() {
   $('nav-pill').hidden = !on;
   if (on) { $('nav-pill').style.transform = `translateY(${on.offsetTop}px)`; $('nav-pill').style.height = on.offsetHeight + 'px'; }
   for (const v of ['home', 'library', 'project', 'settings', 'credits', 'feedback']) $('view-' + v).hidden = v !== view;
-  $('version').textContent = 'v' + snap.version;
+  $('version').textContent = 'v' + snap.version + (snap.portable ? ' · ' + t('portable') : '');
+  $('version').title = snap.portable || '';
   $('self-update').hidden = !selfUpdate;
   if (selfUpdate) {
     $('self-update').textContent = selfUpdate.installing ? t('self_updating') : t('self_update', { v: selfUpdate.version });

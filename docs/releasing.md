@@ -6,7 +6,8 @@ internet:
 - `news.txt`: the launcher's own news, shown on Home.
 - `registry.json`: the list of projects. It is also built into the launcher, for
   when it cannot be read online, so adding a project needs no release.
-- Its Releases: the installer, from where the launcher updates itself.
+- Its Releases: the installer and the portable zip, from where the launcher
+  updates itself.
 
 An update is
 only installed when it is signed with the launcher's private key, so a release
@@ -52,7 +53,8 @@ Only the launcher is released this way. Projects are never published built.
 
 The Release workflow builds the installer, signs it and publishes
 `NicoLauncher-setup.exe`, its signature and `latest.json` as a release of
-this repository. Installed launchers look at its
+this repository, with `NicoLauncher-portable.zip` and its signature for
+portable launchers ([portable.md](portable.md)). Installed launchers look at its
 `releases/latest/download/latest.json` when they start and offer the
 update in the sidebar.
 

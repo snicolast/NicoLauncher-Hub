@@ -37,6 +37,8 @@ Get **`NicoLauncher-setup.exe`** from the [latest release](https://github.com/sn
 
 Windows will probably show a blue box that says **"Windows protected your PC"**. That is normal: the installer is new and not code-signed yet. Click **More info**, then **Run anyway**.
 
+Prefer a portable copy that keeps everything in one folder? Get **`NicoLauncher-portable.zip`** instead and unzip it anywhere you can write to. See [docs/portable.md](docs/portable.md).
+
 ### 2. Accept the license and choose a folder
 
 The first time, the launcher shows its license. Scroll to the end and press **I accept**. Then choose the folder where your games will live, for example `D:\Games`. Any folder with free space will do.
@@ -111,6 +113,7 @@ The launcher is open source: a Rust engine and a [Tauri 2](https://tauri.app) ap
 | `news.txt` | The launcher's own news |
 | `kit.json` | The build tools the launcher downloads, each pinned by SHA-256 |
 | `docs/manifest.md` | The `hub.toml` format a project uses to say how it is built |
+| `docs/portable.md` | Portable mode: where the launcher keeps its files, relative paths |
 
 To build it you need [Rust](https://rustup.rs) and Node.js, on Windows:
 

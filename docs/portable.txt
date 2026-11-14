@@ -1,0 +1,23 @@
+NicoLauncher, portable
+
+This file makes the launcher portable. While it sits next to NicoLauncher.exe,
+the launcher keeps everything of its own in this folder:
+
+  config.json   its settings
+  kit\          the build tools it downloads (the first game takes a while)
+  webview\      the window's own data
+
+Nothing is written to AppData, so you can move this folder, or carry it on a
+USB drive, as a whole.
+
+In config.json, paths can be relative to this folder, for example:
+
+  "install_root": ".\\Games"
+
+Folders you pick inside this folder are saved that way by the launcher itself.
+
+The launcher still updates itself: it downloads the new portable version,
+checks its signature and replaces NicoLauncher.exe.
+
+Delete this file and config.json and the launcher works as an installed one,
+with its settings in AppData.
