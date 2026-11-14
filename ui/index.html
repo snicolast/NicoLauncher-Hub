@@ -9,6 +9,11 @@
 <body>
 <header class="titlebar" data-tauri-drag-region>
   <span class="titlebar-name" data-tauri-drag-region>NicoLauncher</span>
+  <button class="announce" id="announce" hidden>
+    <span class="announce-ico" data-icon="megaphone"></span>
+    <span class="announce-label" id="announce-label"></span>
+    <span class="announce-dot" aria-hidden="true"></span>
+  </button>
   <div class="win-buttons">
     <button class="win" id="win-min" tabindex="-1" aria-label="Minimize"><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></button>
     <button class="win" id="win-max" tabindex="-1" aria-label="Maximize"><svg viewBox="0 0 10 10"><path id="win-max-icon" d="M.5.5h9v9h-9z"/></svg></button>

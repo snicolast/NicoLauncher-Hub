@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use hub_core::achievements::{self, Achievement};
+use hub_core::announcements::{self, Announcement};
 use hub_core::build;
 use hub_core::config::{self, Config};
 use hub_core::news::{self, Entry};
@@ -30,6 +31,7 @@ struct Hub {
     remote_news: Mutex<HashMap<String, Vec<Entry>>>,
     launcher_news: Mutex<Vec<Entry>>,
     latest_video: Mutex<Option<Video>>,
+    announcements: Mutex<Vec<Announcement>>,
     task: Mutex<Option<Running>>,
 }
 
@@ -59,7 +61,17 @@ struct Snapshot {
     launcher_news: Vec<Entry>,
     /// The author's newest video on YouTube, when it could be read.
     latest_video: Option<Video>,
+    /// The author's announcements this user should see, newest first.
+    announcements: Vec<AnnouncementView>,
     projects: Vec<ProjectView>,
+}
+
+#[derive(Serialize)]
+struct AnnouncementView {
+    #[serde(flatten)]
+    announcement: Announcement,
+    /// Closed by the user already: it no longer makes the megaphone beat.
+    seen: bool,
 }
 
 #[derive(Serialize)]
@@ -110,7 +122,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
     let missing_root = config.install_root.take_if(|root| !root.is_dir());
     let registry = hub.registry.lock().unwrap().clone();
     let remote = hub.remote_news.lock().unwrap();
-    let projects = registry
+    let projects: Vec<ProjectView> = registry
         .projects
         .iter()
         .map(|p| {
@@ -159,6 +171,16 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
             }
         })
         .collect();
+    let today = announcements::today();
+    let installed = |id: &str| projects.iter().any(|p| p.id == id && p.state != State::NotInstalled);
+    let announcements = hub
+        .announcements
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|a| announcements::shown(a, &today, installed))
+        .map(|a| AnnouncementView { seen: config.seen_announcements.contains(&a.id), announcement: a.clone() })
+        .collect();
     Snapshot {
         version: env!("CARGO_PKG_VERSION"),
         install_root: config.install_root.clone(),
@@ -169,6 +191,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
         busy: hub.task.lock().unwrap().as_ref().map(|t| t.project.clone()),
         launcher_news: hub.launcher_news.lock().unwrap().clone(),
         latest_video: hub.latest_video.lock().unwrap().clone(),
+        announcements,
         projects,
     }
 }
@@ -212,6 +235,9 @@ fn refresh(hub: tauri::State<Hub>) -> Snapshot {
     }
     if let Ok(Some(v)) = video::fetch_latest() {
         *hub.latest_video.lock().unwrap() = Some(v);
+    }
+    if let Ok(list) = announcements::fetch() {
+        *hub.announcements.lock().unwrap() = list;
     }
     snapshot_of(&hub)
 }
@@ -267,6 +293,20 @@ fn set_install_root(hub: tauri::State<Hub>, path: PathBuf) -> Result<Snapshot, S
 #[tauri::command]
 fn set_language(hub: tauri::State<Hub>, language: String) -> Result<Snapshot, String> {
     change_config(&hub, |c| c.language = Some(language))?;
+    Ok(snapshot_of(&hub))
+}
+
+/// The user closed these announcements: they stop making the megaphone beat
+/// until there is one with a new id.
+#[tauri::command]
+fn mark_announcements_seen(hub: tauri::State<Hub>, ids: Vec<String>) -> Result<Snapshot, String> {
+    change_config(&hub, |c| {
+        for id in ids {
+            if !c.seen_announcements.contains(&id) {
+                c.seen_announcements.push(id);
+            }
+        }
+    })?;
     Ok(snapshot_of(&hub))
 }
 
@@ -511,6 +551,7 @@ fn main() {
             remote_news: Mutex::new(HashMap::new()),
             launcher_news: Mutex::new(Vec::new()),
             latest_video: Mutex::new(None),
+            announcements: Mutex::new(Vec::new()),
             task: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
@@ -523,6 +564,7 @@ fn main() {
             set_language,
             license_text,
             accept_license,
+            mark_announcements_seen,
             quit,
             set_input,
             set_project_dir,

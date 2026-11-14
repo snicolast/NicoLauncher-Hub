@@ -18,6 +18,10 @@ pub struct Config {
     pub license_accepted: Option<u32>,
     #[serde(default)]
     pub projects: BTreeMap<String, ProjectConfig>,
+    /// Ids of the announcements the user has closed: they no longer make the
+    /// megaphone beat.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub seen_announcements: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
