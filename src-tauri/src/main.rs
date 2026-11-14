@@ -3,7 +3,7 @@
 
 use hub_core::achievements::{self, Achievement};
 use hub_core::build;
-use hub_core::config::Config;
+use hub_core::config::{self, Config};
 use hub_core::news::{self, Entry};
 use hub_core::project::{self, Script, State};
 use hub_core::registry::{Project, Registry};
@@ -257,6 +257,9 @@ fn set_install_root(hub: tauri::State<Hub>, path: PathBuf) -> Result<Snapshot, S
     if !path.is_absolute() {
         return Err("Pick a full folder path.".into());
     }
+    if let Some(problem) = config::folder_problem(&path) {
+        return Err(problem);
+    }
     change_config(&hub, |c| c.install_root = Some(path))?;
     Ok(snapshot_of(&hub))
 }
@@ -302,6 +305,9 @@ fn set_project_dir(hub: tauri::State<Hub>, id: String, path: PathBuf) -> Result<
     let p = find_project(&hub, &id)?;
     if !project::is_installed(&p, &path) {
         return Err(format!("{} does not look like a folder of {}.", path.display(), p.name));
+    }
+    if let Some(problem) = config::folder_problem(&path) {
+        return Err(problem);
     }
     change_config(&hub, |c| c.projects.entry(id).or_default().dir = Some(path))?;
     Ok(snapshot_of(&hub))
@@ -386,6 +392,10 @@ fn start_task(app: AppHandle, hub: tauri::State<Hub>, id: String, action: String
         let config = hub.config.lock().unwrap();
         (config.project_dir(&id).ok_or("Choose where to install projects first (Settings).")?, config.input(&id))
     };
+    // Chosen before the launcher checked it: nothing would build there
+    if let Some(problem) = config::folder_problem(&dir) {
+        return Err(problem);
+    }
     if action != "setup" && project::is_running(&p, &dir) {
         return Err(format!("{} is running: close it first.", p.name));
     }

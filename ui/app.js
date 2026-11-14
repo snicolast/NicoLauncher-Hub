@@ -15,6 +15,7 @@ const STR = {
     first_run: 'Choose the folder where projects will be installed. Each one gets a folder of its own inside it.',
     root_gone_title: 'The install folder is not there', root_gone: '{path} was not found: it was deleted or moved, or its drive is not connected. Choose the folder where projects will be installed.',
     choose_folder: 'Choose folder',
+    bad_folder: '{path} has [ ] or ; in its name, and the build tools cannot work in a folder like that. Choose a folder without them (Settings, Install folder).',
     st_not_installed: 'Not installed', st_needs_input: 'Needs your own file',
     st_needs_build: 'Ready to build', st_ready: 'Ready', st_busy: 'Working...',
     update_available: 'Update available',
@@ -117,6 +118,7 @@ const STR = {
     first_run: 'Elige la carpeta donde se instalarán los proyectos. Cada uno tendrá su propia carpeta dentro.',
     root_gone_title: 'La carpeta de instalación no está', root_gone: 'No se encontró {path}: se borró o se movió, o su unidad no está conectada. Elige la carpeta donde se instalarán los proyectos.',
     choose_folder: 'Elegir carpeta',
+    bad_folder: '{path} tiene [ ] o ; en el nombre, y las herramientas de compilación no funcionan en una carpeta así. Elige una carpeta sin esos caracteres (Ajustes, Carpeta de instalación).',
     st_not_installed: 'No instalado', st_needs_input: 'Falta tu archivo',
     st_needs_build: 'Listo para compilar', st_ready: 'Listo', st_busy: 'Trabajando...',
     update_available: 'Hay novedades',
@@ -315,9 +317,14 @@ async function update(cmd, args) {
   return s;
 }
 
+// CMake reads [ ] as wildcards and ; as a list separator: nothing builds in a
+// folder with them (the engine refuses it too, with the same check)
+const badFolder = (path) => /[[\];]/.test(path || '');
+
 async function pickInstallRoot() {
   const path = await T.dialog.open({ directory: true, multiple: false });
   if (!path) return false;
+  if (badFolder(path)) { toast(t('bad_folder', { path })); return false; }
   return !!(await update('set_install_root', { path }));
 }
 
@@ -332,6 +339,7 @@ async function startTask(p, action) {
   if (action === 'setup' && !snap.install_root && !p.dir) {
     if (!(await pickInstallRoot())) return;
   }
+  if (badFolder(p.dir)) { toast(t('bad_folder', { path: p.dir })); return; }
   newTask(p, action);
   task.own = true;
   task.fresh = action === 'setup' && p.state === 'not_installed';
@@ -479,7 +487,8 @@ async function chooseInput(p, thenBuild, fresh) {
 
 async function chooseExisting(p) {
   const path = await T.dialog.open({ directory: true, multiple: false });
-  if (path) update('set_project_dir', { id: p.id, path });
+  if (path && badFolder(path)) toast(t('bad_folder', { path }));
+  else if (path) update('set_project_dir', { id: p.id, path });
 }
 
 function primaryButton(p, large) {

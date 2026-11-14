@@ -75,6 +75,25 @@ impl Config {
     }
 }
 
+/// Characters a project's folder cannot have: CMake reads `[` `]` as wildcards
+/// when it lists files (SDL3 is then unpacked but never found, issue #20) and
+/// `;` as a list separator. Spaces and other characters are fine.
+pub const BAD_FOLDER_CHARS: [char; 3] = ['[', ']', ';'];
+
+/// Why projects cannot be built in this folder, if they cannot.
+pub fn folder_problem(path: &Path) -> Option<String> {
+    let text = path.to_string_lossy();
+    let found: Vec<String> = BAD_FOLDER_CHARS.iter().filter(|c| text.contains(**c)).map(|c| c.to_string()).collect();
+    if found.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "{} has {} in its name, and the build tools cannot work in a folder like that. Choose a folder without [ ] or ; in its name.",
+        path.display(),
+        found.join(" ")
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -98,5 +117,14 @@ mod tests {
         std::fs::write(&path, "{ not json").unwrap();
         assert!(Config::load(&path).is_err());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn folders_the_build_tools_cannot_use() {
+        assert!(folder_problem(Path::new(r"D:\Games\Arcade - Sega Rally 2\NicoLauncher")).is_none());
+        assert!(folder_problem(Path::new(r"C:\Juegos\Señor")).is_none());
+        let problem = folder_problem(Path::new(r"D:\[Recompilados]\Racing\[Arcade] - Sega Rally 2")).unwrap();
+        assert!(problem.starts_with(r"D:\[Recompilados]") && problem.contains("has [ ] in its name"), "{problem}");
+        assert!(folder_problem(Path::new("/games/a;b")).is_some());
     }
 }
