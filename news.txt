@@ -17,6 +17,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[7] 2026-11-14
+- Launcher 0.3.7: fixes 0.3.6, which stopped responding with an empty window as soon as it started
+
 [6] 2026-11-14
 - Launcher 0.3.6: announcements. When there is a note from the author (help wanted, a call for testers, something everyone should know), a megaphone moves in the title bar. Press it to read the note; once you close it, the megaphone stays quiet until the next one
 - After updating a game, a window shows its new version and everything that changed since the version you had
