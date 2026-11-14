@@ -65,6 +65,12 @@ fn parse_version(v: &str) -> Option<Vec<u32>> {
     parts.filter(|p| p.len() == 3)
 }
 
+/// Whether version `a` is newer than `b`, compared as numbers (0.3.10 is
+/// newer than 0.3.9). False when either is not a version.
+pub fn is_newer(a: &str, b: &str) -> bool {
+    matches!((parse_version(a), parse_version(b)), (Some(a), Some(b)) if a > b)
+}
+
 /// One launcher release in its news: the version and what it brought.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Release {
@@ -132,6 +138,15 @@ mod tests {
         let first = &launcher_changes(&e, Some("0.3.5"), "0.3.6")[0];
         assert_eq!((first.title.as_str(), first.lines.clone()), ("2026-11-15", vec!["popups".to_string(), "more".to_string()]));
         assert_eq!(release_of(&e[1]), None);
+    }
+
+    #[test]
+    fn compares_versions_as_numbers() {
+        assert!(is_newer("0.3.10", "0.3.9"));
+        assert!(is_newer("1.0.0", "0.9.9"));
+        assert!(!is_newer("0.3.9", "0.3.9"));
+        assert!(!is_newer("0.3.8", "0.3.9"));
+        assert!(!is_newer("soon", "0.3.9"));
     }
 
     const SAMPLE: &str = "# what is new\n#\n\n[10] 2026-11-09\n- New explosions\n- Flight sticks\n\n[9] 2026-11-08\n- Mac build\n";

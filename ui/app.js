@@ -98,6 +98,7 @@ const STR = {
     ann_important: 'Important', ann_from: 'from snicolast', ann_of: '{i} of {n}', ann_prev: 'Previous', ann_next: 'Next',
     cl_badge: 'Updated', cl_title: 'What is new in {name}', cl_from: 'From version {a} to version {b}', cl_one: '1 update', cl_many: '{n} updates',
     cl_latest: 'Latest', cl_all: 'All the news', cl_title_launcher: 'What is new in NicoLauncher',
+    cl_ready: 'Update available', cl_go: 'Update now', cl_later: 'Not now', updated_toast: '{name} is up to date.',
     fb_report_this: 'Report this problem', fb_report_game: 'Report a problem',
     fb_bug_lead: 'Tell what happened in your own words. The versions and the log are added for you.',
     fb_idea_lead: 'Tell what you would change, and why it would be better.',
@@ -205,6 +206,7 @@ const STR = {
     ann_important: 'Importante', ann_from: 'de snicolast', ann_of: '{i} de {n}', ann_prev: 'Anterior', ann_next: 'Siguiente',
     cl_badge: 'Actualizado', cl_title: 'Novedades de {name}', cl_from: 'De la versión {a} a la versión {b}', cl_one: '1 actualización', cl_many: '{n} actualizaciones',
     cl_latest: 'Última', cl_all: 'Todas las novedades', cl_title_launcher: 'Novedades de NicoLauncher',
+    cl_ready: 'Actualización disponible', cl_go: 'Actualizar ahora', cl_later: 'Ahora no', updated_toast: '{name} está al día.',
     fb_report_this: 'Informar de este fallo', fb_report_game: 'Informar de un fallo',
     fb_bug_lead: 'Cuenta con tus palabras qué pasó. Las versiones y el registro se añaden solos.',
     fb_idea_lead: 'Cuenta qué cambiarías y por qué sería mejor.',
@@ -722,7 +724,7 @@ function renderHome() {
     line('', 'count_missing', count('not_installed')),
     ...fresh.map((p) => el('div', { class: 'fresh' },
       el('span', {}, el('strong', {}, p.name.replace(/ Native$/, '')), el('span', { class: 'chip new' }, t('update_available'))),
-      el('button', { class: 'btn small attn', disabled: !!snap.busy, onclick: () => startTask(p, 'update') }, icon('up'), t('do_update')))),
+      el('button', { class: 'btn small attn', disabled: !!snap.busy, onclick: () => askUpdate(p) }, icon('up'), t('do_update')))),
     el('button', { class: 'btn ghost small', onclick: () => show('library') }, t('home_open_library')),
   ].filter(Boolean));
 
@@ -815,7 +817,7 @@ function renderProject() {
 
   const btn = (ic, label, fn, cls = '') => el('button', { class: 'btn ' + cls, disabled: busy, onclick: fn }, ic ? icon(ic) : null, label);
   const actions = [primaryButton(p, true)];
-  if (p.can_update) actions.push(btn('up', t('do_update'), () => startTask(p, 'update'), 'lg' + (hasUpdate(p) ? ' attn' : ' idle')));
+  if (p.can_update) actions.push(btn('up', t('do_update'), () => askUpdate(p), 'lg' + (hasUpdate(p) ? ' attn' : ' idle')));
   // In sight beside Play, but quiet: it is not what one comes here for
   if (p.state !== 'not_installed') actions.push(btn('trash', t('do_uninstall'), () => uninstall(p), 'ghost danger'));
   $('p-actions').replaceChildren(...actions);
@@ -1288,12 +1290,14 @@ function openAnnouncements(startId) {
   document.body.append(box);
 }
 
-// After an update: the new version and what it brought. Every news entry
-// newer than the version the user had, newest first, so skipping a few
-// updates loses nothing. The same window for a game and for the launcher.
+// What an update brings: every news entry newer than the version the user
+// has, newest first, so skipping a few updates loses nothing. Shown when
+// Update is pressed, before anything is downloaded, so the user reads it and
+// chooses; and, for the launcher, after it updated itself without that (from
+// an older launcher). The same window for a game and for the launcher.
 let clClose = null;
 const CL_MAX = 12;
-function changelog({ head, title, from, to, entries, actions, all }) {
+function changelog({ head, title, from, to, entries, actions, all, ready, close }) {
   if (clClose) clClose();
   const box = el('div', { class: 'modal ann cl', role: 'dialog', 'aria-modal': 'true' });
   // A long list scrolls with the wheel, the bar, or the keyboard; a fade at
@@ -1306,7 +1310,10 @@ function changelog({ head, title, from, to, entries, actions, all }) {
   box.addEventListener('click', (e) => { if (e.target === box) clClose(); });
   const x = el('button', { class: 'ann-x', 'aria-label': t('close'), onclick: () => clClose() });
   x.innerHTML = '<svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg>';
-  head.append(el('div', { class: 'ann-tags' }, el('span', { class: 'ann-badge good' }, icon('check'), t('cl_badge'))), x);
+  const badge = ready
+    ? el('span', { class: 'ann-badge up' }, icon('up'), t('cl_ready'))
+    : el('span', { class: 'ann-badge good' }, icon('check'), t('cl_badge'));
+  head.append(el('div', { class: 'ann-tags' }, badge), x);
   const count = entries.length === 1 ? t('cl_one') : t('cl_many', { n: entries.length });
   const meta = el('div', { class: 'cl-meta' },
     el('span', { class: 'cl-ver' }, from ? el('span', { class: 'cl-old' }, from) : null,
@@ -1326,7 +1333,7 @@ function changelog({ head, title, from, to, entries, actions, all }) {
     el('div', { class: 'cl-fade', 'aria-hidden': 'true' }),
     el('div', { class: 'ann-foot' },
       el('button', { class: 'btn ghost small', onclick: () => { clClose(); all(); } }, t('cl_all')),
-      el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => clClose() }, t('close')), ...(actions || []))));
+      el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => clClose() }, close || t('close')), ...(actions || []))));
   box.append(inner);
   document.body.append(box);
   document.addEventListener('keydown', keys);
@@ -1336,23 +1343,57 @@ function changelog({ head, title, from, to, entries, actions, all }) {
   (box.querySelector('.btn.primary') || box.querySelector('.modal-actions .btn'))?.focus();
 }
 
-// A game updated by this window: its news since the version it had
-function showChangelog(p, from) {
-  const entries = p.news.filter((e) => e.number > from);
+// Update pressed on a game: first what GitHub has that the installed copy
+// does not, and the user chooses. Without news to show (none newer, or GitHub
+// not reached) Update rebuilds right away, as before.
+function askUpdate(p) {
+  if (!hasUpdate(p)) { startTask(p, 'update'); return; }
+  const entries = p.new_entries;
+  const from = Math.max(0, ...p.news.map((e) => e.number));
   const head = el('div', { class: 'ann-head game' });
   head.style.backgroundImage = gradient(p);
   if (p.hero) head.append(picture(p.hero, 'ann-hero'));
   if (p.logo) head.append(picture(p.logo, 'ann-logo'));
   const v = (n) => t('version_short', { n });
   changelog({
-    head, title: t('cl_title', { name: p.name }),
+    head, title: t('cl_title', { name: p.name }), ready: true, close: t('cl_later'),
     from: from ? v(from) : null, to: v(entries[0].number),
     entries: entries.map((e) => ({ ...e, label: v(e.number) })),
-    actions: p.state === 'ready'
-      ? [el('button', { class: 'btn primary', onclick: () => { clClose(); call('launch', { id: p.id }); } }, icon('play'), el('span', {}, t('do_play')))]
-      : [],
+    actions: [el('button', { class: 'btn primary', disabled: !!snap.busy, onclick: () => { clClose(); startTask(p, 'update'); } }, icon('up'), el('span', {}, t('cl_go')))],
     all: () => openProject(p.id),
   });
+}
+
+// The launcher's own Update: what the new version brings (its news entries
+// that start "Launcher X.Y.Z:"), and the user chooses. Without them (the news
+// not loaded) it updates right away, and shows them after the restart.
+function askLauncherUpdate() {
+  const up = selfUpdate;
+  if (!up.changes || !up.changes.length) { installLauncher(false); return; }
+  const head = el('div', { class: 'ann-head cl-launcher' },
+    el('img', { src: 'img/logo.png', alt: 'nico launcher', class: 'cl-mark', draggable: 'false' }));
+  const v = (n) => t('version_short', { n });
+  changelog({
+    head, title: t('cl_title_launcher'), ready: true, close: t('cl_later'),
+    from: v(snap.version), to: v(up.version),
+    entries: up.changes.map((e) => ({ ...e, label: v(e.version) })),
+    actions: [el('button', { class: 'btn primary', disabled: !!snap.busy, onclick: () => { clClose(); installLauncher(true); } }, icon('up'), el('span', {}, t('cl_go')))],
+    all: () => show('home'),
+  });
+}
+
+async function installLauncher(read) {
+  selfUpdate.installing = true;
+  render();
+  // Read already: not shown again when the new version starts
+  if (read) await call('mark_launcher_seen', { version: selfUpdate.version });
+  // On success the launcher is replaced and started again: nothing comes back
+  try { await invoke('install_launcher_update'); } catch (e) {
+    toast(String(e));
+    if (read) await call('mark_launcher_seen');
+  }
+  selfUpdate.installing = false;
+  render();
 }
 
 // The launcher updated itself: on the first start of the new version, what
@@ -1436,14 +1477,7 @@ $('s-pick').addEventListener('click', pickInstallRoot);
 // A newer launcher, when its releases have one. Asked once at start; a failed
 // check (no connection) is not worth a message.
 let selfUpdate = null;
-$('self-update').addEventListener('click', async () => {
-  selfUpdate.installing = true;
-  render();
-  // On success the launcher is replaced and started again: nothing comes back
-  try { await invoke('install_launcher_update'); } catch (e) { toast(String(e)); }
-  selfUpdate.installing = false;
-  render();
-});
+$('self-update').addEventListener('click', () => askLauncherUpdate());
 $('announce').addEventListener('click', () => openAnnouncements());
 $('lib-refresh').addEventListener('click', () => refresh());
 $('home-refresh').addEventListener('click', () => refresh());
@@ -1555,9 +1589,9 @@ T.event.listen('task', async ({ payload }) => {
     // ask for it right away, and build once it is chosen
     const p = snap && snap.projects.find((x) => x.id === payload.project);
     if (payload.ok && finished.own && finished.action === 'setup' && p && p.state === 'needs_input') chooseInput(p, true, finished.fresh);
-    // An update with news: what it brought, everything since the version the
-    // user had
-    else if (payload.ok && finished.own && finished.action === 'update' && p && p.news.some((e) => e.number > finished.fromVersion)) showChangelog(p, finished.fromVersion);
+    // An update with news: they were read before it started, so only a word
+    // that it is done
+    else if (payload.ok && finished.own && finished.action === 'update' && p && p.news.some((e) => e.number > finished.fromVersion)) toast(t('updated_toast', { name: p.name }), true);
     // Cancelled while it was still downloading: the same clean way out
     // The game can be played for the first time: say so, and offer a shortcut
     else if (payload.ok && finished.own && !finished.wasReady && p && p.state === 'ready') celebrate(p);

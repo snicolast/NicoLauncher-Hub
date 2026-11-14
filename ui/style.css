@@ -566,6 +566,7 @@ main { isolation: isolate; }
 .ann-foot .btn .ico { width: 15px; height: 15px; opacity: .85; }
 /* After an update: the new version and every news entry since the old one */
 .ann-badge.good { --tone: 61, 220, 151; }
+.ann-badge.up { --tone: 79, 140, 255; }
 .cl-box .ann-main { padding-bottom: 4px; }
 .ann-head.cl-launcher { height: 140px; }
 .cl-box .ann-main { overflow-y: auto; scrollbar-gutter: stable; padding-right: 18px; }

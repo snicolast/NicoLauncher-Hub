@@ -5,10 +5,11 @@
 # The launcher reads this file from GitHub (main branch) when it starts and
 # on Refresh.
 #
-# The entry of a release starts with "Launcher X.Y.Z: ": after updating, the
-# launcher shows the entries of every version newer than the one the user
-# had, in a window on its first start. Entries without it (a new project, a
-# notice) are only shown on Home.
+# The entry of a release starts with "Launcher X.Y.Z: ": when the user presses
+# the launcher's Update, it shows the entries of every version newer than the
+# running one, in a window, before updating (and, updated from an older
+# launcher that did not, on the first start of the new one). Entries without
+# it (a new project, a notice) are only shown on Home.
 #
 # Format (the same as the projects' news.txt):
 #   [N] title      starts entry N (a number one higher than the last; the

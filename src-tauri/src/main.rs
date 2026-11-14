@@ -230,6 +230,9 @@ fn launcher_update(config: &Config, news: &[Entry]) -> Option<LauncherNews> {
     let current = env!("CARGO_PKG_VERSION");
     match config.last_version.as_deref() {
         Some(v) if v == current => None,
+        // Read before updating: the user chose to update to that version
+        // after reading what it brings
+        Some(v) if news::is_newer(v, current) => None,
         None if config.license_accepted.is_none() => None,
         from => {
             let from = from.unwrap_or(BEFORE_RECORD);
@@ -297,6 +300,10 @@ fn check_requirements(hub: tauri::State<Hub>) -> Vec<Check> {
 struct LauncherUpdate {
     version: String,
     notes: Option<String>,
+    /// What it brings since the running version, from the launcher's news,
+    /// shown before the user chooses to update. Empty while the news are not
+    /// loaded or say nothing of it.
+    changes: Vec<news::Release>,
 }
 
 /// The installer for an installed launcher; the portable zip, signed with the
@@ -316,7 +323,13 @@ fn updater(app: &AppHandle) -> Result<tauri_plugin_updater::Updater, String> {
 #[tauri::command]
 async fn check_launcher_update(app: AppHandle) -> Result<Option<LauncherUpdate>, String> {
     let update = updater(&app)?.check().await.map_err(|e| e.to_string())?;
-    Ok(update.map(|u| LauncherUpdate { version: u.version.clone(), notes: u.body.clone() }))
+    let news = app.state::<Hub>().launcher_news.lock().unwrap().clone();
+    let current = env!("CARGO_PKG_VERSION");
+    Ok(update.map(|u| LauncherUpdate {
+        changes: news::launcher_changes(&news, Some(current), &u.version),
+        version: u.version.clone(),
+        notes: u.body.clone(),
+    }))
 }
 
 /// Downloads the new version, checks its signature against the key built into
@@ -378,9 +391,13 @@ fn mark_announcements_seen(hub: tauri::State<Hub>, ids: Vec<String>) -> Result<S
 }
 
 /// The news of this launcher version have been seen (or there were none).
+/// With `version`, a newer one: its news were read before updating to it, so
+/// they are not shown again once it starts.
 #[tauri::command]
-fn mark_launcher_seen(hub: tauri::State<Hub>) -> Result<Snapshot, String> {
-    change_config(&hub, |c| c.last_version = Some(env!("CARGO_PKG_VERSION").to_string()))?;
+fn mark_launcher_seen(hub: tauri::State<Hub>, version: Option<String>) -> Result<Snapshot, String> {
+    let current = env!("CARGO_PKG_VERSION");
+    let seen = version.filter(|v| news::is_newer(v, current)).unwrap_or_else(|| current.to_string());
+    change_config(&hub, |c| c.last_version = Some(seen))?;
     Ok(snapshot_of(&hub))
 }
 
@@ -712,5 +729,16 @@ mod tests {
         });
         let update = rx.recv_timeout(std::time::Duration::from_secs(10)).expect("the snapshot never came back");
         assert!(update);
+    }
+
+    // Read before updating: nothing to show again after the restart, and
+    // nothing while it is still downloading
+    #[test]
+    fn news_read_before_updating_are_not_shown_again() {
+        let news = news::parse("[1] 2026-11-14\n- Launcher 99.0.0: something\n");
+        let with = |v: &str| Config { license_accepted: Some(LICENSE_VERSION), last_version: Some(v.into()), ..Config::default() };
+        assert!(launcher_update(&with("99.0.0"), &news).is_none());
+        assert!(launcher_update(&with(env!("CARGO_PKG_VERSION")), &news).is_none());
+        assert!(launcher_update(&with("0.0.1"), &news).is_some());
     }
 }

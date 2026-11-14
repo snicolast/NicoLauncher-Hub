@@ -40,8 +40,11 @@ Only the launcher is released this way. Projects are never published built.
 ## Each release
 
 1. Add the release's entry to `news.txt`, starting with `Launcher X.Y.Z: `
-   (the new version). On their first start after updating, launchers show
-   the entries of every version newer than the one the user had.
+   (the new version), and merge it before tagging. When a user presses the
+   launcher's Update, it shows the entries of every version newer than the
+   running one and asks before updating; without the entry it updates
+   straight away. Launchers updated from an older version, which did not ask,
+   show them on their first start instead.
 2. Set the new version in `Cargo.toml` (`[workspace.package] version`) and in
    `src-tauri/tauri.conf.json` (`version`). Merge that.
 3. Tag it and push the tag:
