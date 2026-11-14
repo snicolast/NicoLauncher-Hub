@@ -12,6 +12,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[6] 2026-11-14
+- Launcher 0.3.6: announcements. When there is a note from the author (help wanted, a call for testers, something everyone should know), a megaphone moves in the title bar. Press it to read the note; once you close it, the megaphone stays quiet until the next one
+
 [5] 2026-11-14
 - Launcher 0.3.5: install folders whose name has [ ] or ; are no longer accepted, because the build cannot handle them. The launcher tells you which characters to take out before anything starts
 
