@@ -255,6 +255,9 @@ dd .version-out { color: var(--accent); }
 
 @media (max-width: 1080px) { .body { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* While the launcher is not the window in use (a game running in front of it,
+   say) nothing in it moves, so it draws no frames and leaves the GPU alone */
+html.idle *, html.idle *::before, html.idle *::after { animation-play-state: paused !important; }
 .self-update { width: 100%; margin-bottom: 12px; padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(79, 140, 255, .45); background: rgba(79, 140, 255, .14); color: var(--accent-2); font: inherit; font-weight: 600; cursor: pointer; transition: background .15s var(--ease); }
 .self-update:hover:not(:disabled) { background: rgba(79, 140, 255, .24); }
 .self-update:disabled { opacity: .6; cursor: default; }
