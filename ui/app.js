@@ -94,6 +94,8 @@ const STR = {
     fb_rule_search: 'Look at what others sent first: maybe it is already there, and a vote helps more than a copy.',
     fb_rule_one: 'One problem or idea per message, so each one can be followed and closed.',
     fb_rule_account: 'Sending needs a free GitHub account. Without one, you can still read everything.',
+    ann_title: 'Announcements', ann_new: 'New announcement', ann_new_many: '{n} new announcements', ann_label: 'Announcement',
+    ann_important: 'Important', ann_from: 'from snicolast', ann_of: '{i} of {n}', ann_prev: 'Previous', ann_next: 'Next',
     fb_report_this: 'Report this problem', fb_report_game: 'Report a problem',
     fb_bug_lead: 'Tell what happened in your own words. The versions and the log are added for you.',
     fb_idea_lead: 'Tell what you would change, and why it would be better.',
@@ -197,6 +199,8 @@ const STR = {
     fb_rule_search: 'Mira primero lo que otros enviaron: quizá ya está, y un voto ayuda más que una copia.',
     fb_rule_one: 'Un fallo o una idea por mensaje, para poder seguir y cerrar cada uno.',
     fb_rule_account: 'Para enviar hace falta una cuenta gratuita de GitHub. Sin ella puedes leerlo todo igualmente.',
+    ann_title: 'Avisos', ann_new: 'Aviso nuevo', ann_new_many: '{n} avisos nuevos', ann_label: 'Aviso',
+    ann_important: 'Importante', ann_from: 'de snicolast', ann_of: '{i} de {n}', ann_prev: 'Anterior', ann_next: 'Siguiente',
     fb_report_this: 'Informar de este fallo', fb_report_game: 'Informar de un fallo',
     fb_bug_lead: 'Cuenta con tus palabras qué pasó. Las versiones y el registro se añaden solos.',
     fb_idea_lead: 'Cuenta qué cambiarías y por qué sería mejor.',
@@ -250,6 +254,9 @@ const ICONS = {
   joystick: '<rect x="3" y="15" width="18" height="6" rx="2"/><path d="M12 15V9"/><circle cx="12" cy="6" r="3"/><path d="M7 18h2"/>',
   ban: '<circle cx="12" cy="12" r="8.500"/><path d="M6 6l12 12"/>',
   search: '<circle cx="11" cy="11" r="6.500"/><path d="M16 16l4.500 4.500"/>',
+  megaphone: '<path d="M3.5 10.5v3a1.500 1.500 0 0 0 1.500 1.500H7l9 4.500V4.500L7 9H5a1.500 1.500 0 0 0-1.500 1.500z"/><path d="M7.500 15l1.300 4.500h2.400l-1-4"/><path d="M19 9.500a3.500 3.500 0 0 1 0 5"/>',
+  chevl: '<path d="M15 6l-6 6 6 6"/>',
+  chevr: '<path d="M9 6l6 6-6 6"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 };
 const icon = (name) => {
@@ -1181,6 +1188,94 @@ const PHASES = [
   [/^Copying/, 'ph_place'],
 ];
 
+// Announcements: notes from the author that are not news of a game (help
+// wanted, a call for testers, something important). They come from
+// announcements.json in the Hub; the Rust side leaves out those that have
+// expired or are for a game that is not installed, and says which ones the
+// user has already closed. One not seen yet makes the megaphone in the title
+// bar beat; closing the window marks what it showed as seen, so it stays
+// quiet until there is a new one. An important one opens by itself.
+let annClose = null;
+const annAll = () => (snap && snap.announcements) || [];
+const annUnseen = () => annAll().filter((a) => !a.seen);
+
+function renderAnnounce() {
+  const unseen = annUnseen();
+  const b = $('announce');
+  b.hidden = !annAll().length;
+  b.classList.toggle('unread', unseen.length > 0);
+  b.classList.toggle('important', unseen.some((a) => a.level === 'important'));
+  b.title = t('ann_title');
+  $('announce-label').textContent = unseen.length === 1 ? (unseen[0].label || t('ann_new'))
+    : unseen.length ? t('ann_new_many', { n: unseen.length }) : '';
+}
+
+// The text is plain: a line is a paragraph, and lines that start with "- "
+// make a list. Nothing in it is read as HTML.
+function annBody(lines) {
+  const out = [];
+  let list = null;
+  for (const line of lines) {
+    if (line.startsWith('- ')) {
+      if (!list) { list = el('ul', { class: 'ann-list' }); out.push(list); }
+      list.append(el('li', {}, line.slice(2)));
+    } else { list = null; out.push(el('p', {}, line)); }
+  }
+  return out;
+}
+
+function openAnnouncements(startId) {
+  const all = annAll();
+  if (!all.length || annClose) return;
+  let i = Math.max(0, all.findIndex((a) => a.id === (startId ?? annUnseen()[0]?.id)));
+  const shown = new Set();
+  const box = el('div', { class: 'modal ann', role: 'dialog', 'aria-modal': 'true' });
+  annClose = async () => {
+    annClose = null;
+    box.remove();
+    const ids = all.filter((a) => shown.has(a.id) && !a.seen).map((a) => a.id);
+    if (ids.length) await update('mark_announcements_seen', { ids });
+    else renderAnnounce();
+  };
+  box.addEventListener('click', (e) => { if (e.target === box) annClose(); });
+  const draw = () => {
+    const a = all[i];
+    shown.add(a.id);
+    const p = a.game && snap.projects.find((x) => x.id === a.game);
+    const head = el('div', { class: 'ann-head' + (p ? ' game' : '') });
+    if (p) {
+      head.style.backgroundImage = gradient(p);
+      if (p.hero) head.append(picture(p.hero, 'ann-hero'));
+      if (p.logo) head.append(picture(p.logo, 'ann-logo'));
+    } else head.append(el('span', { class: 'ann-art', 'aria-hidden': 'true' }, icon('megaphone')));
+    head.append(
+      el('div', { class: 'ann-tags' },
+        el('span', { class: 'ann-badge' }, icon('megaphone'), a.label || t('ann_label')),
+        a.level === 'important' ? el('span', { class: 'ann-badge important' }, t('ann_important')) : null),
+      el('button', { class: 'ann-x', 'aria-label': t('close'), onclick: () => annClose() }),
+    );
+    head.querySelector('.ann-x').innerHTML = '<svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg>';
+    const meta = el('div', { class: 'ann-meta' },
+      el('img', { src: 'img/snicolast.png', alt: 'snicolast', class: 'ann-by', draggable: 'false' }),
+      el('span', { class: 'dim' }, [a.date ? dateLabel(a.date) : null, p ? p.name : null].filter(Boolean).join(' · ')));
+    const links = (a.buttons || []).slice(0, 2).map((btn, n) =>
+      el('button', { class: 'btn ' + (n === 0 ? 'primary' : ''), onclick: () => { openLink(btn.url); annClose(); } },
+        el('span', {}, btn.label), icon('external')));
+    const pager = all.length > 1 ? el('div', { class: 'ann-pager' },
+      el('button', { class: 'btn ghost small', 'aria-label': t('ann_prev'), disabled: i === 0, onclick: () => { i--; draw(); } }, icon('chevl')),
+      el('span', { class: 'dim small' }, t('ann_of', { i: i + 1, n: all.length })),
+      el('button', { class: 'btn ghost small', 'aria-label': t('ann_next'), disabled: i === all.length - 1, onclick: () => { i++; draw(); } }, icon('chevr'))) : el('span');
+    box.replaceChildren(el('div', { class: 'modal-box ann-box' + (a.level === 'important' ? ' important' : '') },
+      head,
+      el('div', { class: 'ann-main' }, meta, el('h2', {}, a.title), el('div', { class: 'ann-text' }, ...annBody(a.body || []))),
+      el('div', { class: 'ann-foot' }, pager,
+        el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => annClose() }, t('close')), ...links.reverse()))));
+    (box.querySelector('.btn.primary') || box.querySelector('.ann-foot .btn.ghost:last-child'))?.focus();
+  };
+  draw();
+  document.body.append(box);
+}
+
 function render() {
   if (!snap) return;
   lang = STR[snap.language] ? snap.language : lang;
@@ -1200,6 +1295,7 @@ function render() {
     $('self-update').title = selfUpdate.notes || '';
   }
   noticeAchievements();
+  renderAnnounce();
   renderHome();
   renderLibrary();
   if (view === 'project') renderProject();
@@ -1246,6 +1342,7 @@ $('self-update').addEventListener('click', async () => {
   selfUpdate.installing = false;
   render();
 });
+$('announce').addEventListener('click', () => openAnnouncements());
 $('lib-refresh').addEventListener('click', () => refresh());
 $('home-refresh').addEventListener('click', () => refresh());
 $('home-video').addEventListener('click', () => { const u = $('home-video').dataset.url; if (u) openLink(u); });
@@ -1284,6 +1381,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (licenseBox) { if (!licenseBox.dataset.must) { licenseBox.remove(); licenseBox = null; } }
     else if (closeAsk) closeAsk();
+    else if (annClose) annClose();
     else if (!$('lightbox').hidden) $('lightbox').hidden = true;
     else if (view === 'project') goBack();
   }
@@ -1366,4 +1464,6 @@ T.event.listen('task', async ({ payload }) => {
   if (snap && snap.config_error) toast(`${t('settings_damaged')} ${snap.config_error}`);
   // Project list and news from GitHub; the built-in list shows meanwhile
   await refresh();
+  const important = annUnseen().find((a) => a.level === 'important');
+  if (important) openAnnouncements(important.id);
 })();
