@@ -13,6 +13,7 @@ pub mod config;
 pub mod kit;
 pub mod manifest;
 pub mod news;
+pub mod portable;
 pub mod project;
 pub mod registry;
 pub mod requirements;

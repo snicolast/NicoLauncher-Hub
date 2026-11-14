@@ -42,6 +42,23 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npx --yes @tauri-apps/cli@2 build -- --locked
+      # The same exe, with the portable.txt that keeps its settings, build kit
+      # and window data in its own folder. Signed like the installer: a portable
+      # launcher updates itself from this zip (docs/portable.md).
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          $dir = "target/portable"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item target/release/nicolauncher.exe "$dir/NicoLauncher.exe"
+          Copy-Item docs/portable.txt "$dir/portable.txt"
+          Compress-Archive -Path "$dir/*" -DestinationPath target/release/bundle/nsis/NicoLauncher-portable.zip -Force
+      - name: Sign the portable zip
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx --yes @tauri-apps/cli@2 signer sign --app-version "$VERSION" target/release/bundle/nsis/NicoLauncher-portable.zip
       - name: Write latest.json
         shell: bash
         run: |
@@ -58,6 +75,10 @@ jobs:
               "windows-x86_64": {
                 "signature": "$(cat NicoLauncher-setup.exe.sig)",
                 "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/NicoLauncher-setup.exe"
+              },
+              "windows-x86_64-portable": {
+                "signature": "$(cat NicoLauncher-portable.zip.sig)",
+                "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/NicoLauncher-portable.zip"
               }
             }
           }
@@ -69,5 +90,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd target/release/bundle/nsis
-          gh release create "$GITHUB_REF_NAME" NicoLauncher-setup.exe NicoLauncher-setup.exe.sig latest.json \
+          gh release create "$GITHUB_REF_NAME" NicoLauncher-setup.exe NicoLauncher-setup.exe.sig \
+            NicoLauncher-portable.zip NicoLauncher-portable.zip.sig latest.json \
             --repo "$GITHUB_REPOSITORY" --title "NicoLauncher $VERSION" --generate-notes

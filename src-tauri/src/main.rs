@@ -6,6 +6,7 @@ use hub_core::announcements::{self, Announcement};
 use hub_core::build;
 use hub_core::config::{self, Config};
 use hub_core::news::{self, Entry};
+use hub_core::portable::{self, Places};
 use hub_core::project::{self, Script, State};
 use hub_core::registry::{Project, Registry};
 use hub_core::requirements::{self, Check, Requires};
@@ -22,7 +23,9 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 
 struct Hub {
-    config_path: PathBuf,
+    /// Where the settings and the build kit are: AppData, or the launcher's
+    /// own folder when it runs portable.
+    places: Places,
     config: Mutex<Config>,
     /// Set when the settings file could not be read: shown, and nothing is
     /// saved over the file until the user has seen it.
@@ -48,6 +51,8 @@ struct Running {
 #[derive(Serialize)]
 struct Snapshot {
     version: &'static str,
+    /// The launcher's folder, when it runs portable.
+    portable: Option<PathBuf>,
     install_root: Option<PathBuf>,
     /// The install folder of the settings, when it is not on the disk.
     missing_root: Option<PathBuf>,
@@ -130,7 +135,10 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
     // An install folder that is no longer on the disk (deleted, or on a drive
     // that is not plugged in) is shown as not chosen, and named, so the user
     // picks one again instead of finding every project "not installed"
-    let missing_root = config.install_root.take_if(|root| !root.is_dir());
+    let missing_root = config.install_root().filter(|root| !root.is_dir());
+    if missing_root.is_some() {
+        config.install_root = None;
+    }
     let registry = hub.registry.lock().unwrap().clone();
     let remote = hub.remote_news.lock().unwrap();
     let projects: Vec<ProjectView> = registry
@@ -197,7 +205,8 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
     let launcher_news = hub.launcher_news.lock().unwrap().clone();
     Snapshot {
         version: env!("CARGO_PKG_VERSION"),
-        install_root: config.install_root.clone(),
+        portable: hub.places.portable.clone(),
+        install_root: config.install_root(),
         missing_root,
         language: config.language.clone(),
         license_accepted: config.license_accepted.is_some_and(|v| v >= LICENSE_VERSION),
@@ -231,12 +240,12 @@ fn launcher_update(config: &Config, news: &[Entry]) -> Option<LauncherNews> {
 
 fn change_config(hub: &Hub, change: impl FnOnce(&mut Config)) -> Result<(), String> {
     if let Some(e) = hub.config_error.lock().unwrap().as_ref() {
-        return Err(format!("{e} Fix or delete {} and start the launcher again.", hub.config_path.display()));
+        return Err(format!("{e} Fix or delete {} and start the launcher again.", hub.places.config.display()));
     }
     let mut config = hub.config.lock().unwrap();
     let mut next = config.clone();
     change(&mut next);
-    next.save(&hub.config_path)?;
+    next.save(&hub.places.config)?;
     *config = next;
     Ok(())
 }
@@ -290,11 +299,23 @@ struct LauncherUpdate {
     notes: Option<String>,
 }
 
+/// The installer for an installed launcher; the portable zip, signed with the
+/// same key, for a portable one (the installer would install a second copy in
+/// AppData instead of updating this one).
+fn updater(app: &AppHandle) -> Result<tauri_plugin_updater::Updater, String> {
+    let builder = app.updater_builder();
+    let builder = match app.state::<Hub>().places.portable {
+        Some(_) => builder.target(portable::UPDATE_TARGET),
+        None => builder,
+    };
+    builder.build().map_err(|e| e.to_string())
+}
+
 /// Asks the launcher's releases on GitHub whether there is a newer version.
 /// Only the launcher itself: projects are never downloaded built.
 #[tauri::command]
 async fn check_launcher_update(app: AppHandle) -> Result<Option<LauncherUpdate>, String> {
-    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    let update = updater(&app)?.check().await.map_err(|e| e.to_string())?;
     Ok(update.map(|u| LauncherUpdate { version: u.version.clone(), notes: u.body.clone() }))
 }
 
@@ -305,9 +326,22 @@ async fn install_launcher_update(app: AppHandle) -> Result<(), String> {
     if app.state::<Hub>().task.lock().unwrap().is_some() {
         return Err("A task is still running: wait for it to end first.".into());
     }
-    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    let update = updater(&app)?.check().await.map_err(|e| e.to_string())?;
     let update = update.ok_or("This is already the latest version.")?;
-    update.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    if app.state::<Hub>().places.portable.is_some() {
+        // Checked against the signature before it comes back
+        let zip = update.download(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+        let exe = portable::exe_from_zip(&zip)?;
+        let current = std::env::current_exe().map_err(|e| e.to_string())?;
+        portable::replace_exe(&current, &exe)?;
+        // Started from the path it was read from: the running process now
+        // sits at the .old name
+        std::process::Command::new(&current).spawn().map_err(|e| format!("Could not start the new version: {e}"))?;
+        app.exit(0);
+        return Ok(());
+    } else {
+        update.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    }
     app.restart()
 }
 
@@ -319,7 +353,7 @@ fn set_install_root(hub: tauri::State<Hub>, path: PathBuf) -> Result<Snapshot, S
     if let Some(problem) = config::folder_problem(&path) {
         return Err(problem);
     }
-    change_config(&hub, |c| c.install_root = Some(path))?;
+    change_config(&hub, |c| c.install_root = Some(c.store(path)))?;
     Ok(snapshot_of(&hub))
 }
 
@@ -381,7 +415,10 @@ fn set_input(hub: tauri::State<Hub>, id: String, path: PathBuf) -> Result<Snapsh
     if !path.is_file() {
         return Err(format!("{} is not a file.", path.display()));
     }
-    change_config(&hub, |c| c.projects.entry(id).or_default().input = Some(path))?;
+    change_config(&hub, |c| {
+        let path = c.store(path);
+        c.projects.entry(id).or_default().input = Some(path);
+    })?;
     Ok(snapshot_of(&hub))
 }
 
@@ -395,7 +432,10 @@ fn set_project_dir(hub: tauri::State<Hub>, id: String, path: PathBuf) -> Result<
     if let Some(problem) = config::folder_problem(&path) {
         return Err(problem);
     }
-    change_config(&hub, |c| c.projects.entry(id).or_default().dir = Some(path))?;
+    change_config(&hub, |c| {
+        let path = c.store(path);
+        c.projects.entry(id).or_default().dir = Some(path);
+    })?;
     Ok(snapshot_of(&hub))
 }
 
@@ -447,9 +487,12 @@ fn uninstall(hub: tauri::State<Hub>, id: String) -> Result<Snapshot, String> {
     // Also after a failure halfway: what is left is shown as it is
     if !matches!(result, Err(_) if dir.is_dir()) {
         change_config(&hub, |c| {
+            let file_gone = !c.input(&id).is_some_and(|file| file.is_file());
             if let Some(pc) = c.projects.get_mut(&id) {
                 pc.dir = None;
-                pc.input.take_if(|file| !file.is_file());
+                if file_gone {
+                    pc.input = None;
+                }
             }
         })?;
     }
@@ -485,6 +528,7 @@ fn start_task(app: AppHandle, hub: tauri::State<Hub>, id: String, action: String
     if action != "setup" && project::is_running(&p, &dir) {
         return Err(format!("{} is running: close it first.", p.name));
     }
+    let kit_root = hub.places.kit.clone();
     let cancel = Cancel::new();
     {
         let mut task = hub.task.lock().unwrap();
@@ -497,7 +541,7 @@ fn start_task(app: AppHandle, hub: tauri::State<Hub>, id: String, action: String
         let mut log = |text: &str| {
             let _ = app.emit("task", TaskEvent::Line { project: id.clone(), text: text.to_string() });
         };
-        let result = run_task(&p, &dir, input.as_deref(), &action, &cancel, &mut log);
+        let result = run_task(&p, &dir, input.as_deref(), &kit_root, &action, &cancel, &mut log);
         let (ok, message) = match result {
             _ if cancel.was_asked() => (false, "Cancelled.".to_string()),
             Ok(()) => (true, String::new()),
@@ -513,6 +557,7 @@ fn run_task(
     p: &Project,
     dir: &std::path::Path,
     input: Option<&std::path::Path>,
+    kit_root: &std::path::Path,
     action: &str,
     cancel: &Cancel,
     log: &mut dyn FnMut(&str),
@@ -551,9 +596,11 @@ fn run_task(
         if let Some(manifest) = build::manifest_in(dir)? {
             // Its tools from the build kit first: downloaded once, into the
             // launcher's own folder
-            let kit_root = hub_core::kit::default_root();
-            build::install_kit(&manifest, &kit_root, cancel, log)?;
-            match build::Tools::find(&manifest, input, &kit_root) {
+            if let Some(problem) = portable::kit_problem(kit_root) {
+                return Err(problem);
+            }
+            build::install_kit(&manifest, kit_root, cancel, log)?;
+            match build::Tools::find(&manifest, input, kit_root) {
                 Ok(tools) => {
                     let warnings = build::run(&manifest, dir, &tools, cancel, log)?;
                     for w in &warnings {
@@ -580,17 +627,29 @@ fn run_task(
 }
 
 fn main() {
-    let config_path = Config::default_path();
-    let (config, config_error) = match Config::load(&config_path) {
+    let places = Places::here();
+    let (mut config, config_error) = match Config::load(&places.config) {
         Ok(c) => (c, None),
         Err(e) => (Config::default(), Some(e)),
     };
+    config.base = places.config.parent().map(PathBuf::from).unwrap_or_default();
+    config.portable = places.portable.is_some();
+    let mut context = tauri::generate_context!();
+    if let Some(dir) = &places.webview {
+        for window in &mut context.config_mut().app.windows {
+            window.data_directory = Some(dir.clone());
+        }
+    }
+    // What a portable update left aside, once the old launcher has closed
+    if let Ok(exe) = std::env::current_exe() {
+        std::thread::spawn(move || portable::remove_old_exe(&exe));
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Hub {
-            config_path,
+            places,
             config: Mutex::new(config),
             config_error: Mutex::new(config_error),
             registry: Mutex::new(Registry::bundled()),
@@ -623,7 +682,7 @@ fn main() {
             cancel_task,
             start_task
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("could not start NicoLauncher");
 }
 
@@ -636,7 +695,7 @@ mod tests {
     #[test]
     fn a_snapshot_comes_back() {
         let hub = Hub {
-            config_path: PathBuf::from("config.json"),
+            places: Places::for_exe_dir(None),
             config: Mutex::new(Config { license_accepted: Some(LICENSE_VERSION), ..Config::default() }),
             config_error: Mutex::new(None),
             registry: Mutex::new(Registry::bundled()),
