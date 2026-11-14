@@ -22,6 +22,10 @@ pub struct Config {
     /// megaphone beat.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub seen_announcements: Vec<String>,
+    /// The launcher version whose news the user has seen: a newer one running
+    /// shows what changed since, once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_version: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

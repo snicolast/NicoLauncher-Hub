@@ -51,6 +51,53 @@ pub fn newer_than(remote: &[Entry], local: &[Entry]) -> Vec<Entry> {
     remote.iter().filter(|e| e.number > have).cloned().collect()
 }
 
+/// The launcher version an entry of its own news is about: the entries of a
+/// release start "Launcher 0.3.6: ...". Others (a new project, a notice) are
+/// about no version.
+pub fn release_of(entry: &Entry) -> Option<&str> {
+    let rest = entry.lines.first()?.strip_prefix("Launcher ")?;
+    let (version, _) = rest.split_once(':')?;
+    parse_version(version).map(|_| version)
+}
+
+fn parse_version(v: &str) -> Option<Vec<u32>> {
+    let parts: Option<Vec<u32>> = v.split('.').map(|n| n.parse().ok()).collect();
+    parts.filter(|p| p.len() == 3)
+}
+
+/// One launcher release in its news: the version and what it brought.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct Release {
+    pub version: String,
+    pub title: String,
+    pub lines: Vec<String>,
+}
+
+/// What the launcher brought after `from` up to `to` (the running version),
+/// newest first, with "Launcher 0.3.6: " taken off. With `from` unknown (a
+/// launcher too old to have recorded it), only what `to` brought.
+pub fn launcher_changes(entries: &[Entry], from: Option<&str>, to: &str) -> Vec<Release> {
+    let (Some(to_v), from_v) = (parse_version(to), from.and_then(parse_version)) else { return Vec::new() };
+    entries
+        .iter()
+        .filter(|e| {
+            release_of(e).and_then(parse_version).is_some_and(|v| {
+                v <= to_v && from_v.as_ref().map_or(v == to_v, |f| v > *f)
+            })
+        })
+        .map(|e| {
+            let mut lines = e.lines.clone();
+            let rest = lines[0].split_once(':').map_or("", |(_, r)| r.trim_start()).to_string();
+            if rest.is_empty() {
+                lines.remove(0);
+            } else {
+                lines[0] = rest;
+            }
+            Release { version: release_of(e).unwrap_or_default().to_string(), title: e.title.clone(), lines }
+        })
+        .collect()
+}
+
 /// The launcher's own news, for its home page: announcements that are not
 /// about one project. Same format, in the launcher's public repository (NicoLauncher-Hub).
 pub const LAUNCHER_NEWS_URL: &str = "https://raw.githubusercontent.com/snicolast/NicoLauncher-Hub/main/news.txt";
@@ -69,6 +116,23 @@ pub fn fetch(project: &Project) -> Result<Vec<Entry>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const LAUNCHER: &str = "[6] 2026-11-15\n- Launcher 0.3.6: popups\n- more\n\n[5] 2026-11-14\n- A new project\n\n[4] 2026-11-14\n- Launcher 0.3.5: folders\n\n[3] 2026-11-13\n- Launcher 0.3.4: feedback\n\n[2] 2026-11-12\n- Launcher 0.3.10: later\n";
+
+    #[test]
+    fn picks_what_a_launcher_update_brought() {
+        let e = parse(LAUNCHER);
+        let versions = |v: Vec<Release>| v.into_iter().map(|r| r.version).collect::<Vec<_>>();
+        assert_eq!(versions(launcher_changes(&e, Some("0.3.4"), "0.3.6")), vec!["0.3.6", "0.3.5"]);
+        assert_eq!(versions(launcher_changes(&e, Some("0.3.5"), "0.3.6")), vec!["0.3.6"]);
+        assert!(launcher_changes(&e, Some("0.3.6"), "0.3.6").is_empty());
+        assert_eq!(versions(launcher_changes(&e, None, "0.3.6")), vec!["0.3.6"]);
+        // 0.3.10 is newer than 0.3.6, compared as numbers
+        assert_eq!(versions(launcher_changes(&e, Some("0.3.6"), "0.3.10")), vec!["0.3.10"]);
+        let first = &launcher_changes(&e, Some("0.3.5"), "0.3.6")[0];
+        assert_eq!((first.title.as_str(), first.lines.clone()), ("2026-11-15", vec!["popups".to_string(), "more".to_string()]));
+        assert_eq!(release_of(&e[1]), None);
+    }
 
     const SAMPLE: &str = "# what is new\n#\n\n[10] 2026-11-09\n- New explosions\n- Flight sticks\n\n[9] 2026-11-08\n- Mac build\n";
 
