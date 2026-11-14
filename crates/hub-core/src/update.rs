@@ -118,7 +118,7 @@ pub fn apply(src: &Path, files: &[(String, String)], dest: &Path, state_dir: &Pa
 }
 
 /// `2026-11-11_093000` (UTC), for the backup folder's name.
-fn timestamp() -> String {
+pub(crate) fn timestamp() -> String {
     let secs = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     let (days, rest) = (secs / 86400, secs % 86400);
     // Days since 1970 to a date (Howard Hinnant's civil_from_days)

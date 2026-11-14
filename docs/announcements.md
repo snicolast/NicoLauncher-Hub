@@ -51,3 +51,6 @@ megaphone stays quiet until an announcement with a new `id` arrives. An
 Unknown keys are ignored, so later versions can add some (a Spanish text,
 say) without breaking launchers already installed. A file that cannot be read
 shows no announcements; it never stops the launcher.
+
+`examples/announcements.json` has two complete ones: a general "Help wanted"
+and one for a single game.
