@@ -612,8 +612,9 @@ let spotTimer = null;
 function spotNext() {
   const list = snap ? snap.projects : [];
   // Not while something else has the eye: another page, a question on screen,
-  // the pointer on the spotlight, or the window out of sight
-  if (list.length < 2 || view !== 'home' || document.hidden || document.querySelector('.modal') || $('view-home').querySelector('.spot:hover')) return;
+  // the pointer on the spotlight, or the window out of sight or in the
+  // background (a game in front of it)
+  if (list.length < 2 || view !== 'home' || document.hidden || !document.hasFocus() || document.querySelector('.modal') || $('view-home').querySelector('.spot:hover')) return;
   const at = list.findIndex((p) => p.id === $('spot-bg').dataset.id);
   spot = list[(at + 1) % list.length].id;
   renderHome();
@@ -1507,6 +1508,13 @@ async function refresh() {
 
 const refreshDue = () => snap && !working() && Date.now() - lastRefresh >= AUTO_REFRESH_MS;
 setInterval(() => { if (refreshDue()) refresh(); }, 60 * 1000);
+
+// The window stays open behind a game it started, and WebView2 keeps drawing
+// it there: its animations stop while another window is in use (style.css)
+const markIdle = () => document.documentElement.classList.toggle('idle', !document.hasFocus());
+window.addEventListener('blur', markIdle);
+window.addEventListener('focus', markIdle);
+markIdle();
 
 // Back in the launcher after doing something else (deleting or moving a
 // folder in Explorer, say): look at the disk again, and at GitHub too if
