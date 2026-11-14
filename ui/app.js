@@ -1287,10 +1287,16 @@ function openAnnouncements(startId) {
 // updates loses nothing. The same window for a game and for the launcher.
 let clClose = null;
 const CL_MAX = 12;
-function changelog({ head, title, from, to, entries, actions, more }) {
+function changelog({ head, title, from, to, entries, actions, all }) {
   if (clClose) clClose();
   const box = el('div', { class: 'modal ann cl', role: 'dialog', 'aria-modal': 'true' });
-  clClose = () => { clClose = null; box.remove(); };
+  // A long list scrolls with the wheel, the bar, or the keyboard; a fade at
+  // the bottom says there is more to read
+  const keys = (e) => {
+    const step = { ArrowDown: 60, ArrowUp: -60, PageDown: main.clientHeight - 60, PageUp: 60 - main.clientHeight, End: 1e6, Home: -1e6 }[e.key];
+    if (step) { e.preventDefault(); main.scrollBy({ top: step, behavior: 'smooth' }); }
+  };
+  clClose = () => { clClose = null; document.removeEventListener('keydown', keys); box.remove(); };
   box.addEventListener('click', (e) => { if (e.target === box) clClose(); });
   const x = el('button', { class: 'ann-x', 'aria-label': t('close'), onclick: () => clClose() });
   x.innerHTML = '<svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg>';
@@ -1304,13 +1310,23 @@ function changelog({ head, title, from, to, entries, actions, more }) {
     el('h3', {}, el('span', { class: 'cl-num' }, e.label), el('span', { class: 'dim' }, dateLabel(e.title)),
       n === 0 ? el('span', { class: 'chip new' }, t('cl_latest')) : null),
     el('ul', { class: 'ann-list' }, ...e.lines.map((line) => el('li', {}, line)))));
-  box.append(el('div', { class: 'modal-box ann-box cl-box' },
+  const main = el('div', { class: 'ann-main' }, el('h2', {}, title), meta, el('div', { class: 'cl-list' }, ...list));
+  const inner = el('div', { class: 'modal-box ann-box cl-box' });
+  const more = () => inner.classList.toggle('more', main.scrollTop + main.clientHeight < main.scrollHeight - 4);
+  main.addEventListener('scroll', more);
+  inner.append(
     head,
-    el('div', { class: 'ann-main' }, el('h2', {}, title), meta, el('div', { class: 'cl-list' }, ...list)),
+    main,
+    el('div', { class: 'cl-fade', 'aria-hidden': 'true' }),
     el('div', { class: 'ann-foot' },
-      el('button', { class: 'btn ghost small', onclick: () => { clClose(); more(); } }, t('cl_all')),
-      el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => clClose() }, t('close')), ...(actions || [])))));
+      el('button', { class: 'btn ghost small', onclick: () => { clClose(); all(); } }, t('cl_all')),
+      el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => clClose() }, t('close')), ...(actions || []))));
+  box.append(inner);
   document.body.append(box);
+  document.addEventListener('keydown', keys);
+  more();
+  // Pictures that load later change nothing below them, but the fonts can
+  requestAnimationFrame(more);
   (box.querySelector('.btn.primary') || box.querySelector('.modal-actions .btn'))?.focus();
 }
 
@@ -1329,7 +1345,7 @@ function showChangelog(p, from) {
     actions: p.state === 'ready'
       ? [el('button', { class: 'btn primary', onclick: () => { clClose(); call('launch', { id: p.id }); } }, icon('play'), el('span', {}, t('do_play')))]
       : [],
-    more: () => openProject(p.id),
+    all: () => openProject(p.id),
   });
 }
 
@@ -1349,7 +1365,7 @@ function noticeLauncherUpdate() {
     head, title: t('cl_title_launcher'),
     from: up.from ? v(up.from) : null, to: v(snap.version),
     entries: up.changes.map((e) => ({ ...e, label: v(e.version) })),
-    more: () => show('home'),
+    all: () => show('home'),
   });
   update('mark_launcher_seen');
 }
