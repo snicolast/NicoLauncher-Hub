@@ -31,8 +31,33 @@ pub(crate) fn err<E: std::fmt::Display>(what: &str) -> impl FnOnce(E) -> String 
     move |e| format!("{what}: {e}")
 }
 
+/// The certificates HTTPS trusts: Mozilla's list, built in, plus whatever the
+/// system has. Only the system's list failed on some PCs (issue: "invalid peer
+/// certificate: UnknownIssuer"): Windows adds a root to its list only when one
+/// of its own programs first needs it, so GitHub's could be missing. The
+/// system's list is still read for what Mozilla does not have: antivirus and
+/// company proxies that check HTTPS put their own certificate there.
+fn tls_config() -> std::sync::Arc<rustls::ClientConfig> {
+    static CONFIG: std::sync::OnceLock<std::sync::Arc<rustls::ClientConfig>> = std::sync::OnceLock::new();
+    CONFIG
+        .get_or_init(|| {
+            let mut roots = rustls::RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() };
+            if let Ok(system) = rustls_native_certs::load_native_certs() {
+                roots.add_parsable_certificates(system);
+            }
+            let config = rustls::ClientConfig::builder_with_provider(rustls::crypto::ring::default_provider().into())
+                .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
+                .expect("ring supports TLS 1.2 and 1.3")
+                .with_root_certificates(roots)
+                .with_no_client_auth();
+            std::sync::Arc::new(config)
+        })
+        .clone()
+}
+
 pub(crate) fn agent(read_timeout_secs: u64) -> ureq::Agent {
     ureq::AgentBuilder::new()
+        .tls_config(tls_config())
         .timeout_connect(std::time::Duration::from_secs(20))
         .timeout_read(std::time::Duration::from_secs(read_timeout_secs))
         .user_agent(USER_AGENT)
