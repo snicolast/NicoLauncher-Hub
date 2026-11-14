@@ -63,7 +63,18 @@ struct Snapshot {
     latest_video: Option<Video>,
     /// The author's announcements this user should see, newest first.
     announcements: Vec<AnnouncementView>,
+    /// After the launcher updated itself: what it brought since the version
+    /// the user had, until they have seen it. None when there is nothing new
+    /// to show; empty while the news are not loaded or say nothing of it.
+    launcher_update: Option<LauncherNews>,
     projects: Vec<ProjectView>,
+}
+
+#[derive(Serialize)]
+struct LauncherNews {
+    /// The version the user had, when the launcher recorded it.
+    from: Option<String>,
+    changes: Vec<news::Release>,
 }
 
 #[derive(Serialize)]
@@ -192,7 +203,20 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
         launcher_news: hub.launcher_news.lock().unwrap().clone(),
         latest_video: hub.latest_video.lock().unwrap().clone(),
         announcements,
+        launcher_update: launcher_update(&config, &hub.launcher_news.lock().unwrap()),
         projects,
+    }
+}
+
+/// What a launcher update brought, while the user has not seen it. A user
+/// with no version recorded who accepted the license came from a launcher
+/// older than the record: they see what this version brought.
+fn launcher_update(config: &Config, news: &[Entry]) -> Option<LauncherNews> {
+    let current = env!("CARGO_PKG_VERSION");
+    match config.last_version.as_deref() {
+        Some(v) if v == current => None,
+        None if config.license_accepted.is_none() => None,
+        from => Some(LauncherNews { from: from.map(str::to_string), changes: news::launcher_changes(news, from, current) }),
     }
 }
 
@@ -310,6 +334,13 @@ fn mark_announcements_seen(hub: tauri::State<Hub>, ids: Vec<String>) -> Result<S
     Ok(snapshot_of(&hub))
 }
 
+/// The news of this launcher version have been seen (or there were none).
+#[tauri::command]
+fn mark_launcher_seen(hub: tauri::State<Hub>) -> Result<Snapshot, String> {
+    change_config(&hub, |c| c.last_version = Some(env!("CARGO_PKG_VERSION").to_string()))?;
+    Ok(snapshot_of(&hub))
+}
+
 #[tauri::command]
 fn license_text() -> &'static str {
     LICENSE
@@ -317,7 +348,13 @@ fn license_text() -> &'static str {
 
 #[tauri::command]
 fn accept_license(hub: tauri::State<Hub>) -> Result<Snapshot, String> {
-    change_config(&hub, |c| c.license_accepted = Some(LICENSE_VERSION))?;
+    change_config(&hub, |c| {
+        // A new user has nothing to catch up on
+        if c.license_accepted.is_none() {
+            c.last_version = Some(env!("CARGO_PKG_VERSION").to_string());
+        }
+        c.license_accepted = Some(LICENSE_VERSION);
+    })?;
     Ok(snapshot_of(&hub))
 }
 
@@ -565,6 +602,7 @@ fn main() {
             license_text,
             accept_license,
             mark_announcements_seen,
+            mark_launcher_seen,
             quit,
             set_input,
             set_project_dir,

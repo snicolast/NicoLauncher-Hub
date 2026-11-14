@@ -561,5 +561,22 @@ main { isolation: isolate; }
 .ann-foot .modal-actions { margin-top: 0; }
 .ann-foot .btn { display: inline-flex; align-items: center; gap: 8px; }
 .ann-foot .btn .ico { width: 15px; height: 15px; opacity: .85; }
+/* After an update: the new version and every news entry since the old one */
+.ann-badge.good { --tone: 61, 220, 151; }
+.cl-box .ann-main { padding-bottom: 4px; }
+.ann-head.cl-launcher { height: 140px; }
+.cl-mark { position: absolute; z-index: 1; right: 26px; bottom: 14px; height: 76px; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .5)); }
+.cl-box .ann-main h2 { margin-bottom: 8px; }
+.cl-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 16px; font-size: 13px; }
+.cl-ver { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.cl-ver .ico { width: 14px; height: 14px; color: var(--dim); }
+.cl-old { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(152, 162, 184, .5); }
+.cl-new { color: var(--good); }
+.cl-list { display: grid; gap: 18px; padding-bottom: 6px; }
+.cl-entry { display: grid; gap: 8px; }
+.cl-entry h3 { display: flex; align-items: center; gap: 10px; font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.cl-num { font-weight: 700; }
+.cl-entry .ann-list li { color: #d4dae8; line-height: 1.5; }
+.cl-entry:not(.latest) .ann-list li::before { background: var(--dim); box-shadow: none; }
 .ann-pager { display: flex; align-items: center; gap: 4px; margin-left: -10px; }
 .ann-pager .btn.small { padding: 5px 6px; }
