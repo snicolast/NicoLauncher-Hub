@@ -32,6 +32,8 @@ const STR = {
     rename_title: 'Rename', rename_label: 'Name', rename_save: 'Save',
     rename_lead: 'Give it the name you like: the launcher shows it everywhere, and new desktop shortcuts use it. The game and its folder do not change.',
     rename_hint: 'Leave it empty to go back to {name}.', renamed: 'Now called {name}.',
+    rename_text: 'Show this name instead of the logo',
+    m_text_title: 'Show name instead of logo', m_logo: 'Show logo instead of name',
     m_artwork: 'Change artwork…', art_title: 'Artwork', art_save: 'Save', art_saved: 'Artwork saved.',
     art_cover: 'Cover', art_cover_sub: 'Library, sidebar, Home strip', art_bg: 'Background', art_bg_sub: 'Game page, Home',
     art_drag: 'Drag to choose what shows', art_preparing: 'Preparing the picture…',
@@ -39,6 +41,9 @@ const STR = {
     art_pick: 'Pick a picture', art_pick_hint: 'One of the game\'s screenshots, or any JPG, PNG or WebP from your PC. You can also drop one here.',
     art_default: 'Default', art_yours: 'Your picture', art_from_pc: 'From your PC…', art_files: 'Pictures',
     art_same_cover: 'Use it for the background too', art_same_bg: 'Same as the cover', art_reset: 'Back to default',
+    art_logo: 'Logo', art_logo_sub: 'Instead of the name', art_logo_pick: 'Pick a logo',
+    art_logo_hint: 'A PNG with a see-through background looks best. Pick one from your PC, or drop it here.',
+    art_logo_name: 'The name', art_card: 'Library', art_yours_logo: 'Your logo',
     installed_title: 'All installed!', installed_body: 'You have just built {name} on your own PC, and it is ready to play. Press Play whenever you want.',
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
@@ -153,6 +158,8 @@ const STR = {
     rename_title: 'Renombrar', rename_label: 'Nombre', rename_save: 'Guardar',
     rename_lead: 'Ponle el nombre que quieras: el launcher lo muestra en todas partes y los accesos directos nuevos lo usan. El juego y su carpeta no cambian.',
     rename_hint: 'Déjalo vacío para volver a {name}.', renamed: 'Ahora se llama {name}.',
+    rename_text: 'Mostrar este nombre en vez del logo',
+    m_text_title: 'Mostrar el nombre en vez del logo', m_logo: 'Mostrar el logo en vez del nombre',
     m_artwork: 'Cambiar imágenes…', art_title: 'Imágenes', art_save: 'Guardar', art_saved: 'Imágenes guardadas.',
     art_cover: 'Portada', art_cover_sub: 'Biblioteca, barra lateral, tira de Inicio', art_bg: 'Fondo', art_bg_sub: 'Ficha del juego, Inicio',
     art_drag: 'Arrastra para elegir qué se ve', art_preparing: 'Preparando la imagen…',
@@ -160,6 +167,9 @@ const STR = {
     art_pick: 'Elige una imagen', art_pick_hint: 'Una captura del juego, o cualquier JPG, PNG o WebP de tu PC. También puedes soltarla aquí.',
     art_default: 'De serie', art_yours: 'Tu imagen', art_from_pc: 'Desde tu PC…', art_files: 'Imágenes',
     art_same_cover: 'Usarla también de fondo', art_same_bg: 'La misma que la portada', art_reset: 'Volver a la de serie',
+    art_logo: 'Logo', art_logo_sub: 'En vez del nombre', art_logo_pick: 'Elige un logo',
+    art_logo_hint: 'Queda mejor un PNG con el fondo transparente. Elígelo desde tu PC o suéltalo aquí.',
+    art_logo_name: 'El nombre', art_card: 'Biblioteca', art_yours_logo: 'Tu logo',
     installed_title: '¡Todo instalado!', installed_body: 'Acabas de montar {name} en tu propio PC, y ya está listo para jugar. Pulsa Jugar cuando quieras.',
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
@@ -289,6 +299,7 @@ const ICONS = {
   megaphone: '<path d="M3.5 10.5v3a1.500 1.500 0 0 0 1.500 1.500H7l9 4.500V4.500L7 9H5a1.500 1.500 0 0 0-1.500 1.500z"/><path d="M7.500 15l1.300 4.500h2.400l-1-4"/><path d="M19 9.500a3.500 3.500 0 0 1 0 5"/>',
   chevl: '<path d="M15 6l-6 6 6 6"/>',
   chevr: '<path d="M9 6l6 6-6 6"/>',
+  type: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16.5l-5.5-5.5L5 20"/>',
   move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
   pencil: '<path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>',
@@ -345,6 +356,32 @@ function artPicture(p, kind, cls) {
   const img = picture(src, cls);
   img.style.objectPosition = artFocus(p, kind);
   return img;
+}
+
+// How a game is named in big (game page, Home, its card, its popups): a
+// logo (the user's own, or one its registry entry names), or its name as
+// lettering. Lettering when the user chose it, when there is no logo, and
+// when the logo does not load (no connection)
+const logoSrc = (p) => (p.logo_art ? artUrl(p.logo_art.file) : p.logo);
+const showsLogo = (p) => !!logoSrc(p) && !p.text_title;
+function gameMark(p, cls, textCls) {
+  if (!showsLogo(p)) return titleText(p, textCls);
+  const img = el('img', { src: logoSrc(p), alt: '', class: cls || '', draggable: 'false' });
+  img.addEventListener('load', () => img.classList.add('in'));
+  img.addEventListener('error', () => img.replaceWith(titleText(p, textCls)));
+  return img;
+}
+// The name as a title: the user's own name (or the registry's), large and
+// condensed, over a short accent line. "Main: Sub" or "Main - Sub" sets the
+// second part as a smaller line under the first. A long name is set smaller
+// and may take two lines
+function titleText(p, cls) {
+  const m = /^(.+?)\s*(?::|\s[-–—])\s+(.+)$/.exec(p.name);
+  const main = m ? m[1] : p.name;
+  const size = main.length <= 12 ? 'l' : main.length <= 20 ? 'm' : 's';
+  return el('div', { class: `wordmark ${size} ${cls || ''}`, role: 'img', 'aria-label': p.name },
+    el('span', { class: 'wm-main' }, main),
+    m ? el('span', { class: 'wm-sub' }, m[2]) : null);
 }
 
 // A message in the corner: something went wrong, or (good) something the
@@ -421,12 +458,16 @@ async function addShortcut(p) {
 // The user's own name for a project, kept in their settings only
 async function rename(p) {
   const input = el('input', { type: 'text', value: p.name, placeholder: p.default_name, maxlength: 40, spellcheck: 'false' });
+  // A game with a logo shows another name in it: the new name can show in
+  // its place
+  const lettering = logoSrc(p) ? el('input', { type: 'checkbox', checked: !!p.text_title }) : null;
   const asked = ask({
     title: t('rename_title'),
     body: [
       el('p', { class: 'dim' }, t('rename_lead')),
       field(t('rename_label'), input),
       el('p', { class: 'dim small rename-hint' }, t('rename_hint', { name: p.default_name })),
+      lettering ? el('label', { class: 'check rename-text' }, lettering, el('span', {}, t('rename_text'))) : null,
     ],
     go: [t('rename_save')], later: t('cancel'),
   });
@@ -438,7 +479,12 @@ async function rename(p) {
   input.focus();
   input.select();
   if (!(await asked)) return;
-  saveName(p, input.value);
+  await saveName(p, input.value);
+  if (lettering && lettering.checked !== !!p.text_title) await setTextTitle(p, lettering.checked);
+}
+
+function setTextTitle(p, on) {
+  return update('set_project_text_title', { id: p.id, on });
 }
 
 async function saveName(p, name) {
@@ -461,10 +507,10 @@ function artwork(p) {
   // was made from (by index), to mark it in the strip
   const copy = (a) => (a ? { file: a.file, focus: [...a.focus], screen: a.screen } : null);
   const same = (a, b) => (!a && !b) || (!!a && !!b && a.file === b.file && a.focus[0] === b.focus[0] && a.focus[1] === b.focus[1]);
-  const draft = { cover: copy(p.cover), background: copy(p.background) };
+  const draft = { cover: copy(p.cover), background: copy(p.background), logo: copy(p.logo_art) };
   // The picture of the user's own, besides the screenshots, for each tab: the
   // one they had, or the last one they picked from their PC
-  const own = { cover: copy(p.cover), background: copy(p.background) };
+  const own = { cover: copy(p.cover), background: copy(p.background), logo: copy(p.logo_art) };
   let linked = same(p.cover, p.background);
   let tab = 'cover';
   let working = false;
@@ -509,9 +555,10 @@ function artwork(p) {
     const strip = (a) => (a ? { file: a.file, focus: a.focus } : null);
     const cover = strip(draft.cover);
     const background = linked ? cover : strip(draft.background);
+    const logo = strip(draft.logo);
     working = true; draw();
     try {
-      snap = await invoke('set_project_art', { id: p.id, cover, background });
+      snap = await invoke('set_project_art', { id: p.id, cover, background, logo });
       close(true);
       render();
       toast(t('art_saved'), true);
@@ -530,6 +577,7 @@ function artwork(p) {
     return [img.naturalWidth * scale - r.width, img.naturalHeight * scale - r.height];
   };
   function dragFocus(frame, img, e) {
+    if (tab === 'logo') return;
     const a = shown(tab);
     const over = overflow(frame, img);
     if (!a || working || !over.some((v) => v > 2)) return;
@@ -555,7 +603,8 @@ function artwork(p) {
   }
 
   function draw() {
-    const a = shown(tab);
+    // On the logo tab, the logo is shown over the background
+    const a = shown(tab === 'logo' ? 'background' : tab);
     const src = a ? artUrl(a.file) : p.hero;
     const pos = a ? `${a.focus[0]}% ${a.focus[1]}%` : '';
     const img = (cls) => {
@@ -564,25 +613,39 @@ function artwork(p) {
       if (!src) n.hidden = true;
       return n;
     };
-    const logo = (cls) => (p.logo ? el('img', { src: p.logo, alt: '', class: cls, draggable: 'false' }) : null);
+    // The previews show the logo being picked (a new one is shown, not the name)
+    const pv = { ...p, logo_art: draft.logo, text_title: draft.logo && !same(draft.logo, p.logo_art) ? false : p.text_title };
+    const logo = (cls) => gameMark(pv, cls, cls + '-text');
     const main = img('aw-img');
-    const hint = a && !working ? el('span', { class: 'aw-hint' }, icon('move'), t('art_drag')) : null;
+    const hint = a && tab !== 'logo' && !working ? el('span', { class: 'aw-hint' }, icon('move'), t('art_drag')) : null;
     if (hint) hint.hidden = true;
     const wait = working ? el('span', { class: 'aw-wait' }, el('span', { class: 'spinner' }), t('art_preparing')) : null;
     let stage, also;
     if (tab === 'cover') {
       stage = el('div', { class: 'aw-card', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-card-shade' }),
         logo('aw-card-logo'),
-        el('div', { class: 'aw-card-foot' }, el('h3', {}, p.name), el('div', { class: 'state' }, ...stateLine(p))), hint, wait);
+        el('div', { class: 'aw-card-foot' }, showsLogo(pv) ? el('h3', {}, p.name) : null, el('div', { class: 'state' }, ...stateLine(p))), hint, wait);
       also = [
         el('div', { class: 'aw-also-label' }, t('art_side')),
         el('div', { class: 'aw-side' }, el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
         el('div', { class: 'aw-also-label' }, t('art_strip')),
         el('div', { class: 'aw-pick', style: `background-image:${gradient(p)}` }, img()),
       ];
+    } else if (tab === 'logo') {
+      const cover = shown('cover');
+      const coverImg = el('img', { src: cover ? artUrl(cover.file) : p.hero || '', alt: '', class: 'aw-shown', draggable: 'false' });
+      if (cover) coverImg.style.objectPosition = `${cover.focus[0]}% ${cover.focus[1]}%`;
+      stage = el('div', { class: 'aw-hero', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-hero-shade' }),
+        el('div', { class: 'aw-hero-content' }, logo('aw-hero-logo'),
+          el('div', { class: 'aw-hero-btns' }, el('span', { class: 'aw-fake-play' }, icon('play'), t('do_play')), el('span', { class: 'aw-fake-gear' }, icon('gear')))),
+        wait);
+      also = [
+        el('div', { class: 'aw-also-label' }, t('art_card')),
+        el('div', { class: 'aw-home aw-lib', style: `background-image:${gradient(p)}` }, coverImg, el('span', { class: 'aw-home-shade' }), logo('aw-lib-logo')),
+      ];
     } else {
       stage = el('div', { class: 'aw-hero', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-hero-shade' }),
-        el('div', { class: 'aw-hero-content' }, logo('aw-hero-logo') || el('h3', {}, p.name),
+        el('div', { class: 'aw-hero-content' }, logo('aw-hero-logo'),
           el('div', { class: 'aw-hero-btns' }, el('span', { class: 'aw-fake-play' }, icon('play'), t('do_play')), el('span', { class: 'aw-fake-gear' }, icon('gear')))),
         hint, wait);
       also = [
@@ -602,7 +665,10 @@ function artwork(p) {
     // The screenshots, the user's own picture (when there is one), and a
     // button for another from their PC
     const on = (thumb) => !working && thumb;
-    const thumbs = p.screens.map((url, i) => {
+    const logoTab = tab === 'logo';
+    // The logo tab: the name (no logo), the user's own logo, one from the PC
+    const thumbs = logoTab ? [el('button', { class: 'aw-thumb aw-logo-thumb' + (on(!draft.logo) ? ' on' : ''), disabled: working, onclick: () => { draft.logo = null; problem = null; draw(); } },
+      titleText({ ...p, name: shortName(p) }, 'aw-thumb-title'), el('span', { class: 'aw-badge' }, t('art_logo_name')))] : p.screens.map((url, i) => {
       const isDefault = url === p.hero;
       const selected = isDefault ? !a : !!a && a.screen === i;
       return el('button', { class: 'aw-thumb' + (on(selected) ? ' on' : ''), disabled: working, title: isDefault ? t('art_default') : '', onclick: () => pickScreen(i) },
@@ -611,10 +677,11 @@ function artwork(p) {
     });
     const mine = own[tab] || (tab === 'background' && linked ? own.cover : null);
     if (mine) {
-      const selected = !!a && a.screen == null && a.file === mine.file;
-      thumbs.push(el('button', { class: 'aw-thumb' + (on(selected) ? ' on' : ''), disabled: working, onclick: () => { set(tab, copy(mine)); problem = null; draw(); } },
+      const current = shown(tab);
+      const selected = !!current && current.screen == null && current.file === mine.file;
+      thumbs.push(el('button', { class: 'aw-thumb' + (logoTab ? ' aw-logo-thumb' : '') + (on(selected) ? ' on' : ''), disabled: working, onclick: () => { set(tab, copy(mine)); problem = null; draw(); } },
         el('img', { src: artUrl(mine.file), alt: '', draggable: 'false' }),
-        el('span', { class: 'aw-badge' }, t('art_yours'))));
+        el('span', { class: 'aw-badge' }, t(logoTab ? 'art_yours_logo' : 'art_yours'))));
     }
     thumbs.push(el('button', { class: 'aw-thumb aw-own', disabled: working, onclick: choose }, el('span', { class: 'aw-own-label' }, icon('folder'), t('art_from_pc'))));
 
@@ -628,21 +695,21 @@ function artwork(p) {
       label, el('small', {}, sub));
     const custom = !!shown(tab);
     const reset = () => {
-      if (tab === 'cover') draft.cover = null; else set('background', null);
+      if (tab === 'cover') draft.cover = null; else if (tab === 'logo') draft.logo = null; else set('background', null);
       problem = null; draw();
     };
     box.replaceChildren(el('div', { class: 'modal-box aw-box' },
       el('div', { class: 'aw-head' },
         el('h2', {}, t('art_title'), el('span', { class: 'aw-of' }, p.name)),
-        el('div', { class: 'aw-seg', role: 'tablist' }, tabButton('cover', t('art_cover'), t('art_cover_sub')), tabButton('background', t('art_bg'), t('art_bg_sub')))),
+        el('div', { class: 'aw-seg', role: 'tablist' }, tabButton('cover', t('art_cover'), t('art_cover_sub')), tabButton('background', t('art_bg'), t('art_bg_sub')), tabButton('logo', t('art_logo'), t('art_logo_sub')))),
       el('div', { class: 'aw-stage' }, stage, el('div', { class: 'aw-also' }, ...also)),
       el('div', { class: 'aw-src' },
-        el('div', { class: 'aw-src-head' }, el('span', { class: 'aw-label' }, t('art_pick')), el('span', { class: 'dim small' }, t('art_pick_hint'))),
+        el('div', { class: 'aw-src-head' }, el('span', { class: 'aw-label' }, t(logoTab ? 'art_logo_pick' : 'art_pick')), el('span', { class: 'dim small' }, t(logoTab ? 'art_logo_hint' : 'art_pick_hint'))),
         el('div', { class: 'aw-strip' }, ...thumbs),
         problem ? el('div', { class: 'aw-problem' }, icon('ban'), el('span', {}, problem)) : null),
       el('div', { class: 'modal-actions aw-actions' },
         el('button', { class: 'btn ghost', disabled: !custom || working, onclick: reset }, icon('refresh'), t('art_reset')),
-        el('label', { class: 'aw-check' }, check, el('span', {}, t(tab === 'cover' ? 'art_same_cover' : 'art_same_bg'))),
+        logoTab ? null : el('label', { class: 'aw-check' }, check, el('span', {}, t(tab === 'cover' ? 'art_same_cover' : 'art_same_bg'))),
         el('span', { class: 'aw-gap' }),
         el('button', { class: 'btn ghost', onclick: () => close(false) }, t('cancel')),
         el('button', { class: 'btn primary', disabled: working, onclick: save }, t('art_save')))));
@@ -1032,7 +1099,7 @@ function renderHome() {
     $('spot-bg').style.backgroundImage = gradient(lead);
     const last = items.find((e) => e.from === lead);
     $('spot-content').replaceChildren(
-      el('div', { class: 'hero-logo' }, lead.logo ? picture(lead.logo) : el('h1', {}, lead.name)),
+      el('div', { class: 'hero-logo' }, gameMark(lead, 'in', 'spot-title')),
       el('p', { class: 'tagline' }, lead.tagline),
       last ? el('p', { class: 'spot-news' }, el('b', {}, dayLabel(last.title)), last.lines[0] || '') : null,
       el('div', { class: 'hero-actions' },
@@ -1050,7 +1117,7 @@ function renderHome() {
 
   const block = (b) => el('div', { class: 'feed-block' + (b.from ? ' link' : ''), onclick: b.from ? () => open(b.from) : null },
     el('div', { class: 'feed-from' },
-      b.from && b.from.logo ? picture(b.from.logo, 'feed-logo') : el('span', { class: 'mark', 'aria-hidden': 'true' }),
+      !b.from ? el('span', { class: 'mark', 'aria-hidden': 'true' }) : showsLogo(b.from) ? picture(logoSrc(b.from), 'feed-logo') : null,
       el('strong', {}, b.from ? b.from.name : 'NicoLauncher'),
       b.isNew ? el('span', { class: 'chip new' }, t('update_available')) : null),
     el('ul', {}, ...b.lines.map((l) => el('li', {}, l))),
@@ -1065,9 +1132,10 @@ function renderHome() {
   // only with it, so they do not blink), the library in numbers and the links
   let shots = lead ? (lead.screens && lead.screens.length ? lead.screens : lead.hero ? [lead.hero] : []).slice(0, 4) : [];
   if (shots.length === 3) shots.pop();
+  // (its name follows a rename at once)
+  $('shots-title').textContent = lead ? lead.name : '';
   if ($('home-shots').dataset.id !== (lead ? lead.id : '')) {
     $('home-shots').dataset.id = lead ? lead.id : '';
-    $('shots-title').textContent = lead ? lead.name : '';
     $('home-shots').replaceChildren(...shots.map((src) => {
       const img = picture(src);
       img.addEventListener('click', () => { $('lightbox-img').src = src; $('lightbox').hidden = false; });
@@ -1131,7 +1199,7 @@ function renderLibrary() {
     const cover = artPicture(p, 'cover');
     if (cover) art.append(cover);
     const top = el('div', { class: 'card-top' },
-      p.logo ? picture(p.logo, 'card-logo') : el('span'),
+      gameMark(p, 'card-logo', 'card-title'),
       updateChip(p));
     // Until there is a folder to install into, the projects are only shown:
     // the welcome box above is the one thing to do. A project that already
@@ -1141,6 +1209,8 @@ function renderLibrary() {
     const card = locked
       ? { class: 'card locked', 'aria-disabled': 'true', title: t('first_run') }
       : { class: 'card', tabindex: '0', onclick: () => openProject(p.id) };
+    // The name in big at the top already: not again at the bottom
+    if (!showsLogo(p)) card.class += ' titled';
     cards.append(el('div', card,
       art, top,
       el('div', { class: 'card-foot' },
@@ -1161,7 +1231,6 @@ function renderProject() {
     shownProject = p.id;
     projectNewsAll = false;
     $('p-bg').style.backgroundImage = gradient(p);
-    $('p-logo').replaceChildren(...(p.logo ? [picture(p.logo)] : []));
     $('p-screens').replaceChildren(...p.screens.map((src) => {
       const img = picture(src);
       img.classList.add('in');
@@ -1172,9 +1241,15 @@ function renderProject() {
     achSeen = markAchievementsSeen(p);
   }
   backdrop($('p-bg'), artSrc(p, 'background'), artFocus(p, 'background'));
+  // The logo or the name in big, drawn again only when that changes
+  const mark = showsLogo(p) ? 'logo ' + logoSrc(p) : 'text ' + p.name;
+  if ($('p-logo').dataset.mark !== mark) {
+    $('p-logo').dataset.mark = mark;
+    $('p-logo').replaceChildren(gameMark(p, '', 'page-title'));
+  }
   $('p-screens-block').hidden = !p.screens.length;
   $('p-name').textContent = p.name;
-  $('p-name').hidden = !!p.logo && !!$('p-logo').children.length;
+  $('p-name').hidden = !!$('p-logo').children.length;
   $('p-tagline').textContent = p.tagline;
   $('p-desc').textContent = p.description;
   $('p-tags').replaceChildren(...p.tags.map((tag) => el('span', { class: 'chip' }, tag)));
@@ -1258,6 +1333,7 @@ function manageItems(p) {
   // Only a setting: it can change while a task runs
   groups[0].push(['pencil', t('m_rename'), null, false, () => rename(p)]);
   groups[0].push(['image', t('m_artwork'), null, false, () => artwork(p)]);
+  if (logoSrc(p)) groups[0].push(['type', t(p.text_title ? 'm_logo' : 'm_text_title'), null, false, () => setTextTitle(p, !p.text_title)]);
   if (p.input_label) groups[1].push(['file', t('m_change_file'), file, busy, () => chooseInput(p, false)]);
   if (p.can_rebuild) groups[1].push(['hammer', t('m_rebuild'), t('m_rebuild_sub'), busy, () => startTask(p, 'build')]);
   groups[2].push(['github', t('do_github'), null, false, () => openLink(p.url), 'ext']);
@@ -1745,7 +1821,7 @@ function openAnnouncements(startId) {
     if (p) {
       head.style.backgroundImage = gradient(p);
       if (p.hero) head.append(picture(p.hero, 'ann-hero'));
-      if (p.logo) head.append(picture(p.logo, 'ann-logo'));
+      head.append(gameMark(p, 'ann-logo', 'ann-title'));
     } else head.append(el('span', { class: 'ann-art', 'aria-hidden': 'true' }, icon('megaphone')));
     head.append(
       el('div', { class: 'ann-tags' },
@@ -1839,7 +1915,7 @@ function askUpdate(p) {
   const head = el('div', { class: 'ann-head game' });
   head.style.backgroundImage = gradient(p);
   if (p.hero) head.append(picture(p.hero, 'ann-hero'));
-  if (p.logo) head.append(picture(p.logo, 'ann-logo'));
+  head.append(gameMark(p, 'ann-logo', 'ann-title'));
   const v = (n) => t('version_short', { n });
   changelog({
     head, title: t('cl_title', { name: p.name }), ready: true, close: t('cl_later'),

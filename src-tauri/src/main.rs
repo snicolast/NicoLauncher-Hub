@@ -99,6 +99,8 @@ struct ProjectView {
     /// The registry's name: what a rename falls back to, and what reports
     /// on GitHub call it.
     default_name: String,
+    /// Its name shown as lettering instead of its logo, by the user's choice.
+    text_title: bool,
     tagline: String,
     description: String,
     tags: Vec<String>,
@@ -111,6 +113,8 @@ struct ProjectView {
     /// shown instead of `hero`. The window loads them from the `art:` protocol.
     cover: Option<Art>,
     background: Option<Art>,
+    /// The user's own logo, shown instead of `logo` (the registry's).
+    logo_art: Option<Art>,
     input_label: Option<String>,
     dir: Option<PathBuf>,
     input: Option<PathBuf>,
@@ -179,6 +183,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 id: p.id.clone(),
                 name: config.name(&p.id).unwrap_or(&p.name).to_string(),
                 default_name: p.name.clone(),
+                text_title: config.text_title(&p.id),
                 tagline: p.tagline.clone(),
                 description: p.description.clone(),
                 tags: p.tags.clone(),
@@ -188,6 +193,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 screens: p.art.screens.iter().map(|f| p.raw_url(f)).collect(),
                 cover: own_art(&p.id, art::Kind::Cover),
                 background: own_art(&p.id, art::Kind::Background),
+                logo_art: own_art(&p.id, art::Kind::Logo),
                 input_label: p.input.as_ref().map(|i| i.label.clone()),
                 // Before it is installed, show the news from GitHub instead
                 latest_news: remote.get(&p.id).cloned().unwrap_or_else(|| local.clone()),
@@ -481,6 +487,14 @@ fn set_project_name(hub: tauri::State<Hub>, id: String, name: String) -> Result<
     Ok(snapshot_of(&hub))
 }
 
+/// The project's name as lettering instead of its logo, or its logo again.
+#[tauri::command]
+fn set_project_text_title(hub: tauri::State<Hub>, id: String, on: bool) -> Result<Snapshot, String> {
+    find_project(&hub, &id)?;
+    change_config(&hub, |c| c.projects.entry(id).or_default().text_title = on)?;
+    Ok(snapshot_of(&hub))
+}
+
 /// Points a project at a folder the user already has it in.
 #[tauri::command]
 fn set_project_dir(hub: tauri::State<Hub>, id: String, path: PathBuf) -> Result<Snapshot, String> {
@@ -514,6 +528,8 @@ fn prepare_art(hub: tauri::State<Hub>, id: String, kind: art::Kind, path: Option
     let dir = art_dir(&hub);
     match (path, screen) {
         (Some(path), _) => art::from_file(&dir, &id, kind, &path),
+        // Screenshots are not logos
+        (None, Some(_)) if kind == art::Kind::Logo => Err("Choose a logo from your PC.".into()),
         (None, Some(i)) => {
             let rel = p.art.screens.get(i).ok_or("That screenshot is not in the list any more.")?;
             let installed = hub.config.lock().unwrap().project_dir(&id).map(|d| d.join(rel)).filter(|f| f.is_file());
@@ -530,10 +546,10 @@ fn prepare_art(hub: tauri::State<Hub>, id: String, kind: art::Kind, path: Option
 /// The pictures that were made ready and not saved, or that these replace,
 /// are deleted.
 #[tauri::command]
-fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, background: Option<Art>) -> Result<Snapshot, String> {
+fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, background: Option<Art>, logo: Option<Art>) -> Result<Snapshot, String> {
     find_project(&hub, &id)?;
     let dir = art_dir(&hub);
-    for a in [&cover, &background].into_iter().flatten() {
+    for a in [&cover, &background, &logo].into_iter().flatten() {
         if !art::valid_name(&a.file) || !dir.join(&a.file).is_file() {
             return Err("That picture is not there any more. Choose it again.".into());
         }
@@ -542,6 +558,11 @@ fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, backg
         let pc = c.projects.entry(id).or_default();
         pc.cover = cover.map(Art::clean);
         pc.background = background.map(Art::clean);
+        // A new logo is put up to be seen, not left behind the name
+        if logo.is_some() && logo.as_ref().map(|a| &a.file) != pc.logo.as_ref().map(|a| &a.file) {
+            pc.text_title = false;
+        }
+        pc.logo = logo.map(Art::clean);
     })?;
     prune_art(&hub);
     Ok(snapshot_of(&hub))
@@ -569,7 +590,7 @@ fn art_response(dir: &Path, name: &str) -> tauri::http::Response<Vec<u8>> {
     let builder = tauri::http::Response::builder();
     match art::read(dir, name) {
         // A name is never given to another picture: the window may keep it
-        Some(bytes) => builder.header("Content-Type", "image/jpeg").header("Cache-Control", "max-age=31536000, immutable").body(bytes),
+        Some(bytes) => builder.header("Content-Type", if name.ends_with(".png") { "image/png" } else { "image/jpeg" }).header("Cache-Control", "max-age=31536000, immutable").body(bytes),
         None => builder.status(404).body(Vec::new()),
     }
     .expect("a response with fixed headers")
@@ -853,6 +874,7 @@ fn main() {
             set_input,
             set_project_dir,
             set_project_name,
+            set_project_text_title,
             prepare_art,
             set_project_art,
             discard_art,
