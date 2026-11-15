@@ -1,5 +1,6 @@
 //! The launcher's own settings, in one JSON file per user.
 
+use crate::art::{self, Art};
 use crate::{err, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -51,6 +52,12 @@ pub struct ProjectConfig {
     /// The name the user gave the project, shown instead of the registry's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// The user's own pictures for the project (see `art`), shown instead of
+    /// the registry's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cover: Option<Art>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background: Option<Art>,
 }
 
 impl Config {
@@ -108,6 +115,25 @@ impl Config {
     /// The name the user gave a project, if any.
     pub fn name(&self, id: &str) -> Option<&str> {
         self.projects.get(id).and_then(|p| p.name.as_deref())
+    }
+
+    /// The user's own picture of that kind for a project, if any.
+    pub fn art(&self, id: &str, kind: art::Kind) -> Option<&Art> {
+        let p = self.projects.get(id)?;
+        match kind {
+            art::Kind::Cover => p.cover.as_ref(),
+            art::Kind::Background => p.background.as_ref(),
+        }
+    }
+
+    /// Every picture file the settings name: what `art::prune` keeps.
+    pub fn art_files(&self) -> Vec<&str> {
+        self.projects.values().flat_map(|p| [&p.cover, &p.background]).flatten().map(|a| a.file.as_str()).collect()
+    }
+
+    /// The folder the user's pictures are kept in, next to the settings.
+    pub fn art_dir(&self) -> PathBuf {
+        art::dir(&self.base)
     }
 
     /// A path from the file as a full one.
@@ -267,6 +293,25 @@ mod tests {
         assert_eq!(c.name("other"), None);
         // No name, no key: the file stays as older launchers wrote it
         assert!(!serde_json::to_string(&c.projects["lostworld"]).unwrap().contains("name"));
+    }
+
+    #[test]
+    fn pictures_the_user_picks() {
+        let text = r#"{ "projects": { "segarally2": { "cover": { "file": "a.jpg", "focus": [20, 70] }, "background": { "file": "b.jpg" } }, "lostworld": { "cover": { "file": "a.jpg" } } } }"#;
+        let c: Config = serde_json::from_str(text).unwrap();
+        assert_eq!(c.art("segarally2", art::Kind::Cover).unwrap().focus, [20, 70]);
+        assert_eq!(c.art("segarally2", art::Kind::Background).unwrap().focus, [50, 50]);
+        assert!(c.art("lostworld", art::Kind::Background).is_none());
+        assert!(c.art("other", art::Kind::Cover).is_none());
+        let mut files = c.art_files();
+        files.sort();
+        assert_eq!(files, ["a.jpg", "a.jpg", "b.jpg"]);
+        let c = Config { base: PathBuf::from("/portable/NicoLauncher"), ..c };
+        assert_eq!(c.art_dir(), PathBuf::from("/portable/NicoLauncher/art"));
+        // None, no key
+        let none: Config = serde_json::from_str(r#"{ "projects": { "x": {} } }"#).unwrap();
+        let out = serde_json::to_string(&none).unwrap();
+        assert!(!out.contains("cover") && !out.contains("background"), "{out}");
     }
 
     #[test]

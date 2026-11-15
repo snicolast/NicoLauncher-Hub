@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com https://i.ytimg.com"
+      "csp": "default-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' data: art: http://art.localhost https://raw.githubusercontent.com https://i.ytimg.com"
     }
   },
   "bundle": {

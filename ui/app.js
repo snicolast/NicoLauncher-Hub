@@ -32,6 +32,13 @@ const STR = {
     rename_title: 'Rename', rename_label: 'Name', rename_save: 'Save',
     rename_lead: 'Give it the name you like: the launcher shows it everywhere, and new desktop shortcuts use it. The game and its folder do not change.',
     rename_hint: 'Leave it empty to go back to {name}.', renamed: 'Now called {name}.',
+    m_artwork: 'Change artwork…', art_title: 'Artwork', art_save: 'Save', art_saved: 'Artwork saved.',
+    art_cover: 'Cover', art_cover_sub: 'Library, sidebar, Home strip', art_bg: 'Background', art_bg_sub: 'Game page, Home',
+    art_drag: 'Drag to choose what shows', art_preparing: 'Preparing the picture…',
+    art_side: 'Sidebar', art_strip: 'Home strip', art_home: 'Home', art_blur: 'Also far behind the whole window, blurred, while this game is open.',
+    art_pick: 'Pick a picture', art_pick_hint: 'One of the game\'s screenshots, or any JPG, PNG or WebP from your PC. You can also drop one here.',
+    art_default: 'Default', art_yours: 'Your picture', art_from_pc: 'From your PC…', art_files: 'Pictures',
+    art_same_cover: 'Use it for the background too', art_same_bg: 'Same as the cover', art_reset: 'Back to default',
     installed_title: 'All installed!', installed_body: 'You have just built {name} on your own PC, and it is ready to play. Press Play whenever you want.',
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
@@ -146,6 +153,13 @@ const STR = {
     rename_title: 'Renombrar', rename_label: 'Nombre', rename_save: 'Guardar',
     rename_lead: 'Ponle el nombre que quieras: el launcher lo muestra en todas partes y los accesos directos nuevos lo usan. El juego y su carpeta no cambian.',
     rename_hint: 'Déjalo vacío para volver a {name}.', renamed: 'Ahora se llama {name}.',
+    m_artwork: 'Cambiar imágenes…', art_title: 'Imágenes', art_save: 'Guardar', art_saved: 'Imágenes guardadas.',
+    art_cover: 'Portada', art_cover_sub: 'Biblioteca, barra lateral, tira de Inicio', art_bg: 'Fondo', art_bg_sub: 'Ficha del juego, Inicio',
+    art_drag: 'Arrastra para elegir qué se ve', art_preparing: 'Preparando la imagen…',
+    art_side: 'Barra lateral', art_strip: 'Tira de Inicio', art_home: 'Inicio', art_blur: 'También detrás de toda la ventana, difuminada, mientras este juego está abierto.',
+    art_pick: 'Elige una imagen', art_pick_hint: 'Una captura del juego, o cualquier JPG, PNG o WebP de tu PC. También puedes soltarla aquí.',
+    art_default: 'De serie', art_yours: 'Tu imagen', art_from_pc: 'Desde tu PC…', art_files: 'Imágenes',
+    art_same_cover: 'Usarla también de fondo', art_same_bg: 'La misma que la portada', art_reset: 'Volver a la de serie',
     installed_title: '¡Todo instalado!', installed_body: 'Acabas de montar {name} en tu propio PC, y ya está listo para jugar. Pulsa Jugar cuando quieras.',
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
@@ -275,6 +289,8 @@ const ICONS = {
   megaphone: '<path d="M3.5 10.5v3a1.500 1.500 0 0 0 1.500 1.500H7l9 4.500V4.500L7 9H5a1.500 1.500 0 0 0-1.500 1.500z"/><path d="M7.500 15l1.300 4.500h2.400l-1-4"/><path d="M19 9.500a3.500 3.500 0 0 1 0 5"/>',
   chevl: '<path d="M15 6l-6 6 6 6"/>',
   chevr: '<path d="M9 6l6 6-6 6"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16.5l-5.5-5.5L5 20"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
   pencil: '<path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
@@ -313,6 +329,21 @@ function picture(src, cls) {
   const img = el('img', { src, alt: '', class: cls || '', draggable: 'false' });
   img.addEventListener('load', () => img.classList.add('in'));
   img.addEventListener('error', () => img.remove());
+  return img;
+}
+
+// The cover or background of a project: the user's own picture (from the
+// launcher's pictures folder, through the art: protocol), or else the hero
+// from its repository. `focus` is the part of the picture kept in sight when a
+// frame cuts it.
+const artUrl = (file) => T.core.convertFileSrc(file, 'art');
+const artSrc = (p, kind) => (p[kind] ? artUrl(p[kind].file) : p.hero);
+const artFocus = (p, kind) => (p[kind] ? `${p[kind].focus[0]}% ${p[kind].focus[1]}%` : '');
+function artPicture(p, kind, cls) {
+  const src = artSrc(p, kind);
+  if (!src) return null;
+  const img = picture(src, cls);
+  img.style.objectPosition = artFocus(p, kind);
   return img;
 }
 
@@ -411,6 +442,222 @@ async function rename(p) {
   const now = s && s.projects.find((x) => x.id === p.id);
   if (now && now.name !== p.name) toast(t('renamed', { name: now.name }), true);
 }
+
+// ------------------------------------------------------------ artwork
+// The user's own cover and background for a project. A picture picked here is
+// copied into the launcher's pictures folder at once, so it can be shown; the
+// settings change only on Save, and Cancel deletes what was copied. The two
+// are linked while they show the same picture: then the background follows
+// the cover, until the background is given a picture of its own.
+const ART_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
+let artDrop = null;   // the open dialog's handler for a file dropped on the window
+
+function artwork(p) {
+  // A picture: its file, its focus, and in the dialog only, the screenshot it
+  // was made from (by index), to mark it in the strip
+  const copy = (a) => (a ? { file: a.file, focus: [...a.focus], screen: a.screen } : null);
+  const same = (a, b) => (!a && !b) || (!!a && !!b && a.file === b.file && a.focus[0] === b.focus[0] && a.focus[1] === b.focus[1]);
+  const draft = { cover: copy(p.cover), background: copy(p.background) };
+  // The picture of the user's own, besides the screenshots, for each tab: the
+  // one they had, or the last one they picked from their PC
+  const own = { cover: copy(p.cover), background: copy(p.background) };
+  let linked = same(p.cover, p.background);
+  let tab = 'cover';
+  let working = false;
+  let problem = null;
+  const box = el('div', { class: 'modal art-modal', role: 'dialog', 'aria-modal': 'true' });
+
+  // What a tab shows now: null is the project's own picture (the hero)
+  const shown = (kind) => (kind === 'background' && linked ? draft.cover : draft[kind]);
+  const set = (kind, art) => {
+    if (kind === 'background' && linked) { linked = false; }
+    draft[kind] = art;
+  };
+
+  async function prepare(args, done) {
+    working = true; problem = null; draw();
+    try {
+      const file = await invoke('prepare_art', { id: p.id, kind: tab, ...args });
+      done({ file, focus: [50, 50] });
+    } catch (e) {
+      problem = String(e);
+    }
+    working = false; draw();
+  }
+  const pickScreen = (i) => {
+    if (p.screens[i] === p.hero) { set(tab, null); problem = null; draw(); return; }
+    const kind = tab;
+    prepare({ screen: i }, (art) => set(kind, { ...art, screen: i }));
+  };
+  const pickFile = (path) => {
+    const kind = tab;
+    prepare({ path }, (art) => { set(kind, art); own[kind] = copy(art); });
+  };
+  const choose = async () => {
+    const path = await T.dialog.open({ directory: false, multiple: false, title: t('art_pick'), filters: [{ name: t('art_files'), extensions: ART_EXTENSIONS }] });
+    if (path) pickFile(path);
+  };
+  const close = (saved) => {
+    closeAsk = null; artDrop = null; box.remove();
+    if (!saved) call('discard_art');
+  };
+  const save = async () => {
+    const strip = (a) => (a ? { file: a.file, focus: a.focus } : null);
+    const cover = strip(draft.cover);
+    const background = linked ? cover : strip(draft.background);
+    working = true; draw();
+    try {
+      snap = await invoke('set_project_art', { id: p.id, cover, background });
+      close(true);
+      render();
+      toast(t('art_saved'), true);
+    } catch (e) {
+      working = false; problem = String(e); draw();
+    }
+  };
+
+  // Dragging the picture moves the part of it in sight. The frame shows it
+  // filling it (cover), so it can only move the way it overflows: a picture
+  // of the frame's own shape does not move at all.
+  const overflow = (frame, img) => {
+    if (!img.naturalWidth) return [0, 0];
+    const r = frame.getBoundingClientRect();
+    const scale = Math.max(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    return [img.naturalWidth * scale - r.width, img.naturalHeight * scale - r.height];
+  };
+  function dragFocus(frame, img, e) {
+    const a = shown(tab);
+    const over = overflow(frame, img);
+    if (!a || working || !over.some((v) => v > 2)) return;
+    e.preventDefault();
+    frame.setPointerCapture(e.pointerId);
+    const start = [e.clientX, e.clientY, ...a.focus];
+    frame.classList.add('dragging');
+    const move = (ev) => {
+      const d = [ev.clientX - start[0], ev.clientY - start[1]];
+      a.focus = [0, 1].map((i) => (over[i] > 1 ? Math.round(Math.min(100, Math.max(0, start[2 + i] - (d[i] / over[i]) * 100))) : a.focus[i]));
+      const pos = `${a.focus[0]}% ${a.focus[1]}%`;
+      box.querySelectorAll('.aw-shown').forEach((n) => { n.style.objectPosition = pos; });
+    };
+    const up = () => {
+      frame.classList.remove('dragging');
+      frame.removeEventListener('pointermove', move);
+      frame.removeEventListener('pointerup', up);
+      frame.removeEventListener('pointercancel', up);
+    };
+    frame.addEventListener('pointermove', move);
+    frame.addEventListener('pointerup', up);
+    frame.addEventListener('pointercancel', up);
+  }
+
+  function draw() {
+    const a = shown(tab);
+    const src = a ? artUrl(a.file) : p.hero;
+    const pos = a ? `${a.focus[0]}% ${a.focus[1]}%` : '';
+    const img = (cls) => {
+      const n = el('img', { src: src || '', alt: '', class: 'aw-shown ' + (cls || ''), draggable: 'false' });
+      n.style.objectPosition = pos;
+      if (!src) n.hidden = true;
+      return n;
+    };
+    const logo = (cls) => (p.logo ? el('img', { src: p.logo, alt: '', class: cls, draggable: 'false' }) : null);
+    const main = img('aw-img');
+    const hint = a && !working ? el('span', { class: 'aw-hint' }, icon('move'), t('art_drag')) : null;
+    if (hint) hint.hidden = true;
+    const wait = working ? el('span', { class: 'aw-wait' }, el('span', { class: 'spinner' }), t('art_preparing')) : null;
+    let stage, also;
+    if (tab === 'cover') {
+      stage = el('div', { class: 'aw-card', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-card-shade' }),
+        logo('aw-card-logo'),
+        el('div', { class: 'aw-card-foot' }, el('h3', {}, p.name), el('div', { class: 'state' }, ...stateLine(p))), hint, wait);
+      also = [
+        el('div', { class: 'aw-also-label' }, t('art_side')),
+        el('div', { class: 'aw-side' }, el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
+        el('div', { class: 'aw-also-label' }, t('art_strip')),
+        el('div', { class: 'aw-pick', style: `background-image:${gradient(p)}` }, img()),
+      ];
+    } else {
+      stage = el('div', { class: 'aw-hero', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-hero-shade' }),
+        el('div', { class: 'aw-hero-content' }, logo('aw-hero-logo') || el('h3', {}, p.name),
+          el('div', { class: 'aw-hero-btns' }, el('span', { class: 'aw-fake-play' }, icon('play'), t('do_play')), el('span', { class: 'aw-fake-gear' }, icon('gear')))),
+        hint, wait);
+      also = [
+        el('div', { class: 'aw-also-label' }, t('art_home')),
+        el('div', { class: 'aw-home', style: `background-image:${gradient(p)}` }, img(), el('span', { class: 'aw-home-shade' }), logo('aw-home-logo')),
+        el('p', { class: 'dim small aw-also-note' }, t('art_blur')),
+      ];
+    }
+    stage.addEventListener('pointerdown', (e) => dragFocus(stage, main, e));
+    // Once the picture is in, whether it can move in this frame
+    main.addEventListener('load', () => {
+      const movable = !!a && overflow(stage, main).some((v) => v > 2);
+      stage.classList.toggle('movable', movable);
+      if (hint) hint.hidden = !movable;
+    });
+
+    // The screenshots, the user's own picture (when there is one), and a
+    // button for another from their PC
+    const on = (thumb) => !working && thumb;
+    const thumbs = p.screens.map((url, i) => {
+      const isDefault = url === p.hero;
+      const selected = isDefault ? !a : !!a && a.screen === i;
+      return el('button', { class: 'aw-thumb' + (on(selected) ? ' on' : ''), disabled: working, title: isDefault ? t('art_default') : '', onclick: () => pickScreen(i) },
+        el('img', { src: url, alt: '', draggable: 'false' }),
+        isDefault ? el('span', { class: 'aw-badge' }, t('art_default')) : null);
+    });
+    const mine = own[tab] || (tab === 'background' && linked ? own.cover : null);
+    if (mine) {
+      const selected = !!a && a.screen == null && a.file === mine.file;
+      thumbs.push(el('button', { class: 'aw-thumb' + (on(selected) ? ' on' : ''), disabled: working, onclick: () => { set(tab, copy(mine)); problem = null; draw(); } },
+        el('img', { src: artUrl(mine.file), alt: '', draggable: 'false' }),
+        el('span', { class: 'aw-badge' }, t('art_yours'))));
+    }
+    thumbs.push(el('button', { class: 'aw-thumb aw-own', disabled: working, onclick: choose }, el('span', { class: 'aw-own-label' }, icon('folder'), t('art_from_pc'))));
+
+    const check = el('input', { type: 'checkbox' });
+    check.checked = linked;
+    check.addEventListener('change', () => {
+      if (check.checked) linked = true; else { linked = false; draft.background = copy(draft.cover); }
+      draw();
+    });
+    const tabButton = (kind, label, sub) => el('button', { class: tab === kind ? 'on' : '', role: 'tab', 'aria-selected': String(tab === kind), onclick: () => { tab = kind; problem = null; draw(); } },
+      label, el('small', {}, sub));
+    const custom = !!shown(tab);
+    const reset = () => {
+      if (tab === 'cover') draft.cover = null; else set('background', null);
+      problem = null; draw();
+    };
+    box.replaceChildren(el('div', { class: 'modal-box aw-box' },
+      el('div', { class: 'aw-head' },
+        el('h2', {}, t('art_title'), el('span', { class: 'aw-of' }, p.name)),
+        el('div', { class: 'aw-seg', role: 'tablist' }, tabButton('cover', t('art_cover'), t('art_cover_sub')), tabButton('background', t('art_bg'), t('art_bg_sub')))),
+      el('div', { class: 'aw-stage' }, stage, el('div', { class: 'aw-also' }, ...also)),
+      el('div', { class: 'aw-src' },
+        el('div', { class: 'aw-src-head' }, el('span', { class: 'aw-label' }, t('art_pick')), el('span', { class: 'dim small' }, t('art_pick_hint'))),
+        el('div', { class: 'aw-strip' }, ...thumbs),
+        problem ? el('div', { class: 'aw-problem' }, icon('ban'), el('span', {}, problem)) : null),
+      el('div', { class: 'modal-actions aw-actions' },
+        el('button', { class: 'btn ghost', disabled: !custom || working, onclick: reset }, icon('refresh'), t('art_reset')),
+        el('label', { class: 'aw-check' }, check, el('span', {}, t(tab === 'cover' ? 'art_same_cover' : 'art_same_bg'))),
+        el('span', { class: 'aw-gap' }),
+        el('button', { class: 'btn ghost', onclick: () => close(false) }, t('cancel')),
+        el('button', { class: 'btn primary', disabled: working, onclick: save }, t('art_save')))));
+  }
+
+  artDrop = (path) => { if (!working) pickFile(path); };
+  closeAsk = () => close(false);
+  draw();
+  document.body.append(box);
+}
+
+// A picture dropped on the window goes to the artwork dialog, when it is open
+T.event.listen('tauri://drag-enter', () => { if (artDrop) document.querySelector('.art-modal')?.classList.add('drop'); });
+T.event.listen('tauri://drag-leave', () => document.querySelector('.art-modal')?.classList.remove('drop'));
+T.event.listen('tauri://drag-drop', (e) => {
+  document.querySelector('.art-modal')?.classList.remove('drop');
+  const path = e.payload && e.payload.paths && e.payload.paths[0];
+  if (artDrop && path) artDrop(path);
+});
 
 async function celebrate(p) {
   const yes = await ask({
@@ -667,11 +914,16 @@ function dayHead(title, ...extra) {
 // A picture that fills `box`, changed only when it is another one: the page
 // is drawn again at every change of state, and the picture must not blink
 // The new picture fades in over the one before it, which then goes away.
-function backdrop(box, src) {
-  if (box.dataset.src === (src || '')) return false;
-  box.dataset.src = src || '';
+function backdrop(box, src, focus) {
+  const key = (src || '') + (src && focus ? ' ' + focus : '');
+  if (box.dataset.src === key) return false;
+  box.dataset.src = key;
   const old = [...box.children];
-  if (src) box.append(picture(src));
+  if (src) {
+    const img = picture(src);
+    img.style.objectPosition = focus || '';
+    box.append(img);
+  }
   setTimeout(() => old.forEach((n) => n.remove()), src ? 1100 : 0);
   return true;
 }
@@ -736,7 +988,7 @@ function renderHome() {
   const newest = items.find((e) => e.from);
   const lead = snap.projects.find((p) => p.id === spot) || (newest && newest.from) || snap.projects[0];
   const open = (p) => (!snap.install_root && !p.dir ? show('library') : openProject(p.id));
-  backdrop($('spot-bg'), lead && lead.hero);
+  backdrop($('spot-bg'), lead && artSrc(lead, 'background'), lead && artFocus(lead, 'background'));
   const swapped = $('spot-bg').dataset.id !== (lead ? lead.id : '');
   $('spot-bg').dataset.id = lead ? lead.id : '';
   $('spot-content').classList.remove('swap');
@@ -759,7 +1011,7 @@ function renderHome() {
   $('spot-picks').classList.toggle('dots', snap.projects.length > 5);
   $('spot-picks').replaceChildren(...(snap.projects.length > 1 ? snap.projects.map((p) =>
     el('button', { class: 'pick' + (p === lead ? ' on' : ''), title: p.name, style: `background-image:${gradient(p)}`, onclick: () => { spot = p.id; spotRestart(); render(); } },
-      p.hero ? picture(p.hero) : null)) : []));
+      artPicture(p, 'cover'))) : []));
 
   const block = (b) => el('div', { class: 'feed-block' + (b.from ? ' link' : ''), onclick: b.from ? () => open(b.from) : null },
     el('div', { class: 'feed-from' },
@@ -818,11 +1070,11 @@ function renderHome() {
   // The sidebar's shortcuts, and the picture far behind everything
   $('side-games').replaceChildren(...snap.projects.map((p) =>
     el('button', { class: 'side-game' + (view === 'project' && current === p.id ? ' on' : ''), title: p.name, onclick: () => open(p) },
-      el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, p.hero ? picture(p.hero) : null),
+      el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, artPicture(p, 'cover')),
       el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
       el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) }))));
   const behind = view === 'project' ? snap.projects.find((p) => p.id === current) : lead;
-  backdrop($('ambient'), behind && behind.hero);
+  backdrop($('ambient'), behind && artSrc(behind, 'background'), behind && artFocus(behind, 'background'));
 }
 
 function renderLibrary() {
@@ -835,7 +1087,8 @@ function renderLibrary() {
   cards.replaceChildren();
   for (const p of snap.projects) {
     const art = el('div', { class: 'art', style: `background-image:${gradient(p)}` });
-    if (p.hero) art.append(picture(p.hero));
+    const cover = artPicture(p, 'cover');
+    if (cover) art.append(cover);
     const top = el('div', { class: 'card-top' },
       p.logo ? picture(p.logo, 'card-logo') : el('span'),
       updateChip(p));
@@ -867,7 +1120,6 @@ function renderProject() {
     shownProject = p.id;
     projectNewsAll = false;
     $('p-bg').style.backgroundImage = gradient(p);
-    $('p-bg').replaceChildren(...(p.hero ? [picture(p.hero)] : []));
     $('p-logo').replaceChildren(...(p.logo ? [picture(p.logo)] : []));
     $('p-screens').replaceChildren(...p.screens.map((src) => {
       const img = picture(src);
@@ -878,6 +1130,7 @@ function renderProject() {
     $('view-project').scrollTop = 0;
     achSeen = markAchievementsSeen(p);
   }
+  backdrop($('p-bg'), artSrc(p, 'background'), artFocus(p, 'background'));
   $('p-screens-block').hidden = !p.screens.length;
   $('p-name').textContent = p.name;
   $('p-name').hidden = !!p.logo && !!$('p-logo').children.length;
@@ -963,6 +1216,7 @@ function manageItems(p) {
   else groups[0].push(['folder', t('do_existing'), null, busy, () => chooseExisting(p)]);
   // Only a setting: it can change while a task runs
   groups[0].push(['pencil', t('m_rename'), null, false, () => rename(p)]);
+  groups[0].push(['image', t('m_artwork'), null, false, () => artwork(p)]);
   if (p.input_label) groups[1].push(['file', t('m_change_file'), file, busy, () => chooseInput(p, false)]);
   if (p.can_rebuild) groups[1].push(['hammer', t('m_rebuild'), t('m_rebuild_sub'), busy, () => startTask(p, 'build')]);
   groups[2].push(['github', t('do_github'), null, false, () => openLink(p.url), 'ext']);
