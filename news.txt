@@ -18,6 +18,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[11] 2026-11-15
+- Launcher 0.3.11: fixes a game build failing at "Configuring" when its folder had been built before by another copy of the launcher (a portable one, for example). The launcher now notices and sets the build up again with its own tools
+
 [10] 2026-11-15
 - Launcher 0.3.10: Update no longer downloads anything when the game is already up to date
 - A cancelled or failed game update no longer leaves the old version looking up to date: the game shows "Update not finished", and pressing Update finishes it
