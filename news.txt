@@ -18,6 +18,11 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[10] 2026-11-15
+- Launcher 0.3.10: Update no longer downloads anything when the game is already up to date
+- A cancelled or failed game update no longer leaves the old version looking up to date: the game shows "Update not finished", and pressing Update finishes it
+- The error log attached to a bug report now keeps the line that explains a failed build
+
 [9] 2026-11-15
 - Launcher 0.3.9: pressing Update on a game or on the launcher now shows what the update brings first, so you can read the changes and choose to update now or later
 
