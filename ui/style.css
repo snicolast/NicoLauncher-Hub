@@ -186,12 +186,24 @@ main { flex: 1; min-height: 0; position: relative; }
 .block { margin-bottom: 26px; }
 .block > h2 { margin-bottom: 12px; }
 .col-side .block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px; }
-.timeline { position: relative; padding-left: 22px; }
-.timeline::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 2px; background: var(--line); border-radius: 2px; }
-.entry { position: relative; margin-bottom: 18px; }
-.entry::before { content: ""; position: absolute; left: -22px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface-3); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line-2); }
-.entry.new::before { background: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 12px var(--accent); }
-.entry h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+/* News by day: a calendar leaf on a line down the page, each day's news
+   beside its leaf */
+.timeline { position: relative; }
+.timeline::before { content: ""; position: absolute; left: 27px; top: 30px; bottom: 6px; width: 2px; background: var(--line); border-radius: 2px; }
+.entry { position: relative; display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 20px; margin-bottom: 26px; }
+.entry h3.day { display: contents; }
+.day-cal { grid-column: 1; grid-row: 1 / span 2; align-self: start; position: relative; z-index: 1; display: grid; justify-items: center; width: 56px; padding: 6px 0 7px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line-2); box-shadow: 0 0 0 3px var(--bg); line-height: 1; }
+.day-cal i { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
+.day-cal b { font: 600 24px/1 "Segoe UI Variable Display", "Segoe UI", Inter, system-ui, sans-serif; color: #fff; margin-top: 4px; }
+.day-cal.blank { justify-self: center; width: 12px; height: 12px; padding: 0; margin-top: 5px; border-radius: 50%; background: var(--surface-3); }
+.day.recent .day-cal { background: linear-gradient(180deg, rgba(79, 140, 255, .28), var(--surface-2)); border-color: rgba(134, 176, 255, .45); }
+.entry.new .day-cal { border-color: var(--accent); box-shadow: 0 0 0 3px var(--bg), 0 0 14px rgba(79, 140, 255, .5); }
+.day-text { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 2px 0 10px; font-size: 13px; }
+.day-name { font-weight: 600; color: #fff; }
+.day-date { color: var(--dim); font-weight: 500; }
+.day-text .chip { align-self: center; }
+.day-body { grid-column: 2; grid-row: 2; min-width: 0; }
+.timeline > .news-more { margin-left: 66px; }
 .entry ul { margin: 0; padding-left: 18px; color: #c5cce0; }
 .entry li { margin-bottom: 3px; }
 .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -321,7 +333,7 @@ html.idle *, html.idle *::before, html.idle *::after { animation-play-state: pau
    beside the news, and everything a size up */
 .home-side { display: none; }
 .news-more { margin: -4px 0 0 -10px; justify-self: start; }
-#home-more { margin: -8px 0 0 22px; }
+#home-more { margin: -8px 0 0 66px; }
 .home-side .panel { padding: 18px 20px 20px; border-radius: 16px; background: rgba(17, 22, 38, .82); border: 1px solid var(--line); margin-bottom: 16px; }
 .home-side h2 { margin-bottom: 14px; }
 .video { display: grid; gap: 12px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
@@ -349,9 +361,6 @@ html.idle *, html.idle *::before, html.idle *::after { animation-play-state: pau
 }
 @media (min-width: 1700px) { body { zoom: 1.12; } }
 @media (min-width: 2300px) { body { zoom: 1.3; } }
-}
-.home .entry { margin-bottom: 26px; }
-.home .entry > h3 { font-size: 15px; margin-bottom: 10px; }
 .feed-block { padding: 14px 16px; border-radius: 14px; background: rgba(17, 22, 38, .82); border: 1px solid var(--line); margin-bottom: 10px; transition: border-color .2s, transform .2s var(--ease); }
 .feed-block.link { cursor: pointer; }
 .feed-block.link:hover { border-color: var(--line-2); transform: translateX(3px); }

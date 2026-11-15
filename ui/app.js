@@ -615,18 +615,47 @@ function dayKey(title) {
   return month < 0 || +m[0] < 1 || +m[0] > 31 ? '' : `${m[2]}-${two(month + 1)}-${two(m[0])}`;
 }
 
-function dayLabel(title) {
+// The date of a news title, or null when the title is something else; and
+// how many days ago it was
+function dayOf(title) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey(title));
-  if (!m) return title;
-  const day = new Date(+m[1], +m[2] - 1, +m[3]);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+function daysAgo(day) {
   const now = new Date();
-  const ago = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - day) / 86400000);
+  return Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - day) / 86400000);
+}
+const capital = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+function dayLabel(title) {
+  const day = dayOf(title);
+  if (!day) return title;
+  const ago = daysAgo(day);
   if (ago === 0) return t('today');
   if (ago === 1) return t('yesterday');
   const opts = { weekday: 'long', day: 'numeric', month: 'long' };
-  if (day.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
-  const text = day.toLocaleDateString(lang, opts);
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  if (day.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return capital(day.toLocaleDateString(lang, opts));
+}
+
+// The heading of a day of news: a calendar leaf (month and day) on the
+// timeline, and beside it the weekday (or Today, Yesterday) and the date, so
+// one day stands apart from the next at a glance. A title that is not a date
+// gets a plain mark on the timeline and the title as it is
+function dayHead(title, ...extra) {
+  const day = dayOf(title);
+  if (!day) return el('h3', { class: 'day' }, el('span', { class: 'day-cal blank', 'aria-hidden': 'true' }), el('span', { class: 'day-text' }, el('span', { class: 'day-name' }, title), ...extra));
+  const ago = daysAgo(day);
+  const opts = { day: 'numeric', month: 'long' };
+  if (day.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return el('h3', { class: 'day' + (ago <= 1 ? ' recent' : '') },
+    el('span', { class: 'day-cal', 'aria-hidden': 'true' },
+      el('i', {}, day.toLocaleDateString(lang, { month: 'short' }).replace('.', '')),
+      el('b', {}, String(day.getDate()))),
+    el('span', { class: 'day-text' },
+      el('span', { class: 'day-name' }, ago === 0 ? t('today') : ago === 1 ? t('yesterday') : capital(day.toLocaleDateString(lang, { weekday: 'long' }))),
+      el('span', { class: 'day-date' }, capital(day.toLocaleDateString(lang, opts))),
+      ...extra));
 }
 
 // A picture that fills `box`, changed only when it is another one: the page
@@ -735,7 +764,7 @@ function renderHome() {
     b.had.length ? el('div', { class: 'feed-had' }, el('span', { class: 'feed-had-label' }, icon('check'), t('news_installed'))) : null,
     b.had.length ? el('ul', { class: 'had' }, ...b.had.map((l) => el('li', {}, l))) : null);
   $('home-feed').replaceChildren(...(days.length
-    ? days.map((d) => el('div', { class: 'entry' }, el('h3', {}, dayLabel(d.title)), ...d.blocks.map(block)))
+    ? days.map((d) => el('div', { class: 'entry' }, dayHead(d.title), el('div', { class: 'day-body' }, ...d.blocks.map(block))))
     : [el('p', { class: 'dim' }, t('home_empty'))]));
   $('home-feed').classList.toggle('timeline', days.length > 0);
 
@@ -888,10 +917,11 @@ function renderProject() {
   $('p-news-title').textContent = t('news');
   const news = $('p-news');
   const entry = (e) => el('div', { class: 'entry' + (e.isNew ? ' new' : '') },
-    el('h3', {}, dayLabel(e.title), e.isNew ? el('span', { class: 'chip new' }, t('news_new')) : null),
-    el('ul', {}, ...e.lines.map((l) => el('li', {}, l))),
-    e.had.length ? el('div', { class: 'feed-had' }, el('span', { class: 'feed-had-label' }, icon('check'), t('news_installed'))) : null,
-    e.had.length ? el('ul', { class: 'had' }, ...e.had.map((l) => el('li', {}, l))) : null);
+    dayHead(e.title, e.isNew ? el('span', { class: 'chip new' }, t('news_new')) : null),
+    el('div', { class: 'day-body' },
+      el('ul', {}, ...e.lines.map((l) => el('li', {}, l))),
+      e.had.length ? el('div', { class: 'feed-had' }, el('span', { class: 'feed-had-label' }, icon('check'), t('news_installed'))) : null,
+      e.had.length ? el('ul', { class: 'had' }, ...e.had.map((l) => el('li', {}, l))) : null));
   // Entries with the same title (several on one date) show as one day. On a
   // day that mixes both, what the waiting update brings goes first and what
   // is already installed below it, dimmed (as on the home page)
