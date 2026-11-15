@@ -27,14 +27,16 @@ const STR = {
     ask_2: 'The launcher reads it and builds the game. It takes several minutes, and the first time it also downloads the build tools.',
     ask_3: 'When it ends, the button turns into Play.',
     ask_go: 'Choose the file', ask_later: 'Not now', ask_cancel: 'Cancel the install', install_cancelled: 'Install of {name} cancelled. What had been downloaded was removed.', do_build: 'Build', do_play: 'Play',
-    do_update: 'Update', do_rebuild: 'Rebuild', do_change_file: 'Change file',
-    do_open_folder: 'Open folder', do_shortcut: 'Desktop shortcut', shortcut_done: 'Shortcut to {name} added to your desktop.',
-    do_rename: 'Rename', rename_title: 'Rename', rename_label: 'Name', rename_save: 'Save',
+    do_update: 'Update',
+    shortcut_done: 'Shortcut to {name} added to your desktop.',
+    rename_title: 'Rename', rename_label: 'Name', rename_save: 'Save',
     rename_lead: 'Give it the name you like: the launcher shows it everywhere, and new desktop shortcuts use it. The game and its folder do not change.',
     rename_hint: 'Leave it empty to go back to {name}.', renamed: 'Now called {name}.',
     installed_title: 'All installed!', installed_body: 'You have just built {name} on your own PC, and it is ready to play. Press Play whenever you want.',
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
+    manage: 'More options', m_open_folder: 'Open game folder', m_shortcut: 'Add desktop shortcut', m_rename: 'Rename…',
+    m_change_file: 'Change game file…', m_rebuild: 'Rebuild game', m_rebuild_sub: 'Builds it again from the code', m_uninstall: 'Uninstall…',
     version: 'Version', version_short: 'Version {n}', version_out: 'version {n} is out', commit_title: 'The exact code installed, on GitHub',
     link_failed: 'Could not open {url}: {error}',
     not_chosen: 'not chosen', not_found: 'not found', not_installed_yet: 'not installed',
@@ -61,7 +63,7 @@ const STR = {
     copy_log: 'Copy log', cancel: 'Cancel', close: 'Close', copied: 'Copied',
     task_running: 'running', task_ok: 'finished', task_failed: 'failed',
     task_setup: 'Installing {name}', task_build: 'Building {name}', task_update: 'Updating {name}',
-    do_uninstall: 'Uninstall', un_title: 'Uninstall {name}?',
+    un_title: 'Uninstall {name}?',
     un_delete: 'This folder is deleted with everything in it, including your saved games and settings of the game:',
     un_rom_out: 'Your {file} is not touched: it stays where you keep it.',
     un_rom_in: 'Careful: your {file} is inside that folder and would be deleted too. Move it somewhere else first if you want to keep it.',
@@ -139,14 +141,16 @@ const STR = {
     ask_2: 'El launcher lo lee y compila el juego. Tarda varios minutos, y la primera vez además descarga las herramientas de compilación.',
     ask_3: 'Cuando termine, el botón pasa a ser Jugar.',
     ask_go: 'Elegir el archivo', ask_later: 'Ahora no', ask_cancel: 'Cancelar la instalación', install_cancelled: 'Instalación de {name} cancelada. Se ha borrado lo que se había descargado.', do_build: 'Compilar', do_play: 'Jugar',
-    do_update: 'Actualizar', do_rebuild: 'Recompilar', do_change_file: 'Cambiar archivo',
-    do_open_folder: 'Abrir carpeta', do_shortcut: 'Acceso directo', shortcut_done: 'Acceso directo a {name} añadido a tu escritorio.',
-    do_rename: 'Renombrar', rename_title: 'Renombrar', rename_label: 'Nombre', rename_save: 'Guardar',
+    do_update: 'Actualizar',
+    shortcut_done: 'Acceso directo a {name} añadido a tu escritorio.',
+    rename_title: 'Renombrar', rename_label: 'Nombre', rename_save: 'Guardar',
     rename_lead: 'Ponle el nombre que quieras: el launcher lo muestra en todas partes y los accesos directos nuevos lo usan. El juego y su carpeta no cambian.',
     rename_hint: 'Déjalo vacío para volver a {name}.', renamed: 'Ahora se llama {name}.',
     installed_title: '¡Todo instalado!', installed_body: 'Acabas de montar {name} en tu propio PC, y ya está listo para jugar. Pulsa Jugar cuando quieras.',
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
+    manage: 'Más opciones', m_open_folder: 'Abrir la carpeta del juego', m_shortcut: 'Crear acceso directo', m_rename: 'Renombrar…',
+    m_change_file: 'Cambiar el archivo del juego…', m_rebuild: 'Recompilar el juego', m_rebuild_sub: 'Lo vuelve a compilar desde el código', m_uninstall: 'Desinstalar…',
     version: 'Versión', version_short: 'Versión {n}', version_out: 'ya está la versión {n}', commit_title: 'El código exacto instalado, en GitHub',
     link_failed: 'No se pudo abrir {url}: {error}',
     not_chosen: 'sin elegir', not_found: 'no encontrada', not_installed_yet: 'sin instalar',
@@ -173,7 +177,7 @@ const STR = {
     copy_log: 'Copiar log', cancel: 'Cancelar', close: 'Cerrar', copied: 'Copiado',
     task_running: 'en curso', task_ok: 'terminado', task_failed: 'con errores',
     task_setup: 'Instalando {name}', task_build: 'Compilando {name}', task_update: 'Actualizando {name}',
-    do_uninstall: 'Desinstalar', un_title: '¿Desinstalar {name}?',
+    un_title: '¿Desinstalar {name}?',
     un_delete: 'Se borra esta carpeta con todo lo que tiene dentro, también tus partidas guardadas y los ajustes del juego:',
     un_rom_out: 'Tu {file} no se toca: se queda donde lo tienes.',
     un_rom_in: 'Cuidado: tu {file} está dentro de esa carpeta y también se borraría. Muévelo antes a otro sitio si quieres conservarlo.',
@@ -272,6 +276,8 @@ const ICONS = {
   chevl: '<path d="M15 6l-6 6 6 6"/>',
   chevr: '<path d="M9 6l6 6-6 6"/>',
   pencil: '<path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 };
 const icon = (name) => {
@@ -885,34 +891,30 @@ function renderProject() {
   const btn = (ic, label, fn, cls = '') => el('button', { class: 'btn ' + cls, disabled: busy, onclick: fn }, ic ? icon(ic) : null, label);
   const actions = [primaryButton(p, true)];
   if (p.can_update) actions.push(btn('up', t('do_update'), () => askUpdate(p), 'lg' + (hasUpdate(p) ? ' attn' : ' idle')));
-  // In sight beside Play, but quiet: it is not what one comes here for
-  if (p.state !== 'not_installed') actions.push(btn('trash', t('do_uninstall'), () => uninstall(p), 'ghost danger'));
+  // Everything else one does with a game is in the menu behind the gear
+  manageButton.title = t('manage');
+  manageButton.setAttribute('aria-label', t('manage'));
+  actions.push(manageButton);
   $('p-actions').replaceChildren(...actions);
+  if (manageMenu) {
+    if (manageMenu.project === p.id) fillManageMenu(p); else closeManageMenu();
+  }
   // Play would start the old version until the update is finished
   $('p-note').hidden = !p.rebuild_pending;
   $('p-note').replaceChildren(...(p.rebuild_pending ? [icon('up'), t('unfinished_note', { name: p.name })] : []));
 
+  // Details are facts only; the one link is the code on GitHub
   const installed = p.state !== 'not_installed';
   const details = $('p-details');
   details.replaceChildren(
     el('dt', {}, t('folder')), el('dd', {}, installed ? p.dir : t('not_installed_yet')),
-    el('dt', {}, t('source')), el('dd', {}, p.url.replace('https://', '')));
+    el('dt', {}, t('source')), el('dd', {}, el('a', { class: 'source', href: '#', title: t('do_github'),
+      onclick: (e) => { e.preventDefault(); openLink(p.url); } }, p.url.replace('https://', ''), icon('external'))));
   if (installed && p.version) details.append(el('dt', {}, t('version')), versionDetail(p));
   if (p.input_label) {
     details.append(el('dt', {}, t('your_file')), el('dd', {}, p.input || `${p.input_label} · ${t('not_chosen')}`));
     details.append(el('div', { class: 'note' }, icon('shield'), t('input_note')));
   }
-  const more = [];
-  if (p.can_rebuild) more.push(btn('hammer', t('do_rebuild'), () => startTask(p, 'build')));
-  if (p.input_label) more.push(btn('file', t('do_change_file'), () => chooseInput(p, false)));
-  if (installed) more.push(btn('folder', t('do_open_folder'), () => call('open_folder', { id: p.id })));
-  if (p.state === 'ready') more.push(btn('play', t('do_shortcut'), () => addShortcut(p)));
-  else more.push(btn('folder', t('do_existing'), () => chooseExisting(p)));
-  // Only a setting: it can change while a task runs
-  more.push(el('button', { class: 'btn', onclick: () => rename(p) }, icon('pencil'), t('do_rename')));
-  more.push(el('button', { class: 'btn', onclick: () => openLink(p.url) }, icon('github'), 'GitHub'));
-  more.push(btn('bug', t('fb_report_game'), () => feedback('bug', p.id)));
-  $('p-more').replaceChildren(...more);
 
   $('p-news-title').textContent = t('news');
   const news = $('p-news');
@@ -941,6 +943,108 @@ function renderProject() {
   news.classList.toggle('timeline', rows.length > 0);
   renderAchievements(p);
 }
+
+// ------------------------------------------------------------ game menu
+// The gear beside Play: the rest of what one does with a game, as a menu
+// (open its folder, a shortcut, rename, change the file, rebuild, GitHub,
+// report a problem, uninstall). One button for the whole life of the page,
+// so a menu that is open stays put while the page is drawn again
+const manageButton = el('button', { class: 'btn lg icon-only manage', 'aria-haspopup': 'menu', 'aria-expanded': 'false',
+  onclick: (e) => { e.stopPropagation(); if (manageMenu) closeManageMenu(); else openManageMenu(e.detail === 0); } }, icon('gear'));
+let manageMenu = null;   // the open menu, with .project = the id it is for
+
+function manageItems(p) {
+  const busy = !!snap.busy;
+  const installed = p.state !== 'not_installed';
+  const file = p.input ? p.input.split(/[\\/]/).pop() : p.input_label;
+  const groups = [[], [], [], []];
+  if (installed) groups[0].push(['folder', t('m_open_folder'), null, busy, () => call('open_folder', { id: p.id })]);
+  if (p.state === 'ready') groups[0].push(['monitor', t('m_shortcut'), null, busy, () => addShortcut(p)]);
+  else groups[0].push(['folder', t('do_existing'), null, busy, () => chooseExisting(p)]);
+  // Only a setting: it can change while a task runs
+  groups[0].push(['pencil', t('m_rename'), null, false, () => rename(p)]);
+  if (p.input_label) groups[1].push(['file', t('m_change_file'), file, busy, () => chooseInput(p, false)]);
+  if (p.can_rebuild) groups[1].push(['hammer', t('m_rebuild'), t('m_rebuild_sub'), busy, () => startTask(p, 'build')]);
+  groups[2].push(['github', t('do_github'), null, false, () => openLink(p.url), 'ext']);
+  groups[2].push(['bug', t('fb_report_game'), null, busy, () => feedback('bug', p.id)]);
+  if (installed) groups[3].push(['trash', t('m_uninstall'), null, busy, () => uninstall(p), 'danger']);
+  const out = [];
+  for (const g of groups.filter((x) => x.length)) {
+    if (out.length) out.push(el('div', { class: 'menu-sep', role: 'separator' }));
+    for (const [ic, label, sub, off, fn, cls] of g) {
+      out.push(el('button', { class: 'menu-item' + (cls ? ' ' + cls : ''), role: 'menuitem', tabindex: '-1', disabled: off,
+        onclick: () => { closeManageMenu(); fn(); } },
+        icon(ic), el('span', { class: 'menu-text' }, el('span', {}, label, cls === 'ext' ? icon('external') : null), sub ? el('small', {}, sub) : null)));
+    }
+  }
+  return out;
+}
+
+function fillManageMenu(p) {
+  const focused = manageMenu.contains(document.activeElement) ? [...manageMenu.querySelectorAll('.menu-item')].indexOf(document.activeElement) : -1;
+  manageMenu.replaceChildren(...manageItems(p));
+  if (focused >= 0) manageMenu.querySelectorAll('.menu-item')[focused]?.focus();
+  placeManageMenu();
+}
+
+// Under the gear, or above it when there is more room there; in a window too
+// short for either, the menu scrolls. On big screens the page is zoomed, so
+// the place is worked out in the window's pixels and then turned into the
+// menu's own
+function placeManageMenu() {
+  manageMenu.style.maxHeight = '';
+  const g = manageButton.getBoundingClientRect();
+  const m = manageMenu.getBoundingClientRect();
+  const z = m.width / manageMenu.offsetWidth || 1;
+  const roof = document.querySelector('.titlebar')?.getBoundingClientRect().bottom || 0;
+  const room = { below: window.innerHeight - g.bottom - 16, above: g.top - roof - 16 };
+  const below = m.height <= room.below || room.below >= room.above;
+  const height = Math.min(m.height, below ? room.below : room.above);
+  const left = Math.max(8, Math.min(g.left, window.innerWidth - m.width - 8));
+  manageMenu.style.left = left / z + 'px';
+  manageMenu.style.top = (below ? g.bottom + 8 : g.top - 8 - height) / z + 'px';
+  if (height < m.height) manageMenu.style.maxHeight = height / z + 'px';
+}
+
+function openManageMenu(byKeyboard) {
+  const p = snap.projects.find((x) => x.id === current);
+  if (!p) return;
+  manageMenu = el('div', { class: 'menu', role: 'menu', 'aria-label': t('manage') });
+  manageMenu.project = p.id;
+  manageMenu.addEventListener('keydown', manageKeys);
+  document.body.append(manageMenu);
+  fillManageMenu(p);
+  manageButton.classList.add('open');
+  manageButton.setAttribute('aria-expanded', 'true');
+  if (byKeyboard) manageMenu.querySelector('.menu-item:not(:disabled)')?.focus();
+}
+
+function closeManageMenu(refocus) {
+  if (!manageMenu) return;
+  manageMenu.remove();
+  manageMenu = null;
+  manageButton.classList.remove('open');
+  manageButton.setAttribute('aria-expanded', 'false');
+  if (refocus) manageButton.focus();
+}
+
+function manageKeys(e) {
+  const items = [...manageMenu.querySelectorAll('.menu-item:not(:disabled)')];
+  const i = items.indexOf(document.activeElement);
+  const go = (n) => { e.preventDefault(); items[(n + items.length) % items.length]?.focus(); };
+  if (e.key === 'ArrowDown') go(i + 1);
+  else if (e.key === 'ArrowUp') go(i < 0 ? -1 : i - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(-1);
+  else if (e.key === 'Tab') closeManageMenu();
+}
+
+// A click anywhere else, Escape, scrolling the page or resizing the window
+// closes it
+document.addEventListener('pointerdown', (e) => { if (manageMenu && !manageMenu.contains(e.target) && !manageButton.contains(e.target)) closeManageMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && manageMenu) { e.stopPropagation(); closeManageMenu(true); } }, true);
+window.addEventListener('resize', () => closeManageMenu());
+$('view-project').addEventListener('scroll', () => closeManageMenu());
 
 // ------------------------------------------------------------ achievements
 // Each project writes its own list (save/achievements.json in its folder);
@@ -1541,6 +1645,7 @@ function show(v) {
   const go = () => {
     view = v;
     if (v !== 'project') shownProject = null;
+    closeManageMenu();
     render();
     const page = $('view-' + view);
     page.classList.add('entering');
