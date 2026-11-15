@@ -3,8 +3,8 @@
   "projects": [
     {
       "id": "swtrilogy",
-      "name": "Star Wars Trilogy Native",
-      "tagline": "Sega's 1998 arcade game, running natively on PC.",
+      "name": "Nico SWT",
+      "tagline": "An unofficial recomp of the 1998 arcade game Star Wars Trilogy Arcade.",
       "description": "Not an emulator: the original code, recompiled to C++, with a modern Vulkan renderer. True widescreen, ray-traced shadows, HD text and modern controls.",
       "tags": ["Sega Model 3", "1998", "Vulkan", "Widescreen"],
       "repo": "snicolast/StarWarsTrilogyNative",
@@ -29,8 +29,8 @@
     },
     {
       "id": "lostworld",
-      "name": "The Lost World Native",
-      "tagline": "Sega's 1997 arcade light-gun game, running natively on PC.",
+      "name": "Nico TLW",
+      "tagline": "An unofficial recomp of the 1997 arcade light-gun game The Lost World: Jurassic Park.",
       "description": "Not an emulator: the original code, recompiled to C++, with a modern Vulkan renderer. True widescreen, ray-traced shadows, HD text and modern controls.",
       "tags": ["Sega Model 3", "1997", "Vulkan", "Light gun"],
       "repo": "snicolast/LostWorldNative",
@@ -55,8 +55,8 @@
     },
     {
       "id": "segarally2",
-      "name": "Sega Rally 2 Native",
-      "tagline": "Sega's 1998 arcade rally game, running natively on PC.",
+      "name": "Nico SR2",
+      "tagline": "An unofficial recomp of the 1998 arcade rally game Sega Rally 2.",
       "description": "Not an emulator: the original code, recompiled to C++, with a modern Vulkan renderer. True widescreen, ray tracing, real dust, HD liveries and modern controls.",
       "tags": ["Sega Model 3", "1998", "Vulkan", "Racing"],
       "repo": "snicolast/SegaRally2Native",
