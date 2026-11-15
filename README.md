@@ -15,9 +15,9 @@
 
 ## The games
 
-- [Star Wars Trilogy Native](https://github.com/snicolast/StarWarsTrilogyNative)
-- [The Lost World Native](https://github.com/snicolast/LostWorldNative)
-- [Sega Rally 2 Native](https://github.com/snicolast/SegaRally2Native)
+- **[Nico SWT](https://github.com/snicolast/StarWarsTrilogyNative)**: an unofficial recomp of the 1998 arcade game Star Wars Trilogy Arcade.
+- **[Nico TLW](https://github.com/snicolast/LostWorldNative)**: an unofficial recomp of the 1997 arcade game The Lost World: Jurassic Park.
+- **[Nico SR2](https://github.com/snicolast/SegaRally2Native)**: an unofficial recomp of the 1998 arcade game Sega Rally 2.
 
 New ones show up in the launcher by themselves.
 
