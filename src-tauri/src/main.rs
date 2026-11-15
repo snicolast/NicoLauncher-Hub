@@ -19,7 +19,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder};
 use tauri_plugin_updater::UpdaterExt;
 
 struct Hub {
@@ -676,9 +676,13 @@ fn main() {
     config.base = places.config.parent().map(PathBuf::from).unwrap_or_default();
     config.portable = places.portable.is_some();
     let mut context = tauri::generate_context!();
-    if let Some(dir) = &places.webview {
+    // Tauri does not pass a window's `data_directory` from the config to its
+    // webview, which then keeps its data in %LOCALAPPDATA%: a portable
+    // launcher opens its windows itself, with the folder set on each.
+    let webview_dir = places.webview.clone();
+    if webview_dir.is_some() {
         for window in &mut context.config_mut().app.windows {
-            window.data_directory = Some(dir.clone());
+            window.create = false;
         }
     }
     // What a portable update left aside, once the old launcher has closed
@@ -686,6 +690,16 @@ fn main() {
         std::thread::spawn(move || portable::remove_old_exe(&exe));
     }
     tauri::Builder::default()
+        .setup(move |app| {
+            if let Some(dir) = webview_dir {
+                for window in app.config().app.windows.clone() {
+                    WebviewWindowBuilder::from_config(app.handle(), &window)?
+                        .data_directory(dir.clone())
+                        .build()?;
+                }
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
