@@ -7,8 +7,15 @@
 //!
 //! It keeps the same record as `update.ps1` (`version.txt` and `manifest.txt`
 //! in the project's update folder), so either one can do the next update.
+//!
+//! The new source is in place before the game is rebuilt from it, and the
+//! rebuild can be cancelled or fail. Until a build of that source works, the
+//! program in the folder is still the old version although the record (and
+//! the news the source brings) already say the new one: `rebuild_pending`
+//! tells, so the launcher offers to finish the update instead of Play only.
 
 use crate::registry::{is_plain_relative, Project};
+use crate::runner::Cancel;
 use crate::source::{download, latest_commit, unpack, write_update_state, zip_url};
 use crate::{build::sha256_of, err, Result};
 use std::collections::HashMap;
@@ -38,9 +45,59 @@ pub enum Outcome {
 
 /// The commit the installed copy was made from, when there is a record.
 pub fn installed_version(state_dir: &Path) -> Option<String> {
-    let text = fs::read_to_string(state_dir.join("version.txt")).ok()?;
+    commit_in(&state_dir.join("version.txt"))
+}
+
+/// The commit on the first line of a record file.
+fn commit_in(file: &Path) -> Option<String> {
+    let text = fs::read_to_string(file).ok()?;
     let first = text.lines().next()?.trim().to_lowercase();
     (!first.is_empty()).then_some(first)
+}
+
+/// `built.txt`: the commit the program in the folder was last built from by
+/// the launcher. Only the launcher writes it; `update.ps1` ignores it.
+const BUILT: &str = "built.txt";
+
+fn state_dir(project: &Project, dir: &Path) -> Option<PathBuf> {
+    project.update_state.as_deref().filter(|s| is_plain_relative(s)).map(|s| dir.join(s))
+}
+
+/// Notes that the program in `dir` was just built from the installed source.
+/// Called after every build that worked.
+pub fn record_built(project: &Project, dir: &Path) -> Result<()> {
+    let Some(state) = state_dir(project, dir) else { return Ok(()) };
+    let Some(version) = installed_version(&state) else { return Ok(()) };
+    fs::write(state.join(BUILT), format!("{version}\r\n")).map_err(err("Could not write the version record"))
+}
+
+/// The installed source is newer than the program built from it: an update
+/// put the new source in place and its rebuild was cancelled or failed (in
+/// the launcher, or in the game's own `update.bat`), so Play would start the
+/// old version. Also true of a folder left that way by an older launcher,
+/// which kept no `built.txt`: then the dates tell.
+///
+/// False for a git working copy (its owner builds it) and when the program
+/// is not there at all (the project then simply needs building).
+pub fn rebuild_pending(project: &Project, dir: &Path) -> bool {
+    if dir.join(".git").exists() {
+        return false;
+    }
+    let (Some(state), Some(exe)) = (state_dir(project, dir), project.exe.as_ref().map(|e| dir.join(e))) else {
+        return false;
+    };
+    let Some(version) = installed_version(&state) else { return false };
+    if commit_in(&state.join(BUILT)).is_some_and(|built| built == version) {
+        return false;
+    }
+    // Built after the source last changed (by update.bat, or by hand): done.
+    // The program not rebuilt by an update that changed nothing in it is
+    // caught once, and the rebuild that follows records it
+    let modified = |p: &Path| fs::metadata(p).and_then(|m| m.modified()).ok();
+    match (modified(&state.join("version.txt")), modified(&exe)) {
+        (Some(source), Some(program)) => program < source,
+        _ => false,
+    }
 }
 
 /// `manifest.txt`: `<sha256> <path>` per line. Keyed by the path in lower case
@@ -137,7 +194,10 @@ pub(crate) fn timestamp() -> String {
 /// `dir`. Nothing is changed when the installed version is already that one,
 /// unless `force`; it is not even downloaded when the branch's latest commit
 /// can be read first. It does not rebuild: the caller does.
-pub fn update(project: &Project, dir: &Path, force: bool, log: &mut dyn FnMut(&str)) -> Result<Outcome> {
+///
+/// Cancelled, it stops before a single file of the folder is changed; once
+/// the new files are being copied in, it finishes copying them.
+pub fn update(project: &Project, dir: &Path, force: bool, cancel: &Cancel, log: &mut dyn FnMut(&str)) -> Result<Outcome> {
     let state_rel = project.update_state.as_ref().ok_or_else(|| format!("{} keeps no version record.", project.name))?;
     let state_dir = dir.join(state_rel);
     if !force {
@@ -160,7 +220,7 @@ pub fn update(project: &Project, dir: &Path, force: bool, log: &mut dyn FnMut(&s
     let staging = parent.join(format!(".{tag}.updating"));
     let result = (|| {
         log(&format!("Downloading the latest source of {}...", project.name));
-        download(&zip_url(project), &zip_path, log)?;
+        download(&zip_url(project), &zip_path, cancel, log)?;
         let _ = fs::remove_dir_all(&staging);
         let zip = File::open(&zip_path).map_err(err("Could not open the download"))?;
         let (files, commit) = unpack(zip, &staging)?;
@@ -173,6 +233,9 @@ pub fn update(project: &Project, dir: &Path, force: bool, log: &mut dyn FnMut(&s
         match &current {
             Some(c) => log(&format!("New version {} (installed: {}).", &version[..7], &c[..c.len().min(7)])),
             None => log(&format!("Latest version: {}. The installed version is unknown (first update).", &version[..7])),
+        }
+        if cancel.was_asked() {
+            return Err("Cancelled.".into());
         }
         let backup: PathBuf = dir.join("out").join("update_backup").join(timestamp());
         let report = apply(&staging, &files, dir, &state_dir, &version, &backup)?;
@@ -326,6 +389,69 @@ mod tests {
         assert_eq!(record["file with spaces.txt"].1, "def456");
         assert_eq!(installed_version(&state.join("none")), None);
         fs::remove_dir_all(&state).unwrap();
+    }
+
+    /// Sets a file's modification time, as if written that long ago.
+    fn age(path: &Path, secs_ago: u64) {
+        let when = SystemTime::now() - std::time::Duration::from_secs(secs_ago);
+        File::options().write(true).open(path).unwrap().set_modified(when).unwrap();
+    }
+
+    #[test]
+    fn an_update_whose_rebuild_did_not_finish_is_pending_until_a_build_works() {
+        let reg = crate::registry::Registry::bundled();
+        let p = reg.find("segarally2").unwrap();
+        let root = temp("pending");
+        let (dest, state) = (root.join("game"), root.join("game/save/update"));
+        let exe = dest.join(p.exe.as_deref().unwrap());
+        let (src1, files1) = version(&root, "v1", &[("build.bat", "v1")]);
+        apply(&src1, &files1, &dest, &state, V1, &root.join("backup")).unwrap();
+        assert!(!rebuild_pending(p, &dest), "not built at all: that is not an update left halfway");
+
+        // Installed and built, by the launcher
+        fs::write(&exe, "built from v1").unwrap();
+        record_built(p, &dest).unwrap();
+        assert!(!rebuild_pending(p, &dest));
+
+        // Update: the new source is in, then the rebuild is cancelled
+        age(&exe, 3600);
+        let (src2, files2) = version(&root, "v2", &[("build.bat", "v2")]);
+        apply(&src2, &files2, &dest, &state, V2, &root.join("backup")).unwrap();
+        assert!(rebuild_pending(p, &dest), "Play would start the v1 program");
+
+        // The rebuild works, even one that did not need to write the program
+        record_built(p, &dest).unwrap();
+        assert!(!rebuild_pending(p, &dest));
+        assert_eq!(commit_in(&state.join(BUILT)).as_deref(), Some(V2));
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn tells_a_folder_left_halfway_by_an_older_launcher_by_the_dates() {
+        let reg = crate::registry::Registry::bundled();
+        let p = reg.find("segarally2").unwrap();
+        let root = temp("legacy");
+        let (dest, state) = (root.join("game"), root.join("game/save/update"));
+        let exe = dest.join(p.exe.as_deref().unwrap());
+        fs::create_dir_all(&state).unwrap();
+        fs::write(state.join("version.txt"), format!("{V2}\r\n")).unwrap();
+        fs::write(&exe, "built").unwrap();
+        // No built.txt. The program older than the last update: it was not rebuilt
+        age(&exe, 3600);
+        assert!(rebuild_pending(p, &dest));
+        // Built after it (by update.bat, which keeps no built.txt): done
+        age(&state.join("version.txt"), 7200);
+        assert!(!rebuild_pending(p, &dest));
+        // A built.txt of an older version does not matter when the program is newer
+        fs::write(state.join(BUILT), format!("{V1}\r\n")).unwrap();
+        age(&state.join(BUILT), 7200);
+        assert!(!rebuild_pending(p, &dest));
+        // A git working copy is its owner's to build
+        age(&exe, 9000);
+        assert!(rebuild_pending(p, &dest));
+        fs::create_dir_all(dest.join(".git")).unwrap();
+        assert!(!rebuild_pending(p, &dest));
+        fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

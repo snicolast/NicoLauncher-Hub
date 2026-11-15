@@ -592,3 +592,4 @@ main { isolation: isolate; }
 .cl-entry:not(.latest) .ann-list li::before { background: var(--dim); box-shadow: none; }
 .ann-pager { display: flex; align-items: center; gap: 4px; margin-left: -10px; }
 .ann-pager .btn.small { padding: 5px 6px; }
+.note.unfinished { margin-top: 14px; font-size: 13.5px; max-width: 560px; }

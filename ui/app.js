@@ -18,7 +18,8 @@ const STR = {
     bad_folder: '{path} has [ ] or ; in its name, and the build tools cannot work in a folder like that. Choose a folder without them (Settings, Install folder).',
     st_not_installed: 'Not installed', st_needs_input: 'Needs your own file',
     st_needs_build: 'Ready to build', st_ready: 'Ready', st_busy: 'Working...',
-    update_available: 'Update available',
+    update_available: 'Update available', update_unfinished: 'Update not finished',
+    unfinished_note: 'The last update did not finish, so {name} is still the previous version. Press Update to finish it.',
     do_install: 'Install', do_choose: 'Choose {file}', choose_title: 'Choose your own copy of {file}',
     ask_title: '{name} needs your own file',
     ask_lead: 'The game is built on this PC from your own copy of {file}. This is what happens next:',
@@ -126,7 +127,8 @@ const STR = {
     bad_folder: '{path} tiene [ ] o ; en el nombre, y las herramientas de compilación no funcionan en una carpeta así. Elige una carpeta sin esos caracteres (Ajustes, Carpeta de instalación).',
     st_not_installed: 'No instalado', st_needs_input: 'Falta tu archivo',
     st_needs_build: 'Listo para compilar', st_ready: 'Listo', st_busy: 'Trabajando...',
-    update_available: 'Hay novedades',
+    update_available: 'Hay novedades', update_unfinished: 'Actualización a medias',
+    unfinished_note: 'La última actualización no terminó, así que {name} sigue siendo la versión anterior. Pulsa Actualizar para terminarla.',
     do_install: 'Instalar', do_choose: 'Elegir {file}', choose_title: 'Elige tu propia copia de {file}',
     ask_title: '{name} necesita tu propio archivo',
     ask_lead: 'El juego se compila en este PC a partir de tu propia copia de {file}. Esto es lo que pasa ahora:',
@@ -360,6 +362,7 @@ async function startTask(p, action) {
   task.wasReady = p.state === 'ready';
   // The version before an update: what is newer afterwards is shown
   if (action === 'update') task.fromVersion = Math.max(0, ...p.news.map((e) => e.number));
+  task.wasPending = !!p.rebuild_pending;
   const started = await call('start_task', { id: p.id, action });
   if (started === undefined) { task = null; clearInterval(timer); }
   await update('snapshot');
@@ -518,8 +521,11 @@ function primaryButton(p, large) {
   }
 }
 
-// Something new is waiting for an installed project
-const hasUpdate = (p) => p.can_update && p.new_entries.length > 0;
+// Something new is waiting for an installed project: news it does not have,
+// or the rebuild of an update that was cancelled or failed
+const hasUpdate = (p) => p.can_update && (p.new_entries.length > 0 || p.rebuild_pending);
+const updateChip = (p) => (p.new_entries.length ? el('span', { class: 'chip new' }, t('update_available'))
+  : hasUpdate(p) ? el('span', { class: 'chip new' }, t('update_unfinished')) : null);
 
 function stateLine(p) {
   const working = snap.busy === p.id;
@@ -681,7 +687,7 @@ function renderHome() {
           : primaryButton(lead, true),
         el('button', { class: 'btn lg glass', onclick: () => open(lead) }, t('details')),
         el('span', { class: 'state' }, ...stateLine(lead)),
-        lead.new_entries.length ? el('span', { class: 'chip new' }, t('update_available')) : null));
+        updateChip(lead)));
   } else $('spot-content').replaceChildren();
   $('spot-picks').classList.toggle('dots', snap.projects.length > 5);
   $('spot-picks').replaceChildren(...(snap.projects.length > 1 ? snap.projects.map((p) =>
@@ -715,7 +721,7 @@ function renderHome() {
     }));
   }
   const count = (state) => snap.projects.filter((p) => p.state === state).length;
-  const fresh = snap.projects.filter((p) => p.new_entries.length && p.can_update);
+  const fresh = snap.projects.filter(hasUpdate);
   const todo = count('needs_input') + count('needs_build');
   const line = (dot, key, n) => (n ? el('div', { class: 'state' }, el('span', { class: 'dot ' + dot }), t(key, { n })) : null);
   $('home-library').replaceChildren(...[
@@ -723,7 +729,7 @@ function renderHome() {
     line('needs_build', 'count_todo', todo),
     line('', 'count_missing', count('not_installed')),
     ...fresh.map((p) => el('div', { class: 'fresh' },
-      el('span', {}, el('strong', {}, p.name.replace(/ Native$/, '')), el('span', { class: 'chip new' }, t('update_available'))),
+      el('span', {}, el('strong', {}, p.name.replace(/ Native$/, '')), updateChip(p)),
       el('button', { class: 'btn small attn', disabled: !!snap.busy, onclick: () => askUpdate(p) }, icon('up'), t('do_update')))),
     el('button', { class: 'btn ghost small', onclick: () => show('library') }, t('home_open_library')),
   ].filter(Boolean));
@@ -765,7 +771,7 @@ function renderLibrary() {
     if (p.hero) art.append(picture(p.hero));
     const top = el('div', { class: 'card-top' },
       p.logo ? picture(p.logo, 'card-logo') : el('span'),
-      p.new_entries.length ? el('span', { class: 'chip new' }, t('update_available')) : null);
+      updateChip(p));
     // Until there is a folder to install into, the projects are only shown:
     // the welcome box above is the one thing to do. A project that already
     // has a folder of its own stays in use. A card has no button of its own:
@@ -821,6 +827,9 @@ function renderProject() {
   // In sight beside Play, but quiet: it is not what one comes here for
   if (p.state !== 'not_installed') actions.push(btn('trash', t('do_uninstall'), () => uninstall(p), 'ghost danger'));
   $('p-actions').replaceChildren(...actions);
+  // Play would start the old version until the update is finished
+  $('p-note').hidden = !p.rebuild_pending;
+  $('p-note').replaceChildren(...(p.rebuild_pending ? [icon('up'), t('unfinished_note', { name: p.name })] : []));
 
   const installed = p.state !== 'not_installed';
   const details = $('p-details');
@@ -1356,10 +1365,11 @@ function changelog({ head, title, from, to, entries, actions, all, ready, close 
 }
 
 // Update pressed on a game: first what GitHub has that the installed copy
-// does not, and the user chooses. Without news to show (none newer, or GitHub
-// not reached) Update rebuilds right away, as before.
+// does not, and the user chooses. Without news to show (none newer, GitHub
+// not reached, or only an unfinished update to finish) Update rebuilds right
+// away, as before.
 function askUpdate(p) {
-  if (!hasUpdate(p)) { startTask(p, 'update'); return; }
+  if (!p.can_update || !p.new_entries.length) { startTask(p, 'update'); return; }
   const entries = p.new_entries;
   const from = Math.max(0, ...p.news.map((e) => e.number));
   const head = el('div', { class: 'ann-head game' });
@@ -1603,7 +1613,8 @@ T.event.listen('task', async ({ payload }) => {
     if (payload.ok && finished.own && finished.action === 'setup' && p && p.state === 'needs_input') chooseInput(p, true, finished.fresh);
     // An update with news: they were read before it started, so only a word
     // that it is done
-    else if (payload.ok && finished.own && finished.action === 'update' && p && p.news.some((e) => e.number > finished.fromVersion)) toast(t('updated_toast', { name: p.name }), true);
+    // or the rebuild of an unfinished one is done
+    else if (payload.ok && finished.own && finished.action === 'update' && p && (p.news.some((e) => e.number > finished.fromVersion) || finished.wasPending)) toast(t('updated_toast', { name: p.name }), true);
     // Cancelled while it was still downloading: the same clean way out
     // The game can be played for the first time: say so, and offer a shortcut
     else if (payload.ok && finished.own && !finished.wasReady && p && p.state === 'ready') celebrate(p);
