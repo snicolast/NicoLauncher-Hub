@@ -180,6 +180,14 @@ Inside `run`, these are replaced before the program starts:
 Using one that `[requires]` or `[input]` does not ask for is an error. Write `{{`
 and `}}` for literal braces.
 
+A CMake configure step (`run = ["{cmake}", ..., "-B", "<folder>", ...]`) keeps
+its build folder between builds. Before it runs, the launcher checks the
+programs that folder's `CMakeCache.txt` remembers (cmake, ninja, the compilers):
+when one is gone, or the folder was set up by another cmake (the build kit is
+in another place: another copy of the launcher, a portable one), the folder is
+set up again from scratch, as `cmake --fresh` does, and everything is compiled
+again.
+
 A step can run one of the project's own scripts (`run = ["cmd", "/c", "tools\\get_dlss.bat"]`)
 for anything the format does not cover.
 

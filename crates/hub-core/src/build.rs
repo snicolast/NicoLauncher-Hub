@@ -322,6 +322,9 @@ pub fn run(manifest: &Manifest, dir: &Path, tools: &Tools, cancel: &Cancel, log:
             log("  Already done.");
             continue;
         }
+        if let Some(build_dir) = cmake_build_dir(step) {
+            forget_stale_cmake_setup(&dir.join(build_dir), tools, log)?;
+        }
         match run_step(step, dir, tools, cancel, log) {
             Ok(()) => {}
             Err(_) if cancel.was_asked() => return Err("Cancelled.".into()),
@@ -336,6 +339,91 @@ pub fn run(manifest: &Manifest, dir: &Path, tools: &Tools, cancel: &Cancel, log:
         return Err(format!("The steps ended but {} is not there.", manifest.exe));
     }
     Ok(warnings)
+}
+
+/// The build folder a CMake configure step sets up: `-B dir` or `-Bdir`,
+/// inside the project.
+fn cmake_build_dir(step: &Step) -> Option<&str> {
+    if step.run.first().map(String::as_str) != Some("{cmake}") {
+        return None;
+    }
+    let mut args = step.run.iter().skip(1);
+    let dir = loop {
+        let arg = args.next()?;
+        if arg == "-B" {
+            break args.next()?.as_str();
+        }
+        if let Some(dir) = arg.strip_prefix("-B").filter(|d| !d.is_empty()) {
+            break dir;
+        }
+    };
+    (!dir.contains('{') && Path::new(dir).is_relative()).then_some(dir)
+}
+
+/// The programs a CMake build folder keeps the path of. Run again, CMake
+/// takes them from there and not from the command line or the PATH.
+const CMAKE_PROGRAMS: [&str; 8] = [
+    "CMAKE_COMMAND",
+    "CMAKE_MAKE_PROGRAM",
+    "CMAKE_C_COMPILER",
+    "CMAKE_CXX_COMPILER",
+    "CMAKE_RC_COMPILER",
+    "CMAKE_AR",
+    "CMAKE_RANLIB",
+    "CMAKE_LINKER",
+];
+
+/// Why the CMake setup kept in `CMakeCache.txt` cannot be used again, if so:
+/// a program it names is gone (the build kit moved: another copy of the
+/// launcher, a portable one, a newer kit), or it was made by another cmake
+/// than the one the steps now run.
+fn stale_cmake_cache(cache: &str, cmake: Option<&Path>) -> Option<String> {
+    let entries = cache.lines().filter_map(|line| {
+        let (name, value) = line.split_once('=')?;
+        let name = name.split_once(':').map_or(name, |(n, _)| n);
+        CMAKE_PROGRAMS.contains(&name).then(|| (name, value.trim()))
+    });
+    for (name, value) in entries {
+        let path = Path::new(value);
+        // A bare name is looked for again; only a whole path is kept
+        if value.is_empty() || value.ends_with("-NOTFOUND") || !path.is_absolute() {
+            continue;
+        }
+        if !path.exists() {
+            return Some(format!("{value} is no longer there"));
+        }
+        if name == "CMAKE_COMMAND" {
+            if let Some(cmake) = cmake.filter(|c| c.is_absolute()) {
+                // Both whole and in the same spelling: Windows may write a
+                // folder in its short form (RUNNER~1) in one and whole in the other
+                let same = match (fs::canonicalize(path), fs::canonicalize(cmake)) {
+                    (Ok(a), Ok(b)) => a == b,
+                    _ => true,
+                };
+                if !same {
+                    return Some(format!("it was set up with {value}"));
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Before a CMake configure step: a build folder set up with tools that are
+/// no longer the ones in use is set up again from scratch, as `cmake --fresh`
+/// does (its `CMakeCache.txt` and `CMakeFiles` go; everything is compiled
+/// again). Otherwise CMake would keep looking for the old ones.
+fn forget_stale_cmake_setup(build: &Path, tools: &Tools, log: &mut dyn FnMut(&str)) -> Result<()> {
+    let cache = build.join("CMakeCache.txt");
+    let Ok(text) = fs::read_to_string(&cache) else { return Ok(()) };
+    let Some(why) = stale_cmake_cache(&text, tools.cmake.as_deref()) else { return Ok(()) };
+    log(&format!("  The build folder was made with other tools ({why}): starting it again."));
+    fs::remove_file(&cache).map_err(|e| format!("Could not remove {}: {e}", cache.display()))?;
+    let files = build.join("CMakeFiles");
+    if files.exists() {
+        fs::remove_dir_all(&files).map_err(|e| format!("Could not remove {}: {e}", files.display()))?;
+    }
+    Ok(())
 }
 
 /// The project's manifest, when its folder has one.
@@ -488,6 +576,67 @@ mod tests {
         fs::remove_dir_all(&root).unwrap();
     }
 
+    #[test]
+    fn finds_the_build_folder_of_a_cmake_configure_step() {
+        let step = |run: &[&str]| Step { name: "s".into(), run: run.iter().map(|s| s.to_string()).collect(), copy: None, msvc_env: false, skip_if_exists: vec![], optional: false };
+        assert_eq!(cmake_build_dir(&step(&["{cmake}", "-S", ".", "-B", "build/kit", "-G", "Ninja"])), Some("build/kit"));
+        assert_eq!(cmake_build_dir(&step(&["{cmake}", "-S.", "-Bbuild"])), Some("build"));
+        // Building, not configuring; not CMake; no folder of its own
+        assert_eq!(cmake_build_dir(&step(&["{cmake}", "--build", "build/kit"])), None);
+        assert_eq!(cmake_build_dir(&step(&["{python}", "-B", "build"])), None);
+        assert_eq!(cmake_build_dir(&step(&["{cmake}", "-S", "."])), None);
+        assert_eq!(cmake_build_dir(&step(&["{cmake}", "-B"])), None);
+    }
+
+    #[test]
+    fn a_cmake_setup_with_tools_that_are_gone_is_stale() {
+        let dir = temp("stale-cache");
+        let old_kit = dir.join("old-kit");
+        let kit = dir.join("kit");
+        for k in [&old_kit, &kit] {
+            fs::create_dir_all(k).unwrap();
+            for exe in ["cmake.exe", "ninja.exe", "clang.exe"] {
+                fs::write(k.join(exe), "").unwrap();
+            }
+        }
+        let p = |k: &Path, exe: &str| k.join(exe).to_string_lossy().replace('\\', "/");
+        let cache = |k: &Path| {
+            format!(
+                "# This is the CMakeCache file.\nCMAKE_BUILD_TYPE:STRING=Release\nCMAKE_MAKE_PROGRAM:FILEPATH={}\nCMAKE_C_COMPILER:STRING={}\nCMAKE_RC_COMPILER:FILEPATH=x86_64-w64-mingw32-windres\nCMAKE_AR:FILEPATH=CMAKE_AR-NOTFOUND\nCMAKE_COMMAND:INTERNAL={}\n",
+                p(k, "ninja.exe"),
+                p(k, "clang.exe"),
+                p(k, "cmake.exe")
+            )
+        };
+        let cmake = kit.join("cmake.exe");
+        // Made with the tools in use
+        assert_eq!(stale_cmake_cache(&cache(&kit), Some(&cmake)), None);
+        // Made by another kit that is still there: another cmake
+        assert!(stale_cmake_cache(&cache(&old_kit), Some(&cmake)).unwrap().contains("set up with"));
+        // The other kit is gone
+        fs::remove_file(old_kit.join("ninja.exe")).unwrap();
+        assert!(stale_cmake_cache(&cache(&old_kit), Some(&cmake)).unwrap().contains("ninja.exe is no longer there"));
+        // A cmake looked for on the PATH is not compared
+        assert_eq!(stale_cmake_cache(&cache(&kit), Some(Path::new("cmake"))), None);
+
+        // The stale setup goes before the step; the rest of the folder stays
+        let build = dir.join("build");
+        fs::create_dir_all(build.join("CMakeFiles/game.dir")).unwrap();
+        fs::write(build.join("CMakeCache.txt"), cache(&old_kit)).unwrap();
+        fs::write(build.join("keep.txt"), "").unwrap();
+        let tools = Tools { cmake: Some(cmake.clone()), ..Default::default() };
+        let (seen, mut log) = lines();
+        forget_stale_cmake_setup(&build, &tools, &mut log).unwrap();
+        assert!(!build.join("CMakeCache.txt").exists() && !build.join("CMakeFiles").exists() && build.join("keep.txt").exists());
+        assert!(seen.borrow().iter().any(|l| l.contains("starting it again")));
+        // A good one is left alone
+        fs::write(build.join("CMakeCache.txt"), cache(&kit)).unwrap();
+        let (seen, mut log) = lines();
+        forget_stale_cmake_setup(&build, &tools, &mut log).unwrap();
+        assert!(build.join("CMakeCache.txt").exists() && seen.borrow().is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     /// The whole kit for real: downloaded, unpacked, and a C++ program built
     /// with its clang, CMake, Ninja and Python and nothing else from the PC.
     /// About 250 MB of downloads, so only when asked for (the Windows CI does).
@@ -549,6 +698,17 @@ run = ["./hello.exe"]
         let (seen, mut log) = lines();
         install_kit(&m, &root, &Cancel::new(), &mut log).unwrap();
         assert!(seen.borrow().is_empty());
+        // The kit somewhere else (another copy of the launcher, a portable
+        // one): the build folder still names the old tools and is set up again
+        let moved = dir.join("kit-moved");
+        fs::rename(&root, &moved).unwrap();
+        let tools = Tools::find(&m, None, &moved).unwrap();
+        let (seen, mut log) = lines();
+        let result = run(&m, &dir, &tools, &Cancel::new(), &mut log);
+        assert!(result.is_ok(), "{result:?}\n{:#?}", seen.borrow());
+        assert!(seen.borrow().iter().any(|l| l.contains("starting it again")), "{:#?}", seen.borrow());
+        let cache = fs::read_to_string(dir.join("build/CMakeCache.txt")).unwrap().to_lowercase();
+        assert!(cache.contains("/kit-moved/") && !cache.contains("/kit/"), "the moved kit is used");
         let _ = fs::remove_dir_all(&dir);
     }
 
