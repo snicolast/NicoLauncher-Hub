@@ -1118,8 +1118,14 @@ function feedbackUrl(kind, where, { title, system, text, log }) {
     : `${HUB}/discussions/new?category=${{ idea: 'ideas', recomp: 'recomp-proposals', talk: 'general' }[kind]}`;
   const sep = base.includes('?') ? '&' : '?';
   const facts = details(where, true).map(([k, v]) => `- **${k}:** ${v}`).join('\n');
-  // The user's name in their own paths stays out of a public page
-  let lines = log ? log.split('\n').filter((l) => l.trim()).map((l) => l.replace(/([A-Za-z]:\\Users\\)[^\\\r\n]+/gi, '$1<user>')) : [];
+  // The user's name in their own paths stays out of a public page. A very long
+  // line (a linker's command line, thousands of characters) keeps only its start:
+  // whole, it would push the error lines after it out of the address
+  const LINE_MAX = 300;
+  const all = log ? log.split('\n').filter((l) => l.trim())
+    .map((l) => l.replace(/([A-Za-z]:\\Users\\)[^\\\r\n]+/gi, '$1<user>'))
+    .map((l) => (l.length > LINE_MAX ? `${l.slice(0, LINE_MAX)} […]` : l)) : [];
+  let lines = all;
   const make = () => {
     let md;
     if (kind === 'recomp') {
@@ -1133,13 +1139,19 @@ function feedbackUrl(kind, where, { title, system, text, log }) {
     const name = kind === 'recomp' && system ? `${title} (${system})` : title;
     return `${base}${sep}title=${encodeURIComponent(name)}&body=${encodeURIComponent(md)}`;
   };
-  // A long log does not fit in an address: its last lines, where the error is
+  // A long log does not fit in an address: as many of its last lines as fit,
+  // where the error is (the first line to keep found by halving)
   let url = make();
-  while (url.length > URL_MAX && lines.length > 1) {
-    lines = lines.slice(Math.ceil(lines.length / 4));
-    url = make();
+  if (url.length <= URL_MAX || all.length < 2) return url;
+  let lo = 1, hi = all.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    lines = all.slice(mid);
+    if (make().length <= URL_MAX) hi = mid;
+    else lo = mid + 1;
   }
-  return url;
+  lines = all.slice(lo);
+  return make();
 }
 
 function clock(ms) {
