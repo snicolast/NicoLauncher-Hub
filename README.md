@@ -11,8 +11,6 @@
   <a href="https://github.com/snicolast/NicoLauncher-Hub/releases/latest"><b>Download for Windows</b></a>
 </p>
 
-![NicoLauncher's home screen](docs/img/home.jpg)
-
 ## The games
 
 - **[Nico SWT](https://github.com/snicolast/StarWarsTrilogyNative)**: an unofficial recomp of the 1998 arcade game Star Wars Trilogy Arcade.
@@ -45,8 +43,6 @@ The first time, the launcher shows its license. Scroll to the end and press **I 
 
 ### 3. Pick a game and press Install
 
-![The library](docs/img/library.jpg)
-
 Open the game you want and press **Install**.
 
 ### 4. Choose your ROM file
@@ -55,13 +51,9 @@ A file window opens. Find **your own** ROM file for that game and select it. It 
 
 ### 5. Wait
 
-![Installing a game](docs/img/install.jpg)
-
 The launcher downloads the game's source code and builds the game on your PC. The bar at the bottom tells you what it is doing in plain words. It takes a few minutes, and the first game takes longer because the tools are downloaded too. You can keep using your PC meanwhile.
 
 ### 6. Play
-
-![A game's page](docs/img/game.jpg)
 
 When it says **Ready**, press **Play**. From then on, opening the launcher and pressing **Play** is all you do.
 
