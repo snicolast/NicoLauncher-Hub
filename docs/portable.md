@@ -48,3 +48,10 @@ the old one becomes `NicoLauncher.exe.old` and is deleted on the next start.
 - A folder the user can write to, without `[` `]` or `;` in its path (the
   build tools cannot work from one).
 - No Start menu entry or uninstaller: deleting the folder removes it.
+
+## Older portable copies
+
+Up to version 0.3.11 a portable launcher still kept its window data in
+`%LOCALAPPDATA%\io.github.snicolast.nicolauncher`. From the next version it
+uses its own `webview\` folder. That old folder can be deleted, unless an
+installed launcher on the same PC is using it.
