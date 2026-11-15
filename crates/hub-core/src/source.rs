@@ -55,6 +55,54 @@ pub(crate) fn zip_url(project: &Project) -> String {
     format!("https://codeload.github.com/{}/zip/refs/heads/{}", project.repo, project.branch)
 }
 
+/// The list of the repository's branches that `git` itself asks for. Served by
+/// github.com like a clone, so no GitHub API limit either, and only a few KB.
+fn refs_url(project: &Project) -> String {
+    format!("https://github.com/{}.git/info/refs?service=git-upload-pack", project.repo)
+}
+
+/// The commit at the tip of the project's branch, without downloading the
+/// source: the same commit the zip of the branch would be made from.
+pub fn latest_commit(project: &Project) -> Result<String> {
+    let url = refs_url(project);
+    let resp = agent(30).get(&url).call().map_err(|e| http_error(&url, e))?;
+    let mut body = Vec::new();
+    // A list of branches is small: anything much bigger is not one
+    resp.into_reader()
+        .take(4 * 1024 * 1024)
+        .read_to_end(&mut body)
+        .map_err(err("Could not read the list of versions"))?;
+    branch_commit(&body, &project.branch).ok_or_else(|| format!("{url} does not list the branch {}", project.branch))
+}
+
+/// Finds `refs/heads/<branch>` in git's list of references (pkt-lines: four hex
+/// digits giving each line's length, `0000` between sections).
+fn branch_commit(advert: &[u8], branch: &str) -> Option<String> {
+    let wanted = format!("refs/heads/{branch}");
+    let mut rest = advert;
+    while rest.len() >= 4 {
+        let len = usize::from_str_radix(std::str::from_utf8(&rest[..4]).ok()?, 16).ok()?;
+        if len == 0 {
+            rest = &rest[4..];
+            continue;
+        }
+        if len < 4 || len > rest.len() {
+            return None;
+        }
+        let line = &rest[4..len];
+        rest = &rest[len..];
+        // The first reference carries git's options after a NUL
+        let line = line.split(|&b| b == 0).next()?;
+        let line = std::str::from_utf8(line).ok()?.trim_end();
+        if let Some((sha, name)) = line.split_once(' ') {
+            if name == wanted && sha.len() == 40 && sha.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return Some(sha.to_lowercase());
+            }
+        }
+    }
+    None
+}
+
 fn dir_has_files(dir: &Path) -> bool {
     fs::read_dir(dir).map(|mut d| d.next().is_some()).unwrap_or(false)
 }
@@ -231,6 +279,37 @@ mod tests {
         let _ = fs::remove_dir_all(&out);
     }
 
+    fn pkt(line: &str) -> String {
+        format!("{:04x}{line}", line.len() + 4)
+    }
+
+    #[test]
+    fn finds_the_branch_in_the_list_of_references() {
+        let master = "78726018f583bd0276d1900cb9507e4697a1d80b";
+        let other = "806d5216f091dd08cb26c3d28052e5a98daaacdf";
+        let advert = [
+            pkt("# service=git-upload-pack\n"),
+            "0000".to_string(),
+            pkt(&format!("{master} HEAD\0multi_ack thin-pack symref=HEAD:refs/heads/master\n")),
+            pkt(&format!("{other} refs/heads/dev\n")),
+            pkt(&format!("{master} refs/heads/master\n")),
+            pkt(&format!("{other} refs/pull/1/head\n")),
+            "0000".to_string(),
+        ]
+        .concat();
+        assert_eq!(branch_commit(advert.as_bytes(), "master").as_deref(), Some(master));
+        assert_eq!(branch_commit(advert.as_bytes(), "dev").as_deref(), Some(other));
+        // Only a whole branch name, and never HEAD or a pull request
+        assert_eq!(branch_commit(advert.as_bytes(), "mast"), None);
+        assert_eq!(branch_commit(advert.as_bytes(), "main"), None);
+        // The first reference, with git's options after the NUL
+        let first = [pkt("# service=git-upload-pack\n"), "0000".into(), pkt(&format!("{master} refs/heads/main\0agent=git/2\n")), "0000".into()].concat();
+        assert_eq!(branch_commit(first.as_bytes(), "main").as_deref(), Some(master));
+        // A sign-in page or a cut-off answer is not a list
+        assert_eq!(branch_commit(b"<html>proxy page</html>", "main"), None);
+        assert_eq!(branch_commit(&advert.as_bytes()[..60], "master"), None);
+    }
+
     #[test]
     fn refuses_an_empty_or_broken_download() {
         let out = temp("empty");
@@ -245,6 +324,15 @@ mod network_tests {
     use super::*;
     use crate::project::{self, State};
     use crate::registry::Registry;
+
+    #[test]
+    #[ignore = "needs the network"]
+    fn reads_the_latest_commit_of_a_real_project() {
+        let reg = Registry::bundled();
+        let p = reg.find("lostworld").unwrap();
+        let sha = latest_commit(p).unwrap();
+        assert_eq!(sha.len(), 40);
+    }
 
     /// Real download from GitHub: `cargo test -p hub-core -- --ignored`
     #[test]

@@ -9,7 +9,7 @@
 //! in the project's update folder), so either one can do the next update.
 
 use crate::registry::{is_plain_relative, Project};
-use crate::source::{download, unpack, write_update_state, zip_url};
+use crate::source::{download, latest_commit, unpack, write_update_state, zip_url};
 use crate::{build::sha256_of, err, Result};
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -135,10 +135,25 @@ pub(crate) fn timestamp() -> String {
 
 /// Downloads the latest source of the project's branch and applies it to
 /// `dir`. Nothing is changed when the installed version is already that one,
-/// unless `force`. It does not rebuild: the caller does.
+/// unless `force`; it is not even downloaded when the branch's latest commit
+/// can be read first. It does not rebuild: the caller does.
 pub fn update(project: &Project, dir: &Path, force: bool, log: &mut dyn FnMut(&str)) -> Result<Outcome> {
     let state_rel = project.update_state.as_ref().ok_or_else(|| format!("{} keeps no version record.", project.name))?;
     let state_dir = dir.join(state_rel);
+    if !force {
+        if let Some(current) = installed_version(&state_dir) {
+            log(&format!("Checking for a newer version of {}...", project.name));
+            match latest_commit(project) {
+                Ok(latest) if latest == current => {
+                    log(&format!("Up to date (version {}).", &latest[..7]));
+                    return Ok(Outcome::UpToDate { version: latest });
+                }
+                Ok(_) => {}
+                // The download below says which version it is just as well
+                Err(e) => log(&format!("Could not check the latest version first ({e}).")),
+            }
+        }
+    }
     let parent = dir.parent().ok_or("Bad install folder")?;
     let tag = format!("{}-{}", project.id, std::process::id());
     let zip_path = parent.join(format!(".{tag}.zip.part"));
