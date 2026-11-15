@@ -3,6 +3,7 @@
 
 use hub_core::achievements::{self, Achievement};
 use hub_core::announcements::{self, Announcement};
+use hub_core::art::{self, Art};
 use hub_core::build;
 use hub_core::config::{self, Config};
 use hub_core::news::{self, Entry};
@@ -17,7 +18,7 @@ use hub_core::update::{self, Outcome};
 use hub_core::video::{self, Video};
 use serde::Serialize;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder};
 use tauri_plugin_updater::UpdaterExt;
@@ -106,6 +107,10 @@ struct ProjectView {
     hero: Option<String>,
     logo: Option<String>,
     screens: Vec<String>,
+    /// The user's own pictures, when they picked one and its file is there:
+    /// shown instead of `hero`. The window loads them from the `art:` protocol.
+    cover: Option<Art>,
+    background: Option<Art>,
     input_label: Option<String>,
     dir: Option<PathBuf>,
     input: Option<PathBuf>,
@@ -148,6 +153,8 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
     }
     let registry = hub.registry.lock().unwrap().clone();
     let remote = hub.remote_news.lock().unwrap();
+    let art_dir = config.art_dir();
+    let own_art = |id: &str, kind| config.art(id, kind).filter(|a| art_dir.join(&a.file).is_file()).cloned();
     let projects: Vec<ProjectView> = registry
         .projects
         .iter()
@@ -179,6 +186,8 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 hero: p.art.hero.as_deref().map(|f| p.raw_url(f)),
                 logo: p.art.logo.as_deref().map(|f| p.raw_url(f)),
                 screens: p.art.screens.iter().map(|f| p.raw_url(f)).collect(),
+                cover: own_art(&p.id, art::Kind::Cover),
+                background: own_art(&p.id, art::Kind::Background),
                 input_label: p.input.as_ref().map(|i| i.label.clone()),
                 // Before it is installed, show the news from GitHub instead
                 latest_news: remote.get(&p.id).cloned().unwrap_or_else(|| local.clone()),
@@ -489,6 +498,83 @@ fn set_project_dir(hub: tauri::State<Hub>, id: String, path: PathBuf) -> Result<
     Ok(snapshot_of(&hub))
 }
 
+/// Where the user's pictures are kept: next to the settings.
+fn art_dir(hub: &Hub) -> PathBuf {
+    art::dir(hub.places.config.parent().unwrap_or(Path::new(".")))
+}
+
+/// A picture for a project's cover or background, copied into the launcher's
+/// pictures folder: a file the user picked, or one of the project's
+/// screenshots (from its folder when it is installed, from GitHub otherwise).
+/// Only made ready: the settings change when the user saves. A big picture
+/// takes a moment, so it runs off the main thread.
+#[tauri::command(async)]
+fn prepare_art(hub: tauri::State<Hub>, id: String, kind: art::Kind, path: Option<PathBuf>, screen: Option<usize>) -> Result<String, String> {
+    let p = find_project(&hub, &id)?;
+    let dir = art_dir(&hub);
+    match (path, screen) {
+        (Some(path), _) => art::from_file(&dir, &id, kind, &path),
+        (None, Some(i)) => {
+            let rel = p.art.screens.get(i).ok_or("That screenshot is not in the list any more.")?;
+            let installed = hub.config.lock().unwrap().project_dir(&id).map(|d| d.join(rel)).filter(|f| f.is_file());
+            match installed {
+                Some(local) => art::from_file(&dir, &id, kind, &local),
+                None => art::from_url(&dir, &id, kind, &p.raw_url(rel)),
+            }
+        }
+        (None, None) => Err("No picture was chosen.".into()),
+    }
+}
+
+/// Saves the user's pictures for a project; None puts the registry's back.
+/// The pictures that were made ready and not saved, or that these replace,
+/// are deleted.
+#[tauri::command]
+fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, background: Option<Art>) -> Result<Snapshot, String> {
+    find_project(&hub, &id)?;
+    let dir = art_dir(&hub);
+    for a in [&cover, &background].into_iter().flatten() {
+        if !art::valid_name(&a.file) || !dir.join(&a.file).is_file() {
+            return Err("That picture is not there any more. Choose it again.".into());
+        }
+    }
+    change_config(&hub, |c| {
+        let pc = c.projects.entry(id).or_default();
+        pc.cover = cover.map(Art::clean);
+        pc.background = background.map(Art::clean);
+    })?;
+    prune_art(&hub);
+    Ok(snapshot_of(&hub))
+}
+
+/// The user closed the pictures without saving: what was made ready goes.
+#[tauri::command]
+fn discard_art(hub: tauri::State<Hub>) {
+    prune_art(&hub);
+}
+
+/// Deletes the pictures the settings do not name.
+fn prune_art(hub: &Hub) {
+    // Settings that could not be read say nothing of which pictures are in use
+    if hub.config_error.lock().unwrap().is_some() {
+        return;
+    }
+    let config = hub.config.lock().unwrap();
+    art::prune(&art_dir(hub), &config.art_files());
+}
+
+/// The `art:` protocol: the window asks for a picture of the pictures folder
+/// by its name, and gets nothing for any other name.
+fn art_response(dir: &Path, name: &str) -> tauri::http::Response<Vec<u8>> {
+    let builder = tauri::http::Response::builder();
+    match art::read(dir, name) {
+        // A name is never given to another picture: the window may keep it
+        Some(bytes) => builder.header("Content-Type", "image/jpeg").header("Cache-Control", "max-age=31536000, immutable").body(bytes),
+        None => builder.status(404).body(Vec::new()),
+    }
+    .expect("a response with fixed headers")
+}
+
 #[tauri::command]
 fn launch(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     let p = find_project(&hub, &id)?;
@@ -727,7 +813,15 @@ fn main() {
                         .build()?;
                 }
             }
+            // Pictures left from a launcher closed while one was picked
+            let handle = app.handle().clone();
+            std::thread::spawn(move || prune_art(&handle.state::<Hub>()));
             Ok(())
+        })
+        .register_asynchronous_uri_scheme_protocol("art", |ctx, request, responder| {
+            let dir = art_dir(&ctx.app_handle().state::<Hub>());
+            let name = request.uri().path().trim_start_matches('/').to_string();
+            std::thread::spawn(move || responder.respond(art_response(&dir, &name)));
         })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -759,6 +853,9 @@ fn main() {
             set_input,
             set_project_dir,
             set_project_name,
+            prepare_art,
+            set_project_art,
+            discard_art,
             launch,
             open_folder,
             system_info,

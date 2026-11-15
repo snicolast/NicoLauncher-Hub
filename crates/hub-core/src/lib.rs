@@ -8,6 +8,7 @@
 
 pub mod achievements;
 pub mod announcements;
+pub mod art;
 pub mod build;
 pub mod config;
 pub mod kit;
