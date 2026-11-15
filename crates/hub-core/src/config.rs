@@ -48,6 +48,9 @@ pub struct ProjectConfig {
     /// The user's own file (ROM) for this project: a path on their disk.
     #[serde(default)]
     pub input: Option<PathBuf>,
+    /// The name the user gave the project, shown instead of the registry's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 impl Config {
@@ -102,6 +105,11 @@ impl Config {
         self.projects.get(id).and_then(|p| p.input.as_deref()).map(|p| self.resolve(p))
     }
 
+    /// The name the user gave a project, if any.
+    pub fn name(&self, id: &str) -> Option<&str> {
+        self.projects.get(id).and_then(|p| p.name.as_deref())
+    }
+
     /// A path from the file as a full one.
     pub fn resolve(&self, path: &Path) -> PathBuf {
         if path.is_absolute() {
@@ -140,6 +148,20 @@ fn normalize(path: &Path) -> PathBuf {
         }
     }
     out
+}
+
+/// The longest name a user can give a project.
+pub const NAME_MAX: usize = 40;
+
+/// A name the user typed, as it is kept: trimmed, one line, at most
+/// `NAME_MAX` characters. None for an empty one or the project's own name,
+/// which both mean "the registry's name".
+pub fn clean_name(typed: &str, default: &str) -> Option<String> {
+    let one_line: String = typed.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
+    let words: Vec<&str> = one_line.split_whitespace().collect();
+    let name: String = words.join(" ").chars().take(NAME_MAX).collect();
+    let name = name.trim_end().to_string();
+    (!name.is_empty() && name != default).then_some(name)
 }
 
 /// Characters a project's folder cannot have: CMake reads `[` `]` as wildcards
@@ -227,6 +249,24 @@ mod tests {
         // And reads them back as they were picked
         c.install_root = Some(c.store(inside.clone()));
         assert_eq!(c.install_root().unwrap(), inside);
+    }
+
+    #[test]
+    fn names_the_user_gives() {
+        assert_eq!(clean_name("  My   Rally\n2 ", "Nico SR2").as_deref(), Some("My Rally 2"));
+        assert_eq!(clean_name("", "Nico SR2"), None);
+        assert_eq!(clean_name("   ", "Nico SR2"), None);
+        assert_eq!(clean_name(" Nico SR2 ", "Nico SR2"), None, "the default name is no custom name");
+        let long = clean_name(&"é".repeat(100), "x").unwrap();
+        assert_eq!(long.chars().count(), NAME_MAX);
+
+        let text = r#"{ "projects": { "segarally2": { "name": "Rally", "input": "/roms/r.zip" }, "lostworld": {} } }"#;
+        let c: Config = serde_json::from_str(text).unwrap();
+        assert_eq!(c.name("segarally2"), Some("Rally"));
+        assert_eq!(c.name("lostworld"), None);
+        assert_eq!(c.name("other"), None);
+        // No name, no key: the file stays as older launchers wrote it
+        assert!(!serde_json::to_string(&c.projects["lostworld"]).unwrap().contains("name"));
     }
 
     #[test]

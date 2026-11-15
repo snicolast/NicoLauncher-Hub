@@ -93,7 +93,11 @@ struct AnnouncementView {
 #[derive(Serialize)]
 struct ProjectView {
     id: String,
+    /// The name the user gave it, or the registry's.
     name: String,
+    /// The registry's name: what a rename falls back to, and what reports
+    /// on GitHub call it.
+    default_name: String,
     tagline: String,
     description: String,
     tags: Vec<String>,
@@ -166,7 +170,8 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
             };
             ProjectView {
                 id: p.id.clone(),
-                name: p.name.clone(),
+                name: config.name(&p.id).unwrap_or(&p.name).to_string(),
+                default_name: p.name.clone(),
                 tagline: p.tagline.clone(),
                 description: p.description.clone(),
                 tags: p.tags.clone(),
@@ -257,8 +262,14 @@ fn change_config(hub: &Hub, change: impl FnOnce(&mut Config)) -> Result<(), Stri
     Ok(())
 }
 
+/// The project as the registry lists it, under the name the user gave it:
+/// what its messages and its desktop shortcut call it.
 fn find_project(hub: &Hub, id: &str) -> Result<Project, String> {
-    hub.registry.lock().unwrap().find(id).cloned().ok_or_else(|| format!("Unknown project: {id}"))
+    let mut p = hub.registry.lock().unwrap().find(id).cloned().ok_or_else(|| format!("Unknown project: {id}"))?;
+    if let Some(name) = hub.config.lock().unwrap().name(id) {
+        p.name = name.to_string();
+    }
+    Ok(p)
 }
 
 #[tauri::command]
@@ -439,6 +450,24 @@ fn set_input(hub: tauri::State<Hub>, id: String, path: PathBuf) -> Result<Snapsh
     change_config(&hub, |c| {
         let path = c.store(path);
         c.projects.entry(id).or_default().input = Some(path);
+    })?;
+    Ok(snapshot_of(&hub))
+}
+
+/// The user's own name for a project. Empty, or the registry's name, goes
+/// back to the registry's. Only the launcher shows it: the project's folder
+/// and files keep their names.
+#[tauri::command]
+fn set_project_name(hub: tauri::State<Hub>, id: String, name: String) -> Result<Snapshot, String> {
+    let default = hub.registry.lock().unwrap().find(&id).map(|p| p.name.clone()).ok_or_else(|| format!("Unknown project: {id}"))?;
+    let name = config::clean_name(&name, &default);
+    change_config(&hub, |c| match name {
+        Some(name) => c.projects.entry(id).or_default().name = Some(name),
+        None => {
+            if let Some(pc) = c.projects.get_mut(&id) {
+                pc.name = None;
+            }
+        }
     })?;
     Ok(snapshot_of(&hub))
 }
@@ -729,6 +758,7 @@ fn main() {
             quit,
             set_input,
             set_project_dir,
+            set_project_name,
             launch,
             open_folder,
             system_info,
