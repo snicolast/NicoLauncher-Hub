@@ -438,7 +438,11 @@ async function rename(p) {
   input.focus();
   input.select();
   if (!(await asked)) return;
-  const s = await update('set_project_name', { id: p.id, name: input.value });
+  saveName(p, input.value);
+}
+
+async function saveName(p, name) {
+  const s = await update('set_project_name', { id: p.id, name });
   const now = s && s.projects.find((x) => x.id === p.id);
   if (now && now.name !== p.name) toast(t('renamed', { name: now.name }), true);
 }
@@ -658,6 +662,37 @@ T.event.listen('tauri://drag-drop', (e) => {
   const path = e.payload && e.payload.paths && e.payload.paths[0];
   if (artDrop && path) artDrop(path);
 });
+
+// The sidebar's "...": a small box beside the game with only its name in it.
+// Enter or the tick keeps it; Escape or a click elsewhere leaves it as it was.
+let renaming = null;
+function quickRename(p, anchor) {
+  if (closeAsk) closeAsk();
+  const input = el('input', { type: 'text', value: p.name, placeholder: p.default_name, maxlength: 40, spellcheck: 'false', 'aria-label': t('rename_label') });
+  const ok = el('button', { class: 'rename-ok', title: t('rename_save'), 'aria-label': t('rename_save') }, icon('check'));
+  const box = el('div', { class: 'rename-pop', role: 'dialog' }, icon('pencil'), input, ok);
+  const r = anchor.closest('.side-row').getBoundingClientRect();
+  box.style.left = `${r.right + 8}px`;
+  box.style.top = `${r.top + r.height / 2}px`;
+  const away = (e) => { if (!box.contains(e.target)) close(); };
+  const close = () => {
+    closeAsk = null;
+    renaming = null;
+    box.remove();
+    document.removeEventListener('mousedown', away, true);
+    render();
+  };
+  const keep = () => { const name = input.value; close(); saveName(p, name); };
+  ok.addEventListener('click', keep);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); keep(); } });
+  document.addEventListener('mousedown', away, true);
+  closeAsk = close;
+  renaming = p.id;
+  document.body.append(box);
+  render();
+  input.focus();
+  input.select();
+}
 
 async function celebrate(p) {
   const yes = await ask({
@@ -1068,11 +1103,17 @@ function renderHome() {
   }
 
   // The sidebar's shortcuts, and the picture far behind everything
-  $('side-games').replaceChildren(...snap.projects.map((p) =>
-    el('button', { class: 'side-game' + (view === 'project' && current === p.id ? ' on' : ''), title: p.name, onclick: () => open(p) },
-      el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, artPicture(p, 'cover')),
-      el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
-      el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) }))));
+  // Each with a "..." that shows on hover: a quick rename
+  $('side-games').replaceChildren(...snap.projects.map((p) => {
+    const more = el('button', { class: 'side-more', title: t('do_rename'), 'aria-label': t('do_rename') }, el('span'), el('span'), el('span'));
+    more.addEventListener('click', (e) => { e.stopPropagation(); quickRename(p, more); });
+    return el('div', { class: 'side-row' + (renaming === p.id ? ' renaming' : '') },
+      el('button', { class: 'side-game' + (view === 'project' && current === p.id ? ' on' : ''), title: p.name, onclick: () => open(p) },
+        el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, artPicture(p, 'cover')),
+        el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
+        el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) })),
+      more);
+  }));
   const behind = view === 'project' ? snap.projects.find((p) => p.id === current) : lead;
   backdrop($('ambient'), behind && artSrc(behind, 'background'), behind && artFocus(behind, 'background'));
 }
