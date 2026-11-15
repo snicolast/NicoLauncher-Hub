@@ -29,6 +29,9 @@ const STR = {
     ask_go: 'Choose the file', ask_later: 'Not now', ask_cancel: 'Cancel the install', install_cancelled: 'Install of {name} cancelled. What had been downloaded was removed.', do_build: 'Build', do_play: 'Play',
     do_update: 'Update', do_rebuild: 'Rebuild', do_change_file: 'Change file',
     do_open_folder: 'Open folder', do_shortcut: 'Desktop shortcut', shortcut_done: 'Shortcut to {name} added to your desktop.',
+    do_rename: 'Rename', rename_title: 'Rename', rename_label: 'Name', rename_save: 'Save',
+    rename_lead: 'Give it the name you like: the launcher shows it everywhere, and new desktop shortcuts use it. The game and its folder do not change.',
+    rename_hint: 'Leave it empty to go back to {name}.', renamed: 'Now called {name}.',
     installed_title: 'All installed!', installed_body: 'You have just built {name} on your own PC, and it is ready to play. Press Play whenever you want.',
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
@@ -138,6 +141,9 @@ const STR = {
     ask_go: 'Elegir el archivo', ask_later: 'Ahora no', ask_cancel: 'Cancelar la instalación', install_cancelled: 'Instalación de {name} cancelada. Se ha borrado lo que se había descargado.', do_build: 'Compilar', do_play: 'Jugar',
     do_update: 'Actualizar', do_rebuild: 'Recompilar', do_change_file: 'Cambiar archivo',
     do_open_folder: 'Abrir carpeta', do_shortcut: 'Acceso directo', shortcut_done: 'Acceso directo a {name} añadido a tu escritorio.',
+    do_rename: 'Renombrar', rename_title: 'Renombrar', rename_label: 'Nombre', rename_save: 'Guardar',
+    rename_lead: 'Ponle el nombre que quieras: el launcher lo muestra en todas partes y los accesos directos nuevos lo usan. El juego y su carpeta no cambian.',
+    rename_hint: 'Déjalo vacío para volver a {name}.', renamed: 'Ahora se llama {name}.',
     installed_title: '¡Todo instalado!', installed_body: 'Acabas de montar {name} en tu propio PC, y ya está listo para jugar. Pulsa Jugar cuando quieras.',
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
@@ -265,6 +271,7 @@ const ICONS = {
   megaphone: '<path d="M3.5 10.5v3a1.500 1.500 0 0 0 1.500 1.500H7l9 4.500V4.500L7 9H5a1.500 1.500 0 0 0-1.500 1.500z"/><path d="M7.500 15l1.300 4.500h2.400l-1-4"/><path d="M19 9.500a3.500 3.500 0 0 1 0 5"/>',
   chevl: '<path d="M15 6l-6 6 6 6"/>',
   chevr: '<path d="M9 6l6 6-6 6"/>',
+  pencil: '<path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 };
 const icon = (name) => {
@@ -372,6 +379,31 @@ async function startTask(p, action) {
 // showing that kind of file first ("swtrilgy.zip (Rev. A)" -> .zip)
 async function addShortcut(p) {
   if ((await call('desktop_shortcut', { id: p.id })) !== undefined) toast(t('shortcut_done', { name: p.name }), true);
+}
+
+// The user's own name for a project, kept in their settings only
+async function rename(p) {
+  const input = el('input', { type: 'text', value: p.name, placeholder: p.default_name, maxlength: 40, spellcheck: 'false' });
+  const asked = ask({
+    title: t('rename_title'),
+    body: [
+      el('p', { class: 'dim' }, t('rename_lead')),
+      field(t('rename_label'), input),
+      el('p', { class: 'dim small rename-hint' }, t('rename_hint', { name: p.default_name })),
+    ],
+    go: [t('rename_save')], later: t('cancel'),
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    input.closest('.modal-box').querySelector('.modal-actions .btn.primary').click();
+  });
+  input.focus();
+  input.select();
+  if (!(await asked)) return;
+  const s = await update('set_project_name', { id: p.id, name: input.value });
+  const now = s && s.projects.find((x) => x.id === p.id);
+  if (now && now.name !== p.name) toast(t('renamed', { name: now.name }), true);
 }
 
 async function celebrate(p) {
@@ -847,6 +879,8 @@ function renderProject() {
   if (installed) more.push(btn('folder', t('do_open_folder'), () => call('open_folder', { id: p.id })));
   if (p.state === 'ready') more.push(btn('play', t('do_shortcut'), () => addShortcut(p)));
   else more.push(btn('folder', t('do_existing'), () => chooseExisting(p)));
+  // Only a setting: it can change while a task runs
+  more.push(el('button', { class: 'btn', onclick: () => rename(p) }, icon('pencil'), t('do_rename')));
   more.push(el('button', { class: 'btn', onclick: () => openLink(p.url) }, icon('github'), 'GitHub'));
   more.push(btn('bug', t('fb_report_game'), () => feedback('bug', p.id)));
   $('p-more').replaceChildren(...more);
@@ -1110,8 +1144,9 @@ function details(where, english) {
   const say = (key, vars) => (english ? STR.en[key].replace(/\{(\w+)\}/g, (_, k) => vars?.[k] ?? '') : t(key, vars));
   const p = snap.projects.find((x) => x.id === where);
   const rows = [[say('fb_launcher'), launcherVersion(say)]];
+  // On GitHub, the registry's name: the one the author knows it by
   if (p) {
-    rows.push([shortName(p), versionLine(p, say)]);
+    rows.push([english ? p.default_name : shortName(p), versionLine(p, say)]);
   }
   if (sysInfo) rows.push([say('fb_system'), sysInfo.os], [say('fb_gpu'), sysInfo.gpu]);
   return rows;
@@ -1143,7 +1178,7 @@ function feedbackUrl(kind, where, { title, system, text, log }) {
       md = `**What happened?**\n\n${text}\n\n**Details**\n\n${facts}`;
       if (lines.length) md += `\n\n<details><summary>Log of the last ${STR.en['act_' + lastFail.action]} (failed)</summary>\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n</details>`;
     } else {
-      md = `${text}\n\n---\n**About:** ${p ? shortName(p) : 'the launcher'}\n\n${facts}`;
+      md = `${text}\n\n---\n**About:** ${p ? p.default_name : 'the launcher'}\n\n${facts}`;
     }
     const name = kind === 'recomp' && system ? `${title} (${system})` : title;
     return `${base}${sep}title=${encodeURIComponent(name)}&body=${encodeURIComponent(md)}`;

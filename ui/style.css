@@ -487,6 +487,7 @@ main { isolation: isolate; }
 .field textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
 .field input::placeholder, .field textarea::placeholder { color: #67718a; }
 .field input:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 140, 255, .2); }
+.rename-hint { margin-top: 8px; }
 .seg.wide { display: flex; }
 .seg.wide button { flex: 1; white-space: nowrap; }
 .fb-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
