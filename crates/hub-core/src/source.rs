@@ -2,7 +2,7 @@
 //! button gives, for one exact commit. Source code only: nothing built is ever
 //! downloaded.
 
-use crate::{agent, err, http_error, registry::Project, Result};
+use crate::{agent, err, http_error, registry::Project, runner::Cancel, Result};
 use sha2::{Digest, Sha256};
 use std::fs::{self, File};
 use std::io::{self, Read, Seek, Write};
@@ -10,8 +10,9 @@ use std::path::{Component, Path, PathBuf};
 
 /// Downloads the project's source into `dest`, which must not exist yet or be
 /// empty. Everything is unpacked next to it first and moved into place at the
-/// end, so a download that fails leaves no half-installed folder.
-pub fn install(project: &Project, dest: &Path, log: &mut dyn FnMut(&str)) -> Result<()> {
+/// end, so a download that fails or is cancelled leaves no half-installed
+/// folder.
+pub fn install(project: &Project, dest: &Path, cancel: &Cancel, log: &mut dyn FnMut(&str)) -> Result<()> {
     if dir_has_files(dest) {
         return Err(format!("{} already has files in it.", dest.display()));
     }
@@ -23,7 +24,7 @@ pub fn install(project: &Project, dest: &Path, log: &mut dyn FnMut(&str)) -> Res
     let staging = parent.join(format!(".{tag}.installing"));
     let result = (|| {
         log(&format!("Downloading the source of {}...", project.name));
-        download(&zip_url(project), &zip_path, log)?;
+        download(&zip_url(project), &zip_path, cancel, log)?;
         log("Unpacking...");
         let _ = fs::remove_dir_all(&staging);
         let zip = File::open(&zip_path).map_err(err("Could not open the download"))?;
@@ -107,7 +108,7 @@ fn dir_has_files(dir: &Path) -> bool {
     fs::read_dir(dir).map(|mut d| d.next().is_some()).unwrap_or(false)
 }
 
-pub(crate) fn download(url: &str, to: &Path, log: &mut dyn FnMut(&str)) -> Result<()> {
+pub(crate) fn download(url: &str, to: &Path, cancel: &Cancel, log: &mut dyn FnMut(&str)) -> Result<()> {
     // No overall limit: only a connection that goes quiet for a minute fails
     let resp = agent(60).get(url).call().map_err(|e| http_error(url, e))?;
     let mut reader = resp.into_reader();
@@ -115,6 +116,9 @@ pub(crate) fn download(url: &str, to: &Path, log: &mut dyn FnMut(&str)) -> Resul
     let mut buf = vec![0u8; 256 * 1024];
     let (mut total, mut next_report) = (0u64, 0u64);
     loop {
+        if cancel.was_asked() {
+            return Err("Cancelled.".into());
+        }
         let n = reader.read(&mut buf).map_err(err("The download was cut off"))?;
         if n == 0 {
             break;
@@ -342,13 +346,13 @@ mod network_tests {
         let p = reg.find("lostworld").unwrap();
         let dest = std::env::temp_dir().join(format!("nl-real-{}", std::process::id())).join(&p.id);
         let _ = fs::remove_dir_all(dest.parent().unwrap());
-        install(p, &dest, &mut |l| println!("{l}")).unwrap();
+        install(p, &dest, &Cancel::new(), &mut |l| println!("{l}")).unwrap();
         assert_eq!(project::state(p, Some(&dest), None), State::NeedsInput);
         assert!(dest.join("save/update/version.txt").is_file());
         assert!(!crate::project::local_news(p, &dest).is_empty());
         // Nothing left behind next to it, and a second install is refused
         assert_eq!(fs::read_dir(dest.parent().unwrap()).unwrap().count(), 1);
-        assert!(install(p, &dest, &mut |_| {}).is_err());
+        assert!(install(p, &dest, &Cancel::new(), &mut |_| {}).is_err());
         assert!(!crate::news::fetch(p).unwrap().is_empty());
         fs::remove_dir_all(dest.parent().unwrap()).unwrap();
     }

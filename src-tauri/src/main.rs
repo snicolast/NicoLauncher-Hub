@@ -107,6 +107,9 @@ struct ProjectView {
     input: Option<PathBuf>,
     state: State,
     can_update: bool,
+    /// The last update's new source is here but the game was not rebuilt
+    /// from it (cancelled, or the build failed): Play starts the old version.
+    rebuild_pending: bool,
     can_rebuild: bool,
     /// A git working copy: uninstalling only takes it off the launcher
     is_clone: bool,
@@ -182,6 +185,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                     _ => Vec::new(),
                 },
                 can_update: installed && p.scripts.update.is_some(),
+                rebuild_pending: state == State::Ready && dir.as_deref().is_some_and(|d| update::rebuild_pending(p, d)),
                 can_rebuild: state == State::Ready && p.scripts.build.is_some(),
                 is_clone: dir.as_ref().is_some_and(|d| d.join(".git").exists()),
                 dir,
@@ -582,7 +586,7 @@ fn run_task(
     let script = match action {
         "setup" => {
             if !project::is_installed(p, dir) {
-                source::install(p, dir, log)?;
+                source::install(p, dir, cancel, log)?;
             }
             if cancel.was_asked() {
                 return Ok(());
@@ -598,9 +602,17 @@ fn run_task(
         // A git clone is still updated by the project's own script (git pull)
         _ if p.update_state.is_none() || dir.join(".git").exists() => Script::Update,
         _ => {
-            let outcome = update::update(p, dir, false, log)?;
-            if cancel.was_asked() || (matches!(outcome, Outcome::UpToDate { .. }) && project::is_built(p, dir)) {
+            let outcome = update::update(p, dir, false, cancel, log)?;
+            if cancel.was_asked() {
                 return Ok(());
+            }
+            if matches!(outcome, Outcome::UpToDate { .. }) && project::is_built(p, dir) {
+                // The source is the latest, but an earlier update's rebuild
+                // never finished: the program is still the old version
+                if !update::rebuild_pending(p, dir) {
+                    return Ok(());
+                }
+                log("The last update was not finished: the game is still the previous version.");
             }
             log("Rebuilding...");
             Script::Build
@@ -624,6 +636,7 @@ fn run_task(
                         log(&format!("Warning: {w}"));
                     }
                     log(&format!("Done: {}", manifest.exe));
+                    built(p, dir, log);
                     return Ok(());
                 }
                 Err(e) if script == Script::Install && p.scripts.install.is_some() => {
@@ -640,7 +653,18 @@ fn run_task(
     if code != 0 {
         return Err(format!("The script ended with an error (code {code}). See the log above."));
     }
+    if script != Script::Update && project::is_built(p, dir) {
+        built(p, dir, log);
+    }
     Ok(())
+}
+
+/// A build worked: the program is now the installed version, and an update
+/// that was waiting for it is finished.
+fn built(p: &Project, dir: &std::path::Path, log: &mut dyn FnMut(&str)) {
+    if let Err(e) = update::record_built(p, dir) {
+        log(&format!("Warning: {e}"));
+    }
 }
 
 fn main() {
