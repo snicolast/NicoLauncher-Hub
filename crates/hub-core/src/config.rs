@@ -52,7 +52,8 @@ pub struct ProjectConfig {
     /// The name the user gave the project, shown instead of the registry's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    /// Show the project's name as lettering instead of its logo.
+    /// Show the project's name as lettering instead of its logo (the user's
+    /// own `logo`, or the registry's).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub text_title: bool,
     /// The user's own pictures for the project (see `art`), shown instead of
@@ -61,6 +62,8 @@ pub struct ProjectConfig {
     pub cover: Option<Art>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background: Option<Art>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo: Option<Art>,
 }
 
 impl Config {
@@ -131,12 +134,13 @@ impl Config {
         match kind {
             art::Kind::Cover => p.cover.as_ref(),
             art::Kind::Background => p.background.as_ref(),
+            art::Kind::Logo => p.logo.as_ref(),
         }
     }
 
     /// Every picture file the settings name: what `art::prune` keeps.
     pub fn art_files(&self) -> Vec<&str> {
-        self.projects.values().flat_map(|p| [&p.cover, &p.background]).flatten().map(|a| a.file.as_str()).collect()
+        self.projects.values().flat_map(|p| [&p.cover, &p.background, &p.logo]).flatten().map(|a| a.file.as_str()).collect()
     }
 
     /// The folder the user's pictures are kept in, next to the settings.

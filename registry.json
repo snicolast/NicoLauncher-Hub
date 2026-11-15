@@ -23,7 +23,6 @@
       "update_state": "save/update",
       "art": {
         "hero": "docs/img/death_star.jpg",
-        "logo": "res/menu/logo.png",
         "screens": ["docs/img/menu.jpg", "docs/img/death_star.jpg", "docs/img/hoth.jpg", "docs/img/endor.jpg", "docs/img/yavin.jpg"]
       }
     },
@@ -49,7 +48,6 @@
       "update_state": "save/update",
       "art": {
         "hero": "docs/img/hero.jpg",
-        "logo": "res/menu/logo.png",
         "screens": ["docs/img/hero.jpg", "docs/img/main_menu.jpg", "docs/img/stage_select.jpg", "docs/img/widescreen.jpg"]
       }
     },
@@ -75,7 +73,6 @@
       "update_state": "save/update",
       "art": {
         "hero": "docs/img/village.jpg",
-        "logo": "res/menu/logo.png",
         "screens": ["docs/img/village.jpg", "docs/img/menu.jpg", "docs/img/forest.jpg", "docs/img/snow.jpg"]
       }
     }

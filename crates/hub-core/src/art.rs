@@ -1,9 +1,10 @@
 //! Pictures the user picked for a project: a cover (the library card, the
-//! sidebar, the strip on Home) and a background (the project's page, Home's
-//! spotlight, the blurred picture behind the window).
+//! sidebar, the strip on Home), a background (the project's page, Home's
+//! spotlight, the blurred picture behind the window) and a logo (shown over
+//! them in place of the project's name).
 //!
 //! The picture is copied into the launcher's own `art` folder, made smaller and
-//! saved as a JPEG, instead of pointing at the user's file: a file that is
+//! saved as a JPEG (a logo as a PNG, to keep what is see-through), instead of pointing at the user's file: a file that is
 //! moved, deleted or on a USB drive that is not plugged in would leave the card
 //! empty, and a photo straight from a camera is heavy to draw. A portable
 //! launcher keeps the folder next to its exe, like its settings.
@@ -29,12 +30,17 @@ pub const MAX_WIDTH: u32 = 2560;
 pub const MAX_HEIGHT: u32 = 1600;
 /// The kinds of file the picker offers.
 pub const EXTENSIONS: [&str; 4] = ["jpg", "jpeg", "png", "webp"];
+/// A logo is made to fit in this: it is never drawn bigger than a few hundred
+/// pixels, twice that on a 4K screen.
+pub const LOGO_MAX_WIDTH: u32 = 1600;
+pub const LOGO_MAX_HEIGHT: u32 = 800;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
     Cover,
     Background,
+    Logo,
 }
 
 impl Kind {
@@ -42,6 +48,14 @@ impl Kind {
         match self {
             Kind::Cover => "cover",
             Kind::Background => "background",
+            Kind::Logo => "logo",
+        }
+    }
+
+    fn extension(self) -> &'static str {
+        match self {
+            Kind::Logo => "png",
+            _ => "jpg",
         }
     }
 }
@@ -75,10 +89,10 @@ pub fn dir(settings_dir: &Path) -> PathBuf {
 }
 
 /// A name the launcher could have given a file it made: lower case letters,
-/// digits and dashes, then `.jpg`. Nothing else is read from, or deleted in,
+/// digits and dashes, then `.jpg` (or `.png`, a logo). Nothing else is read from, or deleted in,
 /// the folder, so no path from the window can reach another file.
 pub fn valid_name(name: &str) -> bool {
-    let Some(stem) = name.strip_suffix(".jpg") else { return false };
+    let Some(stem) = name.strip_suffix(".jpg").or_else(|| name.strip_suffix(".png")) else { return false };
     !stem.is_empty() && stem.len() <= 120 && stem.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
@@ -103,11 +117,14 @@ pub fn from_url(dir: &Path, id: &str, kind: Kind, url: &str) -> Result<String> {
     save(dir, id, kind, &bytes)
 }
 
-/// Reads the picture, makes it fit, and writes it to `dir` as a JPEG under a
-/// name of its own: the window shows a new picture at once, without one it
-/// had loaded before under the same name.
+/// Reads the picture, makes it fit, and writes it to `dir` (a JPEG, or a PNG
+/// for a logo) under a name of its own: the window shows a new picture at
+/// once, without one it had loaded before under the same name.
 pub fn save(dir: &Path, id: &str, kind: Kind, bytes: &[u8]) -> Result<String> {
-    let jpeg = prepare(bytes)?;
+    let jpeg = match kind {
+        Kind::Logo => prepare_logo(bytes)?,
+        _ => prepare(bytes)?,
+    };
     std::fs::create_dir_all(dir).map_err(err("Could not create the pictures folder"))?;
     let name = new_name(id, kind);
     let tmp = dir.join(format!("{name}.tmp"));
@@ -120,21 +137,13 @@ fn new_name(id: &str, kind: Kind) -> String {
     static COUNT: AtomicU32 = AtomicU32::new(0);
     let id: String = id.chars().map(|c| c.to_ascii_lowercase()).filter(|c| c.is_ascii_alphanumeric() || *c == '-').take(40).collect();
     let millis = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
-    format!("{id}-{}-{millis}-{}.jpg", kind.word(), COUNT.fetch_add(1, Ordering::Relaxed))
+    format!("{id}-{}-{millis}-{}.{}", kind.word(), COUNT.fetch_add(1, Ordering::Relaxed), kind.extension())
 }
 
 /// The picture as the JPEG that is kept: at most MAX_WIDTH x MAX_HEIGHT, and
 /// a transparent one laid on the launcher's own dark blue.
 pub fn prepare(bytes: &[u8]) -> Result<Vec<u8>> {
-    let mut reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format().map_err(err("Could not read the picture"))?;
-    let mut limits = image::Limits::default();
-    limits.max_image_width = Some(20_000);
-    limits.max_image_height = Some(20_000);
-    reader.limits(limits);
-    let picture = reader.decode().map_err(|e| match e {
-        image::ImageError::Unsupported(_) => "That is not a picture the launcher can read. Choose a JPG, PNG or WebP file.".to_string(),
-        e => format!("Could not read the picture: {e}"),
-    })?;
+    let picture = decode(bytes)?;
     let picture = if picture.width() > MAX_WIDTH || picture.height() > MAX_HEIGHT {
         picture.resize(MAX_WIDTH, MAX_HEIGHT, image::imageops::FilterType::CatmullRom)
     } else {
@@ -144,6 +153,50 @@ pub fn prepare(bytes: &[u8]) -> Result<Vec<u8>> {
     let mut out = Vec::new();
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 90).encode_image(&rgb).map_err(err("Could not save the picture"))?;
     Ok(out)
+}
+
+/// A logo as the PNG that is kept: what is see-through stays so, the empty
+/// margin around it is cut off (so it lines up with the text beside it), and
+/// it is made to fit in LOGO_MAX_WIDTH x LOGO_MAX_HEIGHT.
+pub fn prepare_logo(bytes: &[u8]) -> Result<Vec<u8>> {
+    let picture = decode(bytes)?.into_rgba8();
+    let (w, h) = picture.dimensions();
+    let mut found: Option<(u32, u32, u32, u32)> = None;
+    for (x, y, p) in picture.enumerate_pixels() {
+        if p.0[3] > 8 {
+            let b = found.get_or_insert((x, y, x, y));
+            *b = (b.0.min(x), b.1.min(y), b.2.max(x), b.3.max(y));
+        }
+    }
+    let (x0, y0, x1, y1) = found.ok_or("That picture is all see-through: there is nothing in it to show.")?;
+    let picture = if (x0, y0, x1, y1) != (0, 0, w - 1, h - 1) {
+        image::imageops::crop_imm(&picture, x0, y0, x1 - x0 + 1, y1 - y0 + 1).to_image()
+    } else {
+        picture
+    };
+    let picture = DynamicImage::ImageRgba8(picture);
+    let picture = if picture.width() > LOGO_MAX_WIDTH || picture.height() > LOGO_MAX_HEIGHT {
+        picture.resize(LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, image::imageops::FilterType::CatmullRom)
+    } else {
+        picture
+    };
+    let mut out = Vec::new();
+    picture.write_to(&mut Cursor::new(&mut out), image::ImageFormat::Png).map_err(err("Could not save the picture"))?;
+    Ok(out)
+}
+
+/// The picture in `bytes`, of any kind the launcher reads.
+fn decode(bytes: &[u8]) -> Result<DynamicImage> {
+    let mut reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format().map_err(err("Could not read the picture"))?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(20_000);
+    limits.max_image_height = Some(20_000);
+    reader.limits(limits);
+    let picture = reader.decode().map_err(|e| match e {
+        image::ImageError::Unsupported(_) => "That is not a picture the launcher can read. Choose a JPG, PNG or WebP file.".to_string(),
+        e => format!("Could not read the picture: {e}"),
+    })?;
+    Ok(picture)
 }
 
 /// The window's background colour (#0a0d16) under what is see-through.
@@ -211,7 +264,8 @@ mod tests {
         assert!(!valid_name("C:.jpg"));
         assert!(!valid_name(".jpg"));
         assert!(!valid_name("Cover.jpg"));
-        assert!(!valid_name("cover.png"));
+        assert!(valid_name("segarally2-logo-1763251200000-0.png"));
+        assert!(!valid_name("cover.gif"));
         assert!(!valid_name(&format!("{}.jpg", "a".repeat(121))));
     }
 
@@ -231,6 +285,34 @@ mod tests {
         let back = image::load_from_memory(&prepare(&png(16, 16, 0)).unwrap()).unwrap().into_rgb8();
         let p = back.get_pixel(8, 8).0;
         assert!(p[0] < 24 && p[1] < 26 && p[2] < 36, "{p:?}");
+    }
+
+    #[test]
+    fn a_logo_keeps_what_is_see_through_and_loses_its_empty_margin() {
+        // A 100x40 picture, see-through but for a 30x10 block
+        let mut img = image::RgbaImage::from_pixel(100, 40, image::Rgba([0, 0, 0, 0]));
+        for y in 12..22 {
+            for x in 20..50 {
+                img.put_pixel(x, y, image::Rgba([255, 255, 255, 255]));
+            }
+        }
+        img.put_pixel(0, 0, image::Rgba([255, 0, 0, 3])); // too faint to count
+        let mut png = Vec::new();
+        DynamicImage::ImageRgba8(img).write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+        let back = image::load_from_memory(&prepare_logo(&png).unwrap()).unwrap();
+        assert_eq!((back.width(), back.height()), (30, 10));
+        assert!(back.color().has_alpha());
+        let big = image::load_from_memory(&prepare_logo(&png_bytes(4000, 1000, 255)).unwrap()).unwrap();
+        assert_eq!((big.width(), big.height()), (LOGO_MAX_WIDTH, 400));
+        assert!(prepare_logo(&png_bytes(10, 10, 0)).unwrap_err().contains("see-through"));
+        let dir = temp("logo");
+        let name = save(&dir, "segarally2", Kind::Logo, &png).unwrap();
+        assert!(name.starts_with("segarally2-logo-") && name.ends_with(".png") && valid_name(&name), "{name}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn png_bytes(width: u32, height: u32, alpha: u8) -> Vec<u8> {
+        png(width, height, alpha)
     }
 
     #[test]

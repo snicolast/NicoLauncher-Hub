@@ -757,3 +757,12 @@ main { isolation: isolate; }
 .check { display: flex; align-items: center; gap: 9px; font-size: 13.5px; cursor: pointer; }
 .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .rename-text { margin-top: 14px; }
+/* The logo tab: logos lie whole on a dark tile, the name as a small title */
+.aw-logo-thumb { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a2140, #0d1120); }
+.aw-logo-thumb img { object-fit: contain !important; padding: 30px 14px 10px; }
+.aw-logo-thumb .aw-thumb-title { margin-top: 18px; }
+.aw-thumb-title { --wm: 26px; max-width: 86%; filter: none; }
+.aw-thumb-title::after { margin-top: 3px; }
+.aw-lib { aspect-ratio: 16 / 9; }
+.aw-lib-logo { position: absolute; top: 10px; left: 10px; height: 34px; max-width: 55%; object-fit: contain; object-position: left top; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .6)); }
+.aw-lib-logo-text { --wm: 24px; position: absolute; top: 10px; left: 10px; max-width: 70%; }
