@@ -52,6 +52,9 @@ pub struct ProjectConfig {
     /// The name the user gave the project, shown instead of the registry's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// Show the project's name as lettering instead of its logo.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub text_title: bool,
     /// The user's own pictures for the project (see `art`), shown instead of
     /// the registry's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -115,6 +118,11 @@ impl Config {
     /// The name the user gave a project, if any.
     pub fn name(&self, id: &str) -> Option<&str> {
         self.projects.get(id).and_then(|p| p.name.as_deref())
+    }
+
+    /// Whether the user chose to see a project's name instead of its logo.
+    pub fn text_title(&self, id: &str) -> bool {
+        self.projects.get(id).is_some_and(|p| p.text_title)
     }
 
     /// The user's own picture of that kind for a project, if any.
@@ -212,6 +220,18 @@ pub fn folder_problem(path: &Path) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Off is the default and is not written, so settings files stay as they were
+    #[test]
+    fn text_title_is_kept_only_when_on() {
+        let mut c = Config::default();
+        c.projects.entry("a".into()).or_default().name = Some("Mine".into());
+        assert!(!serde_json::to_string(&c).unwrap().contains("text_title"));
+        assert!(!c.text_title("a") && !c.text_title("missing"));
+        c.projects.get_mut("a").unwrap().text_title = true;
+        let back: Config = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
+        assert!(back.text_title("a"));
+    }
 
     #[test]
     fn round_trips_and_resolves_folders() {

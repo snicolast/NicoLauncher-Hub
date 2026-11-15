@@ -99,6 +99,8 @@ struct ProjectView {
     /// The registry's name: what a rename falls back to, and what reports
     /// on GitHub call it.
     default_name: String,
+    /// Its name shown as lettering instead of its logo, by the user's choice.
+    text_title: bool,
     tagline: String,
     description: String,
     tags: Vec<String>,
@@ -179,6 +181,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 id: p.id.clone(),
                 name: config.name(&p.id).unwrap_or(&p.name).to_string(),
                 default_name: p.name.clone(),
+                text_title: config.text_title(&p.id),
                 tagline: p.tagline.clone(),
                 description: p.description.clone(),
                 tags: p.tags.clone(),
@@ -478,6 +481,14 @@ fn set_project_name(hub: tauri::State<Hub>, id: String, name: String) -> Result<
             }
         }
     })?;
+    Ok(snapshot_of(&hub))
+}
+
+/// The project's name as lettering instead of its logo, or its logo again.
+#[tauri::command]
+fn set_project_text_title(hub: tauri::State<Hub>, id: String, on: bool) -> Result<Snapshot, String> {
+    find_project(&hub, &id)?;
+    change_config(&hub, |c| c.projects.entry(id).or_default().text_title = on)?;
     Ok(snapshot_of(&hub))
 }
 
@@ -853,6 +864,7 @@ fn main() {
             set_input,
             set_project_dir,
             set_project_name,
+            set_project_text_title,
             prepare_art,
             set_project_art,
             discard_art,

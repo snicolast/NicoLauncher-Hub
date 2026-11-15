@@ -1,3 +1,7 @@
+/* The face a game's name is set in when it shows instead of its logo:
+   Barlow Condensed (SIL Open Font License, fonts/OFL.txt) */
+@font-face { font-family: "Nico Title"; src: url(fonts/BarlowCondensed-Bold.woff2) format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Nico Title"; src: url(fonts/BarlowCondensed-SemiBold.woff2) format("woff2"); font-weight: 600; font-display: swap; }
 :root {
   --bg: #0a0d16; --chrome: #0d1120; --surface: #111626; --surface-2: #19203a; --surface-3: #222b4a;
   --line: rgba(255, 255, 255, .08); --line-2: rgba(255, 255, 255, .16);
@@ -726,3 +730,30 @@ main { isolation: isolate; }
 .aw-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--dim); margin-left: 6px; cursor: pointer; }
 .aw-check input { width: 16px; height: 16px; accent-color: var(--accent); }
 @media (max-width: 1000px) { .aw-stage { grid-template-columns: 1fr; } .aw-also { display: none; } }
+
+/* ---------------------------------------------------------------- a game's name as its title
+   In place of its logo: condensed capitals in a light gradient, a short accent
+   line under them and a soft shadow to stand out from any picture. --wm is the
+   size of the place it is in; a long name is set smaller (.m, .s) and may wrap */
+.wordmark { --wm: 64px; --k: 1; display: flex; flex-direction: column; align-items: flex-start; max-width: 100%;
+  font-family: "Nico Title", Bahnschrift, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; text-transform: uppercase;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45)) drop-shadow(0 8px 22px rgba(0, 0, 0, .55)); pointer-events: none; }
+.wordmark.m { --k: .8; }
+.wordmark.s { --k: .62; }
+.wm-main { font-weight: 700; font-size: calc(var(--wm) * var(--k)); line-height: .92; letter-spacing: .015em; padding-top: .06em;
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 45%, #c4d3f5 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-wrap: balance; overflow-wrap: anywhere; max-width: 100%; }
+.wm-sub { font-weight: 600; font-size: calc(var(--wm) * .3); line-height: 1.1; letter-spacing: .24em; color: #dce6ff; margin-top: .3em; overflow-wrap: anywhere; }
+.wordmark::after { content: ""; display: block; width: calc(var(--wm) * 1.1); height: max(2px, calc(var(--wm) * .055)); margin-top: calc(var(--wm) * .14);
+  border-radius: 99px; background: linear-gradient(90deg, var(--accent-2), var(--accent) 55%, rgba(79, 140, 255, 0)); }
+.page-title { --wm: 88px; max-width: 520px; }
+.spot-title { --wm: 62px; }
+.card-title { --wm: 46px; max-width: 64%; }
+.card.titled .card-foot h3 { display: none; }
+.ann-title { --wm: 36px; position: absolute; z-index: 1; right: 22px; bottom: 18px; max-width: 60%; align-items: flex-end; text-align: right; }
+.aw-card-logo-text { --wm: 38px; position: absolute; top: 14px; left: 16px; max-width: 62%; }
+.aw-hero-logo-text { --wm: 42px; max-width: 260px; }
+.aw-home-logo-text { --wm: 20px; position: absolute; left: 10px; bottom: 10px; max-width: 70%; }
+.check { display: flex; align-items: center; gap: 9px; font-size: 13.5px; cursor: pointer; }
+.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.rename-text { margin-top: 14px; }

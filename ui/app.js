@@ -32,6 +32,8 @@ const STR = {
     rename_title: 'Rename', rename_label: 'Name', rename_save: 'Save',
     rename_lead: 'Give it the name you like: the launcher shows it everywhere, and new desktop shortcuts use it. The game and its folder do not change.',
     rename_hint: 'Leave it empty to go back to {name}.', renamed: 'Now called {name}.',
+    rename_text: 'Show this name instead of the logo',
+    m_text_title: 'Show name instead of logo', m_logo: 'Show logo instead of name',
     m_artwork: 'Change artwork…', art_title: 'Artwork', art_save: 'Save', art_saved: 'Artwork saved.',
     art_cover: 'Cover', art_cover_sub: 'Library, sidebar, Home strip', art_bg: 'Background', art_bg_sub: 'Game page, Home',
     art_drag: 'Drag to choose what shows', art_preparing: 'Preparing the picture…',
@@ -153,6 +155,8 @@ const STR = {
     rename_title: 'Renombrar', rename_label: 'Nombre', rename_save: 'Guardar',
     rename_lead: 'Ponle el nombre que quieras: el launcher lo muestra en todas partes y los accesos directos nuevos lo usan. El juego y su carpeta no cambian.',
     rename_hint: 'Déjalo vacío para volver a {name}.', renamed: 'Ahora se llama {name}.',
+    rename_text: 'Mostrar este nombre en vez del logo',
+    m_text_title: 'Mostrar el nombre en vez del logo', m_logo: 'Mostrar el logo en vez del nombre',
     m_artwork: 'Cambiar imágenes…', art_title: 'Imágenes', art_save: 'Guardar', art_saved: 'Imágenes guardadas.',
     art_cover: 'Portada', art_cover_sub: 'Biblioteca, barra lateral, tira de Inicio', art_bg: 'Fondo', art_bg_sub: 'Ficha del juego, Inicio',
     art_drag: 'Arrastra para elegir qué se ve', art_preparing: 'Preparando la imagen…',
@@ -289,6 +293,7 @@ const ICONS = {
   megaphone: '<path d="M3.5 10.5v3a1.500 1.500 0 0 0 1.500 1.500H7l9 4.500V4.500L7 9H5a1.500 1.500 0 0 0-1.500 1.500z"/><path d="M7.500 15l1.300 4.500h2.400l-1-4"/><path d="M19 9.500a3.500 3.500 0 0 1 0 5"/>',
   chevl: '<path d="M15 6l-6 6 6 6"/>',
   chevr: '<path d="M9 6l6 6-6 6"/>',
+  type: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16.5l-5.5-5.5L5 20"/>',
   move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
   pencil: '<path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>',
@@ -345,6 +350,30 @@ function artPicture(p, kind, cls) {
   const img = picture(src, cls);
   img.style.objectPosition = artFocus(p, kind);
   return img;
+}
+
+// How a game is named in big (game page, Home, its card, its popups): its
+// logo, or its name as lettering. Lettering when the user chose it, when it
+// has no logo, and when the logo does not load (no connection)
+const showsLogo = (p) => !!p.logo && !p.text_title;
+function gameMark(p, cls, textCls) {
+  if (!showsLogo(p)) return titleText(p, textCls);
+  const img = el('img', { src: p.logo, alt: '', class: cls || '', draggable: 'false' });
+  img.addEventListener('load', () => img.classList.add('in'));
+  img.addEventListener('error', () => img.replaceWith(titleText(p, textCls)));
+  return img;
+}
+// The name as a title: the user's own name (or the registry's), large and
+// condensed, over a short accent line. "Main: Sub" or "Main - Sub" sets the
+// second part as a smaller line under the first. A long name is set smaller
+// and may take two lines
+function titleText(p, cls) {
+  const m = /^(.+?)\s*(?::|\s[-–—])\s+(.+)$/.exec(p.name);
+  const main = m ? m[1] : p.name;
+  const size = main.length <= 12 ? 'l' : main.length <= 20 ? 'm' : 's';
+  return el('div', { class: `wordmark ${size} ${cls || ''}`, role: 'img', 'aria-label': p.name },
+    el('span', { class: 'wm-main' }, main),
+    m ? el('span', { class: 'wm-sub' }, m[2]) : null);
 }
 
 // A message in the corner: something went wrong, or (good) something the
@@ -421,12 +450,16 @@ async function addShortcut(p) {
 // The user's own name for a project, kept in their settings only
 async function rename(p) {
   const input = el('input', { type: 'text', value: p.name, placeholder: p.default_name, maxlength: 40, spellcheck: 'false' });
+  // A game with a logo shows the official name in it: the new name can show
+  // in its place
+  const lettering = p.logo ? el('input', { type: 'checkbox', checked: !!p.text_title }) : null;
   const asked = ask({
     title: t('rename_title'),
     body: [
       el('p', { class: 'dim' }, t('rename_lead')),
       field(t('rename_label'), input),
       el('p', { class: 'dim small rename-hint' }, t('rename_hint', { name: p.default_name })),
+      lettering ? el('label', { class: 'check rename-text' }, lettering, el('span', {}, t('rename_text'))) : null,
     ],
     go: [t('rename_save')], later: t('cancel'),
   });
@@ -438,7 +471,12 @@ async function rename(p) {
   input.focus();
   input.select();
   if (!(await asked)) return;
-  saveName(p, input.value);
+  await saveName(p, input.value);
+  if (lettering && lettering.checked !== !!p.text_title) await setTextTitle(p, lettering.checked);
+}
+
+function setTextTitle(p, on) {
+  return update('set_project_text_title', { id: p.id, on });
 }
 
 async function saveName(p, name) {
@@ -564,7 +602,7 @@ function artwork(p) {
       if (!src) n.hidden = true;
       return n;
     };
-    const logo = (cls) => (p.logo ? el('img', { src: p.logo, alt: '', class: cls, draggable: 'false' }) : null);
+    const logo = (cls) => gameMark(p, cls, cls + '-text');
     const main = img('aw-img');
     const hint = a && !working ? el('span', { class: 'aw-hint' }, icon('move'), t('art_drag')) : null;
     if (hint) hint.hidden = true;
@@ -573,7 +611,7 @@ function artwork(p) {
     if (tab === 'cover') {
       stage = el('div', { class: 'aw-card', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-card-shade' }),
         logo('aw-card-logo'),
-        el('div', { class: 'aw-card-foot' }, el('h3', {}, p.name), el('div', { class: 'state' }, ...stateLine(p))), hint, wait);
+        el('div', { class: 'aw-card-foot' }, showsLogo(p) ? el('h3', {}, p.name) : null, el('div', { class: 'state' }, ...stateLine(p))), hint, wait);
       also = [
         el('div', { class: 'aw-also-label' }, t('art_side')),
         el('div', { class: 'aw-side' }, el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
@@ -582,7 +620,7 @@ function artwork(p) {
       ];
     } else {
       stage = el('div', { class: 'aw-hero', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-hero-shade' }),
-        el('div', { class: 'aw-hero-content' }, logo('aw-hero-logo') || el('h3', {}, p.name),
+        el('div', { class: 'aw-hero-content' }, logo('aw-hero-logo'),
           el('div', { class: 'aw-hero-btns' }, el('span', { class: 'aw-fake-play' }, icon('play'), t('do_play')), el('span', { class: 'aw-fake-gear' }, icon('gear')))),
         hint, wait);
       also = [
@@ -1032,7 +1070,7 @@ function renderHome() {
     $('spot-bg').style.backgroundImage = gradient(lead);
     const last = items.find((e) => e.from === lead);
     $('spot-content').replaceChildren(
-      el('div', { class: 'hero-logo' }, lead.logo ? picture(lead.logo) : el('h1', {}, lead.name)),
+      el('div', { class: 'hero-logo' }, gameMark(lead, 'in', 'spot-title')),
       el('p', { class: 'tagline' }, lead.tagline),
       last ? el('p', { class: 'spot-news' }, el('b', {}, dayLabel(last.title)), last.lines[0] || '') : null,
       el('div', { class: 'hero-actions' },
@@ -1050,7 +1088,7 @@ function renderHome() {
 
   const block = (b) => el('div', { class: 'feed-block' + (b.from ? ' link' : ''), onclick: b.from ? () => open(b.from) : null },
     el('div', { class: 'feed-from' },
-      b.from && b.from.logo ? picture(b.from.logo, 'feed-logo') : el('span', { class: 'mark', 'aria-hidden': 'true' }),
+      !b.from ? el('span', { class: 'mark', 'aria-hidden': 'true' }) : showsLogo(b.from) ? picture(b.from.logo, 'feed-logo') : null,
       el('strong', {}, b.from ? b.from.name : 'NicoLauncher'),
       b.isNew ? el('span', { class: 'chip new' }, t('update_available')) : null),
     el('ul', {}, ...b.lines.map((l) => el('li', {}, l))),
@@ -1065,9 +1103,10 @@ function renderHome() {
   // only with it, so they do not blink), the library in numbers and the links
   let shots = lead ? (lead.screens && lead.screens.length ? lead.screens : lead.hero ? [lead.hero] : []).slice(0, 4) : [];
   if (shots.length === 3) shots.pop();
+  // (its name follows a rename at once)
+  $('shots-title').textContent = lead ? lead.name : '';
   if ($('home-shots').dataset.id !== (lead ? lead.id : '')) {
     $('home-shots').dataset.id = lead ? lead.id : '';
-    $('shots-title').textContent = lead ? lead.name : '';
     $('home-shots').replaceChildren(...shots.map((src) => {
       const img = picture(src);
       img.addEventListener('click', () => { $('lightbox-img').src = src; $('lightbox').hidden = false; });
@@ -1131,7 +1170,7 @@ function renderLibrary() {
     const cover = artPicture(p, 'cover');
     if (cover) art.append(cover);
     const top = el('div', { class: 'card-top' },
-      p.logo ? picture(p.logo, 'card-logo') : el('span'),
+      gameMark(p, 'card-logo', 'card-title'),
       updateChip(p));
     // Until there is a folder to install into, the projects are only shown:
     // the welcome box above is the one thing to do. A project that already
@@ -1141,6 +1180,8 @@ function renderLibrary() {
     const card = locked
       ? { class: 'card locked', 'aria-disabled': 'true', title: t('first_run') }
       : { class: 'card', tabindex: '0', onclick: () => openProject(p.id) };
+    // The name in big at the top already: not again at the bottom
+    if (!showsLogo(p)) card.class += ' titled';
     cards.append(el('div', card,
       art, top,
       el('div', { class: 'card-foot' },
@@ -1161,7 +1202,6 @@ function renderProject() {
     shownProject = p.id;
     projectNewsAll = false;
     $('p-bg').style.backgroundImage = gradient(p);
-    $('p-logo').replaceChildren(...(p.logo ? [picture(p.logo)] : []));
     $('p-screens').replaceChildren(...p.screens.map((src) => {
       const img = picture(src);
       img.classList.add('in');
@@ -1172,9 +1212,15 @@ function renderProject() {
     achSeen = markAchievementsSeen(p);
   }
   backdrop($('p-bg'), artSrc(p, 'background'), artFocus(p, 'background'));
+  // The logo or the name in big, drawn again only when that changes
+  const mark = showsLogo(p) ? 'logo ' + p.logo : 'text ' + p.name;
+  if ($('p-logo').dataset.mark !== mark) {
+    $('p-logo').dataset.mark = mark;
+    $('p-logo').replaceChildren(gameMark(p, '', 'page-title'));
+  }
   $('p-screens-block').hidden = !p.screens.length;
   $('p-name').textContent = p.name;
-  $('p-name').hidden = !!p.logo && !!$('p-logo').children.length;
+  $('p-name').hidden = !!$('p-logo').children.length;
   $('p-tagline').textContent = p.tagline;
   $('p-desc').textContent = p.description;
   $('p-tags').replaceChildren(...p.tags.map((tag) => el('span', { class: 'chip' }, tag)));
@@ -1258,6 +1304,7 @@ function manageItems(p) {
   // Only a setting: it can change while a task runs
   groups[0].push(['pencil', t('m_rename'), null, false, () => rename(p)]);
   groups[0].push(['image', t('m_artwork'), null, false, () => artwork(p)]);
+  if (p.logo) groups[0].push(['type', t(p.text_title ? 'm_logo' : 'm_text_title'), null, false, () => setTextTitle(p, !p.text_title)]);
   if (p.input_label) groups[1].push(['file', t('m_change_file'), file, busy, () => chooseInput(p, false)]);
   if (p.can_rebuild) groups[1].push(['hammer', t('m_rebuild'), t('m_rebuild_sub'), busy, () => startTask(p, 'build')]);
   groups[2].push(['github', t('do_github'), null, false, () => openLink(p.url), 'ext']);
@@ -1745,7 +1792,7 @@ function openAnnouncements(startId) {
     if (p) {
       head.style.backgroundImage = gradient(p);
       if (p.hero) head.append(picture(p.hero, 'ann-hero'));
-      if (p.logo) head.append(picture(p.logo, 'ann-logo'));
+      head.append(gameMark(p, 'ann-logo', 'ann-title'));
     } else head.append(el('span', { class: 'ann-art', 'aria-hidden': 'true' }, icon('megaphone')));
     head.append(
       el('div', { class: 'ann-tags' },
@@ -1839,7 +1886,7 @@ function askUpdate(p) {
   const head = el('div', { class: 'ann-head game' });
   head.style.backgroundImage = gradient(p);
   if (p.hero) head.append(picture(p.hero, 'ann-hero'));
-  if (p.logo) head.append(picture(p.logo, 'ann-logo'));
+  head.append(gameMark(p, 'ann-logo', 'ann-title'));
   const v = (n) => t('version_short', { n });
   changelog({
     head, title: t('cl_title', { name: p.name }), ready: true, close: t('cl_later'),
