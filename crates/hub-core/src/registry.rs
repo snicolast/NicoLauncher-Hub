@@ -6,6 +6,11 @@ use crate::requirements::Requires;
 use crate::{err, http_get, Result};
 use serde::{Deserialize, Serialize};
 
+/// Where GitHub serves a file of the Hub repository, next to registry.json.
+pub fn hub_raw_url(rel: &str) -> String {
+    format!("{}/{rel}", REGISTRY_URL.rsplit_once('/').map_or(REGISTRY_URL, |(dir, _)| dir))
+}
+
 pub const REGISTRY_URL: &str =
     "https://raw.githubusercontent.com/snicolast/NicoLauncher-Hub/main/registry.json";
 const BUNDLED: &str = include_str!("../../../registry.json");
@@ -72,6 +77,11 @@ pub struct Art {
     pub hero: Option<String>,
     #[serde(default)]
     pub logo: Option<String>,
+    /// A logo kept in this launcher's own repository (the Hub), next to
+    /// registry.json, instead of in the project's: shown in place of `logo`.
+    /// Launchers older than 0.3.13 skip it and show the name.
+    #[serde(default)]
+    pub hub_logo: Option<String>,
     #[serde(default)]
     pub screens: Vec<String>,
 }
@@ -91,6 +101,15 @@ pub struct Scripts {
 impl Project {
     pub fn url(&self) -> String {
         format!("https://github.com/{}", self.repo)
+    }
+
+    /// The logo to show, as a URL: the one in the Hub, else the project's own.
+    pub fn logo_url(&self) -> Option<String> {
+        match (&self.art.hub_logo, &self.art.logo) {
+            (Some(rel), _) => Some(hub_raw_url(rel)),
+            (None, Some(rel)) => Some(self.raw_url(rel)),
+            (None, None) => None,
+        }
     }
 
     /// Where GitHub serves a file of the repository's branch.
@@ -122,7 +141,7 @@ impl Registry {
             }
             p.requires.validate().map_err(|e| format!("{e} ({})", p.id))?;
             let s = &p.scripts;
-            let files = [&p.exe, &p.news, &s.install, &s.build, &s.update, &p.update_state, &p.art.hero, &p.art.logo];
+            let files = [&p.exe, &p.news, &s.install, &s.build, &s.update, &p.update_state, &p.art.hero, &p.art.logo, &p.art.hub_logo];
             for rel in files.into_iter().flatten().chain(&p.art.screens) {
                 if !is_plain_relative(rel) {
                     return Err(format!("Bad path in the registry ({}): {rel}", p.id));
@@ -173,6 +192,19 @@ mod tests {
             lw.raw_url(lw.art.hero.as_ref().unwrap()),
             "https://raw.githubusercontent.com/snicolast/LostWorldNative/master/docs/img/hero.jpg"
         );
+    }
+
+    #[test]
+    fn a_logo_in_the_hub_comes_first() {
+        let entry = |art: &str| Registry::parse(&format!(r#"{{"schema":1,"projects":[{{"id":"a","name":"A","repo":"o/r","branch":"main","art":{art}}}]}}"#));
+        let both = entry(r#"{"logo":"res/logo.png","hub_logo":"art/logos/a.png"}"#).unwrap();
+        assert_eq!(both.projects[0].logo_url().unwrap(), "https://raw.githubusercontent.com/snicolast/NicoLauncher-Hub/main/art/logos/a.png");
+        let own = entry(r#"{"logo":"res/logo.png"}"#).unwrap();
+        assert_eq!(own.projects[0].logo_url().unwrap(), "https://raw.githubusercontent.com/o/r/main/res/logo.png");
+        assert_eq!(entry("{}").unwrap().projects[0].logo_url(), None);
+        assert!(entry(r#"{"hub_logo":"../x.png"}"#).is_err());
+        let sr2 = Registry::bundled();
+        assert!(sr2.find("segarally2").unwrap().logo_url().unwrap().ends_with("/NicoLauncher-Hub/main/art/logos/segarally2.png"));
     }
 
     #[test]
