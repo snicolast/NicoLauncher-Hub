@@ -18,6 +18,14 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[13] 2026-11-16
+- Launcher 0.3.13: a tidier game page, with Play and Update up front and everything else in the gear menu beside them
+- You can rename each game: Rename… in its gear menu, or the ⋯ next to it in the sidebar
+- Each game can have your own cover and background: Change artwork… in its gear menu (a screenshot of the game or any picture from your PC)
+- Games have new logos. Prefer the name as a title, or your own picture? In the gear menu: Show name instead of logo, or Change artwork… > Logo
+- Put your games in your own order: drag them in the Library, or sort them A–Z or by recently played. Games you don't want can be hidden, and Show hidden brings them back
+- News are easier to read: each day starts with a calendar leaf, so one day no longer runs into the next
+
 [12] 2026-11-15
 - Launcher 0.3.12: the portable version no longer writes anything to AppData. Its window data now stays in its own folder too, like the settings and the build tools
 
