@@ -189,7 +189,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 tags: p.tags.clone(),
                 url: p.url(),
                 hero: p.art.hero.as_deref().map(|f| p.raw_url(f)),
-                logo: p.art.logo.as_deref().map(|f| p.raw_url(f)),
+                logo: p.logo_url(),
                 screens: p.art.screens.iter().map(|f| p.raw_url(f)).collect(),
                 cover: own_art(&p.id, art::Kind::Cover),
                 background: own_art(&p.id, art::Kind::Background),
