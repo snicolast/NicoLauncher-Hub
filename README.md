@@ -15,6 +15,7 @@
 
 1. **Download** `NicoLauncher-setup.exe` from the [latest release](https://github.com/snicolast/NicoLauncher-Hub/releases/latest) and run it.
    Windows says *"Windows protected your PC"*? Click **More info**, then **Run anyway**.
+   Browser says *"Virus detected"*? False alarm: the launcher is open source but not code-signed. Use the installer, not the portable zip.
 2. The first time, **accept the license** and **choose a folder** for your games.
 3. **Pick a game** and press **Install**.
 4. **Choose your own ROM file** when it asks.
@@ -51,6 +52,7 @@ Nothing else: no Visual Studio, no Python. The launcher brings its own tools.
 - Problems with the launcher itself go to [Issues](https://github.com/snicolast/NicoLauncher-Hub/issues) here.
 - To remove a game, open it and press **Uninstall**. Only the game's folder is deleted.
 - Want everything in one folder? Use `NicoLauncher-portable.zip` instead: see [docs/portable.md](docs/portable.md).
+  Windows Defender may flag the zip by mistake. To keep it: Windows Security > Protection history > the detection > Actions > **Allow on device**. Don't turn Defender off.
 
 </details>
 
