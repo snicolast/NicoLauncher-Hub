@@ -31,6 +31,13 @@ pub struct Config {
     /// shows what changed since, once.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_version: Option<String>,
+    /// How the library lists the projects.
+    #[serde(default, skip_serializing_if = "Sort::is_custom", deserialize_with = "Sort::read")]
+    pub sort: Sort,
+    /// The user's own order of the projects, by id. Projects it does not name
+    /// (all of them, until the user moves one) follow in the registry's order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub order: Vec<String>,
     /// The folder relative paths start from: the one the file is in.
     #[serde(skip)]
     pub base: PathBuf,
@@ -64,6 +71,43 @@ pub struct ProjectConfig {
     pub background: Option<Art>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logo: Option<Art>,
+    /// Kept out of the library, the sidebar and Home, by the user's choice.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
+    /// When the launcher last started the game (Unix seconds).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_played: Option<u64>,
+}
+
+/// How the library lists the projects.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Sort {
+    /// The user's own order (`Config::order`).
+    #[default]
+    Custom,
+    /// By the name shown, A to Z.
+    Name,
+    /// The one played last first; those never played follow in the user's order.
+    Recent,
+}
+
+impl Sort {
+    fn is_custom(&self) -> bool {
+        *self == Sort::Custom
+    }
+
+    /// A word for it, as the window sends it; an unknown one is None.
+    pub fn parse(word: &str) -> Option<Sort> {
+        serde_json::from_value(serde_json::Value::String(word.to_string())).ok()
+    }
+
+    /// One a newer launcher wrote that this one does not know is the user's
+    /// own order, not a damaged settings file.
+    fn read<'de, D: serde::Deserializer<'de>>(d: D) -> std::result::Result<Sort, D::Error> {
+        let word = Option::<String>::deserialize(d)?;
+        Ok(word.as_deref().and_then(Sort::parse).unwrap_or_default())
+    }
 }
 
 impl Config {
@@ -136,6 +180,32 @@ impl Config {
             art::Kind::Background => p.background.as_ref(),
             art::Kind::Logo => p.logo.as_ref(),
         }
+    }
+
+    /// Whether the user hid a project.
+    pub fn hidden(&self, id: &str) -> bool {
+        self.projects.get(id).is_some_and(|p| p.hidden)
+    }
+
+    /// When the launcher last started a project.
+    pub fn last_played(&self, id: &str) -> Option<u64> {
+        self.projects.get(id).and_then(|p| p.last_played)
+    }
+
+    /// The order the library lists projects in. `projects` are each one's id,
+    /// the name shown and when it was last played, in the registry's order;
+    /// the answer is their places in it.
+    pub fn arrange(&self, projects: &[(&str, &str, Option<u64>)]) -> Vec<usize> {
+        let mine = |id: &str| self.order.iter().position(|o| o == id).unwrap_or(usize::MAX);
+        let mut out: Vec<usize> = (0..projects.len()).collect();
+        // Stable sorts: what ties keeps the order before it
+        out.sort_by_key(|&i| mine(projects[i].0));
+        match self.sort {
+            Sort::Custom => {}
+            Sort::Name => out.sort_by_cached_key(|&i| projects[i].1.to_lowercase()),
+            Sort::Recent => out.sort_by_key(|&i| std::cmp::Reverse(projects[i].2)),
+        }
+        out
     }
 
     /// Every picture file the settings name: what `art::prune` keeps.
@@ -336,6 +406,49 @@ mod tests {
         let none: Config = serde_json::from_str(r#"{ "projects": { "x": {} } }"#).unwrap();
         let out = serde_json::to_string(&none).unwrap();
         assert!(!out.contains("cover") && !out.contains("background"), "{out}");
+    }
+
+    #[test]
+    fn the_order_of_the_library() {
+        let projects = [("swt", "Nico SWT", Some(50)), ("tlw", "nico TLW", None), ("sr2", "Arcade Rally", Some(90)), ("new", "Zed", None)];
+        let ids = |c: &Config| c.arrange(&projects).into_iter().map(|i| projects[i].0).collect::<Vec<_>>();
+        let mut c = Config::default();
+        assert_eq!(ids(&c), ["swt", "tlw", "sr2", "new"], "the registry's until the user moves one");
+        // One the user's order does not name (new in the registry) goes last
+        c.order = vec!["sr2".into(), "swt".into(), "gone".into(), "tlw".into()];
+        assert_eq!(ids(&c), ["sr2", "swt", "tlw", "new"]);
+        c.sort = Sort::Name;
+        assert_eq!(ids(&c), ["sr2", "swt", "tlw", "new"], "A to Z whatever the case");
+        c.sort = Sort::Recent;
+        assert_eq!(ids(&c), ["sr2", "swt", "tlw", "new"]);
+        c.order = vec!["new".into(), "tlw".into()];
+        assert_eq!(ids(&c), ["sr2", "swt", "new", "tlw"], "never played: in the user's order");
+    }
+
+    #[test]
+    fn library_settings_in_the_file() {
+        let c = Config::default();
+        let out = serde_json::to_string(&c).unwrap();
+        assert!(!out.contains("sort") && !out.contains("order"), "the defaults are not written: {out}");
+        let mut c: Config = serde_json::from_str(r#"{ "sort": "recent", "order": ["b", "a"], "projects": { "a": { "hidden": true, "last_played": 7 } } }"#).unwrap();
+        assert_eq!(c.sort, Sort::Recent);
+        assert!(c.hidden("a") && !c.hidden("b") && !c.hidden("x"));
+        assert_eq!(c.last_played("a"), Some(7));
+        assert_eq!(c.last_played("b"), None);
+        // Written back as it was read
+        c.base = PathBuf::new();
+        let back: Config = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
+        assert_eq!(back, c);
+        // A newer launcher's way of sorting is not a damaged file
+        let c: Config = serde_json::from_str(r#"{ "sort": "by_genre" }"#).unwrap();
+        assert_eq!(c.sort, Sort::Custom);
+        assert_eq!(Sort::parse("name"), Some(Sort::Name));
+        assert_eq!(Sort::parse("Name"), None);
+        // Off is not written
+        let mut c = Config::default();
+        c.projects.entry("a".into()).or_default().name = Some("x".into());
+        let out = serde_json::to_string(&c).unwrap();
+        assert!(!out.contains("hidden") && !out.contains("last_played"), "{out}");
     }
 
     #[test]

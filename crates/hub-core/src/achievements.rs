@@ -89,6 +89,13 @@ pub fn read(dir: &Path) -> Vec<Achievement> {
         .unwrap_or_default()
 }
 
+/// When the game last wrote the file (Unix seconds): it does while it is
+/// played, so it tells when the game was last played, even from a shortcut.
+pub fn written(dir: &Path) -> Option<u64> {
+    let time = std::fs::metadata(dir.join(FILE)).ok()?.modified().ok()?;
+    time.duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_secs())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
