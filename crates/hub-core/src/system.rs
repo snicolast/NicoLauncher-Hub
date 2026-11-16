@@ -12,27 +12,56 @@ pub struct SystemInfo {
     pub gpu: String,
 }
 
-/// One PowerShell call: the edition from WMI (the registry still says
-/// "Windows 10" on Windows 11), the feature update ("24H2") from the
-/// registry, and every display adapter with its driver.
-/// No double quotes in it, so it reaches PowerShell as written whatever the
-/// quoting of the command line; UTF-8 out, for names that are not ASCII.
-#[cfg(windows)]
-const SCRIPT: &str = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; $t = [char]9; \
-$o = Get-CimInstance Win32_OperatingSystem; \
-$d = (Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion').DisplayVersion; \
-'OS' + $t + $o.Caption + $t + $d + $t + $o.BuildNumber; \
-Get-CimInstance Win32_VideoController | ForEach-Object { 'GPU' + $t + $_.Name + $t + $_.DriverVersion }";
-
+/// The Windows version from the registry, the graphics cards from DirectX:
+/// what any game asks, and nothing started for it.
 #[cfg(windows)]
 pub fn info() -> SystemInfo {
-    let mut cmd = std::process::Command::new("powershell");
-    cmd.args(["-NoProfile", "-NonInteractive", "-Command", SCRIPT]);
-    crate::runner::no_window(&mut cmd);
-    match cmd.output() {
-        Ok(out) => parse(&String::from_utf8_lossy(&out.stdout)),
-        Err(_) => parse(""),
+    let os = windows_registry::LOCAL_MACHINE
+        .open(r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+        .map(|key| {
+            let get = |name: &str| key.get_string(name).unwrap_or_default();
+            // DisplayVersion ("24H2") since 20H2; ReleaseId ("2004") before
+            let release = Some(get("DisplayVersion")).filter(|r| !r.is_empty()).unwrap_or_else(|| get("ReleaseId"));
+            describe_os(&get("ProductName"), &release, &get("CurrentBuildNumber"))
+        })
+        .unwrap_or_else(|_| UNKNOWN.to_string());
+    SystemInfo { os, gpu: describe_gpus(&adapters()) }
+}
+
+/// Every graphics card with its driver version, as Windows numbers it
+/// (32.0.15.7652). Windows' own software renderer is left out.
+#[cfg(windows)]
+fn adapters() -> Vec<(String, String)> {
+    use windows::core::Interface;
+    use windows::Win32::Graphics::Dxgi::{CreateDXGIFactory1, IDXGIDevice, IDXGIFactory1, DXGI_ADAPTER_FLAG_SOFTWARE};
+
+    let mut out = Vec::new();
+    // SAFETY: plain DirectX queries; every object is released when dropped
+    unsafe {
+        let Ok(factory) = CreateDXGIFactory1::<IDXGIFactory1>() else {
+            return out;
+        };
+        let mut i = 0;
+        while let Ok(adapter) = factory.EnumAdapters1(i) {
+            i += 1;
+            let Ok(desc) = adapter.GetDesc1() else { continue };
+            if desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE.0 as u32 != 0 {
+                continue;
+            }
+            let len = desc.Description.iter().position(|&c| c == 0).unwrap_or(desc.Description.len());
+            let name = String::from_utf16_lossy(&desc.Description[..len]);
+            let driver = adapter.CheckInterfaceSupport(&IDXGIDevice::IID).map(driver_number).unwrap_or_default();
+            out.push((name, driver));
+        }
     }
+    out
+}
+
+/// DirectX gives the driver version as four 16-bit numbers in one.
+#[cfg(windows)]
+fn driver_number(v: i64) -> String {
+    let v = v as u64;
+    format!("{}.{}.{}.{}", v >> 48, (v >> 32) & 0xffff, (v >> 16) & 0xffff, v & 0xffff)
 }
 
 #[cfg(not(windows))]
@@ -42,42 +71,42 @@ pub fn info() -> SystemInfo {
 
 const UNKNOWN: &str = "unknown";
 
-/// Reads the lines of `SCRIPT`: `OS<tab>caption<tab>display version<tab>build`
-/// and `GPU<tab>name<tab>driver version`.
-pub fn parse(text: &str) -> SystemInfo {
-    let mut os = None;
-    let mut gpus = Vec::new();
-    for line in text.lines() {
-        let f: Vec<&str> = line.trim_end_matches('\r').split('\t').map(str::trim).collect();
-        match f.as_slice() {
-            ["OS", caption, rest @ ..] if !caption.is_empty() => {
-                let name = caption.strip_prefix("Microsoft ").unwrap_or(caption);
-                let release = rest.first().copied().unwrap_or("");
-                let build = rest.get(1).copied().unwrap_or("");
-                let mut s = name.to_string();
-                if !release.is_empty() {
-                    s += &format!(" {release}");
-                }
-                if !build.is_empty() {
-                    s += &format!(" (build {build})");
-                }
-                os = Some(s);
-            }
-            ["GPU", name, rest @ ..] if !name.is_empty() => {
-                // Remote desktop and fallback adapters say nothing about the PC
-                if name.starts_with("Microsoft Basic") || name.starts_with("Microsoft Remote") {
-                    continue;
-                }
-                let driver = rest.first().map(|d| driver_version(name, d)).unwrap_or_default();
-                gpus.push(if driver.is_empty() { name.to_string() } else { format!("{name} · driver {driver}") });
-            }
-            _ => {}
-        }
+/// "Windows 11 Home 24H2 (build 26100)". The registry still names Windows 11
+/// "Windows 10": build 22000 and later are Windows 11.
+pub fn describe_os(product: &str, release: &str, build: &str) -> String {
+    let product = product.trim();
+    let product = product.strip_prefix("Microsoft ").unwrap_or(product);
+    if product.is_empty() {
+        return UNKNOWN.to_string();
     }
-    SystemInfo {
-        os: os.unwrap_or_else(|| UNKNOWN.to_string()),
-        gpu: if gpus.is_empty() { UNKNOWN.to_string() } else { gpus.join(" + ") },
+    let mut s = match build.trim().parse::<u32>() {
+        Ok(b) if b >= 22000 => product.replacen("Windows 10", "Windows 11", 1),
+        _ => product.to_string(),
+    };
+    if !release.trim().is_empty() {
+        s += &format!(" {}", release.trim());
     }
+    if !build.trim().is_empty() {
+        s += &format!(" (build {})", build.trim());
+    }
+    s
+}
+
+/// The cards one after another: "NVIDIA GeForce RTX 4070 · driver 576.52".
+pub fn describe_gpus(adapters: &[(String, String)]) -> String {
+    let gpus: Vec<String> = adapters
+        .iter()
+        .map(|(name, driver)| (name.trim(), driver.trim()))
+        // Remote desktop and fallback adapters say nothing about the PC
+        .filter(|(name, _)| {
+            !name.is_empty() && !name.starts_with("Microsoft Basic") && !name.starts_with("Microsoft Remote")
+        })
+        .map(|(name, driver)| {
+            let driver = driver_version(name, driver);
+            if driver.is_empty() { name.to_string() } else { format!("{name} · driver {driver}") }
+        })
+        .collect();
+    if gpus.is_empty() { UNKNOWN.to_string() } else { gpus.join(" + ") }
 }
 
 /// Windows shows NVIDIA drivers as 32.0.15.7652; NVIDIA calls that one
@@ -98,23 +127,31 @@ fn driver_version(name: &str, version: &str) -> String {
 mod tests {
     use super::*;
 
+    fn cards(list: &[(&str, &str)]) -> Vec<(String, String)> {
+        list.iter().map(|(n, d)| (n.to_string(), d.to_string())).collect()
+    }
+
     #[test]
     fn windows_and_cards() {
-        let out = "OS\tMicrosoft Windows 11 Home\t24H2\t26100\r\n\
-                   GPU\tIntel(R) UHD Graphics 770\t31.0.101.5186\r\n\
-                   GPU\tNVIDIA GeForce RTX 4070\t32.0.15.7652\r\n\
-                   GPU\tMicrosoft Basic Display Adapter\t10.0.26100.1\r\n";
-        let i = parse(out);
-        assert_eq!(i.os, "Windows 11 Home 24H2 (build 26100)");
-        assert_eq!(i.gpu, "Intel(R) UHD Graphics 770 · driver 31.0.101.5186 + NVIDIA GeForce RTX 4070 · driver 576.52");
+        assert_eq!(describe_os("Windows 10 Home", "24H2", "26100"), "Windows 11 Home 24H2 (build 26100)");
+        let gpus = cards(&[
+            ("Intel(R) UHD Graphics 770", "31.0.101.5186"),
+            ("NVIDIA GeForce RTX 4070", "32.0.15.7652"),
+            ("Microsoft Basic Display Adapter", "10.0.26100.1"),
+        ]);
+        assert_eq!(
+            describe_gpus(&gpus),
+            "Intel(R) UHD Graphics 770 · driver 31.0.101.5186 + NVIDIA GeForce RTX 4070 · driver 576.52"
+        );
     }
 
     #[test]
     fn missing_pieces() {
-        assert_eq!(parse(""), SystemInfo { os: "unknown".into(), gpu: "unknown".into() });
-        let i = parse("OS\tMicrosoft Windows 10 Pro\t\t19045\nGPU\tAMD Radeon RX 7800 XT\t\n");
-        assert_eq!(i.os, "Windows 10 Pro (build 19045)");
-        assert_eq!(i.gpu, "AMD Radeon RX 7800 XT");
+        assert_eq!(describe_os("", "", ""), "unknown");
+        assert_eq!(describe_gpus(&[]), "unknown");
+        assert_eq!(describe_os("Windows 10 Pro", "", "19045"), "Windows 10 Pro (build 19045)");
+        assert_eq!(describe_os("Windows 10 Pro", "2004", ""), "Windows 10 Pro 2004");
+        assert_eq!(describe_gpus(&cards(&[("AMD Radeon RX 7800 XT", "")])), "AMD Radeon RX 7800 XT");
     }
 
     #[test]

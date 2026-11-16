@@ -40,6 +40,7 @@
       "icons/icon.png"
     ],
     "publisher": "snicolast",
+    "copyright": "Copyright (c) 2026 snicolast",
     "shortDescription": "Installs, builds, updates and starts snicolast's projects",
     "windows": {
       "nsis": {
