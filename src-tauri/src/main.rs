@@ -5,7 +5,7 @@ use hub_core::achievements::{self, Achievement};
 use hub_core::announcements::{self, Announcement};
 use hub_core::art::{self, Art};
 use hub_core::build;
-use hub_core::config::{self, Config};
+use hub_core::config::{self, Config, Sort};
 use hub_core::news::{self, Entry};
 use hub_core::portable::{self, Places};
 use hub_core::project::{self, Script, State};
@@ -73,6 +73,8 @@ struct Snapshot {
     /// the user had, until they have seen it. None when there is nothing new
     /// to show; empty while the news are not loaded or say nothing of it.
     launcher_update: Option<LauncherNews>,
+    /// How the library lists the projects: `projects` come in that order.
+    sort: Sort,
     projects: Vec<ProjectView>,
 }
 
@@ -137,6 +139,11 @@ struct ProjectView {
     achievements: Vec<Achievement>,
     /// Which version is installed.
     version: Option<project::Version>,
+    /// Kept out of the library, the sidebar and Home by the user.
+    hidden: bool,
+    /// When it was last played (Unix seconds): started from the launcher, or
+    /// its achievements written by the game, whichever is later.
+    last_played: Option<u64>,
 }
 
 #[derive(Clone, Serialize)]
@@ -159,7 +166,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
     let remote = hub.remote_news.lock().unwrap();
     let art_dir = config.art_dir();
     let own_art = |id: &str, kind| config.art(id, kind).filter(|a| art_dir.join(&a.file).is_file()).cloned();
-    let projects: Vec<ProjectView> = registry
+    let mut projects: Vec<ProjectView> = registry
         .projects
         .iter()
         .map(|p| {
@@ -208,12 +215,20 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 rebuild_pending: state == State::Ready && dir.as_deref().is_some_and(|d| update::rebuild_pending(p, d)),
                 can_rebuild: state == State::Ready && p.scripts.build.is_some(),
                 is_clone: dir.as_ref().is_some_and(|d| d.join(".git").exists()),
+                hidden: config.hidden(&p.id),
+                last_played: match (&dir, installed) {
+                    (Some(d), true) => config.last_played(&p.id).max(achievements::written(d)),
+                    _ => config.last_played(&p.id),
+                },
                 dir,
                 input,
                 state,
             }
         })
         .collect();
+    let order = config.arrange(&projects.iter().map(|p| (p.id.as_str(), p.name.as_str(), p.last_played)).collect::<Vec<_>>());
+    let mut slots: Vec<Option<ProjectView>> = projects.drain(..).map(Some).collect();
+    projects = order.into_iter().filter_map(|i| slots[i].take()).collect();
     let today = announcements::today();
     let installed = |id: &str| projects.iter().any(|p| p.id == id && p.state != State::NotInstalled);
     let announcements = hub
@@ -240,6 +255,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
         launcher_news,
         latest_video: hub.latest_video.lock().unwrap().clone(),
         announcements,
+        sort: config.sort,
         projects,
     }
 }
@@ -495,6 +511,32 @@ fn set_project_text_title(hub: tauri::State<Hub>, id: String, on: bool) -> Resul
     Ok(snapshot_of(&hub))
 }
 
+/// Hides a project from the library, the sidebar and Home, or shows it again.
+#[tauri::command]
+fn set_project_hidden(hub: tauri::State<Hub>, id: String, hidden: bool) -> Result<Snapshot, String> {
+    find_project(&hub, &id)?;
+    change_config(&hub, |c| c.projects.entry(id).or_default().hidden = hidden)?;
+    Ok(snapshot_of(&hub))
+}
+
+/// How the library lists the projects: "custom", "name" or "recent".
+#[tauri::command]
+fn set_library_sort(hub: tauri::State<Hub>, sort: String) -> Result<Snapshot, String> {
+    let sort = Sort::parse(&sort).ok_or_else(|| format!("Unknown order: {sort}"))?;
+    change_config(&hub, |c| c.sort = sort)?;
+    Ok(snapshot_of(&hub))
+}
+
+/// The user's own order of the projects, by id, and that order in use.
+#[tauri::command]
+fn set_library_order(hub: tauri::State<Hub>, ids: Vec<String>) -> Result<Snapshot, String> {
+    change_config(&hub, |c| {
+        c.order = ids;
+        c.sort = Sort::Custom;
+    })?;
+    Ok(snapshot_of(&hub))
+}
+
 /// Points a project at a folder the user already has it in.
 #[tauri::command]
 fn set_project_dir(hub: tauri::State<Hub>, id: String, path: PathBuf) -> Result<Snapshot, String> {
@@ -600,7 +642,12 @@ fn art_response(dir: &Path, name: &str) -> tauri::http::Response<Vec<u8>> {
 fn launch(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     let p = find_project(&hub, &id)?;
     let dir = hub.config.lock().unwrap().project_dir(&id).ok_or("Not installed.")?;
-    project::launch(&p, &dir)
+    project::launch(&p, &dir)?;
+    // For "Recently played". The game is running: a settings file that cannot
+    // be written now is no reason to say it did not start
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let _ = change_config(&hub, |c| c.projects.entry(id).or_default().last_played = Some(now));
+    Ok(())
 }
 
 /// A shortcut to the built game on the desktop.
@@ -875,6 +922,9 @@ fn main() {
             set_project_dir,
             set_project_name,
             set_project_text_title,
+            set_project_hidden,
+            set_library_sort,
+            set_library_order,
             prepare_art,
             set_project_art,
             discard_art,

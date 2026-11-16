@@ -93,6 +93,12 @@ const STR = {
     count_ready: '{n} ready to play', count_updates: '{n} with something new', count_todo: '{n} still to set up', count_missing: '{n} not installed',
     home_empty: 'No news could be loaded. Check your connection and press Refresh.',
     today: 'Today', yesterday: 'Yesterday',
+    sort_label: 'Order of the games', sort_custom: 'My order', sort_name: 'A–Z', sort_recent: 'Recently played',
+    lib_drag: 'Drag a game to move it.', show_hidden: 'Show hidden ({n})',
+    m_hide: 'Hide from library', m_hide_sub: 'Also from the sidebar and Home', m_unhide: 'Show in library',
+    do_hide: 'Hide', do_unhide: 'Show again', chip_hidden: 'Hidden', hidden_done: '{name} is hidden. Show hidden games from the Library.', undo: 'Undo',
+    all_hidden: 'All your games are hidden.',
+    played_today: 'Played today', played_yesterday: 'Played yesterday', played_days: 'Played {n} days ago', played_never: 'Not played yet',
     settings_damaged: 'The settings file could not be read:',
     ach_title: 'Achievements', ach_view_all: 'View all', ach_count: '{n} of {total} unlocked', ach_unlocked_on: 'Unlocked {date}', ach_locked: 'Locked',
     ach_toast_one: '{name}: achievement unlocked, {ach}', ach_toast_many: '{name}: {n} achievements unlocked',
@@ -219,6 +225,12 @@ const STR = {
     count_ready: '{n} listos para jugar', count_updates: '{n} con novedades', count_todo: '{n} a medio preparar', count_missing: '{n} sin instalar',
     home_empty: 'No se han podido cargar las noticias. Comprueba la conexión y pulsa Actualizar lista.',
     today: 'Hoy', yesterday: 'Ayer',
+    sort_label: 'Orden de los juegos', sort_custom: 'Mi orden', sort_name: 'A–Z', sort_recent: 'Jugados hace poco',
+    lib_drag: 'Arrastra un juego para moverlo.', show_hidden: 'Ver ocultos ({n})',
+    m_hide: 'Ocultar de la biblioteca', m_hide_sub: 'También de la barra lateral y de Inicio', m_unhide: 'Mostrar en la biblioteca',
+    do_hide: 'Ocultar', do_unhide: 'Volver a mostrar', chip_hidden: 'Oculto', hidden_done: '{name} está oculto. Los ocultos se ven desde la Biblioteca.', undo: 'Deshacer',
+    all_hidden: 'Todos tus juegos están ocultos.',
+    played_today: 'Jugado hoy', played_yesterday: 'Jugado ayer', played_days: 'Jugado hace {n} días', played_never: 'Sin jugar todavía',
     settings_damaged: 'No se pudo leer el archivo de ajustes:',
     ach_title: 'Logros', ach_view_all: 'Ver todos', ach_count: '{n} de {total} desbloqueados', ach_unlocked_on: 'Desbloqueado el {date}', ach_locked: 'Bloqueado',
     ach_toast_one: '{name}: logro desbloqueado, {ach}', ach_toast_many: '{name}: {n} logros desbloqueados',
@@ -305,6 +317,8 @@ const ICONS = {
   pencil: '<path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  eye: '<path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M10.600 5.600A9.700 9.700 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a17 17 0 0 1-2.600 3.400M6.400 6.900C3.900 8.600 2.500 12 2.500 12S6 18.500 12 18.500c1.900 0 3.500-.6 4.900-1.500"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200M3 3l18 18"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 };
 const icon = (name) => {
@@ -392,8 +406,9 @@ function openLink(url) {
   T.opener.openUrl(url).catch((e) => toast(t('link_failed', { url, error: e })));
 }
 
-function toast(text, good) {
-  const node = el('div', { class: 'toast' + (good ? ' good' : ''), onclick: () => node.remove() }, text);
+function toast(text, good, action) {
+  const node = el('div', { class: 'toast' + (good ? ' good' : ''), onclick: () => node.remove() }, text,
+    action ? el('button', { class: 'toast-action', onclick: action.go }, action.label) : null);
   $('toasts').append(node);
   setTimeout(() => node.remove(), 9000);
 }
@@ -904,7 +919,7 @@ function primaryButton(p, large) {
     case 'not_installed': return make('download', t('do_install'), () => startTask(p, 'setup'));
     case 'needs_input': return make('file', t('do_choose', { file: p.input_label }), () => chooseInput(p, true));
     case 'needs_build': return make('hammer', t('do_build'), () => startTask(p, 'setup'));
-    default: return make('play', t('do_play'), () => call('launch', { id: p.id }), 'play');
+    default: return make('play', t('do_play'), async () => { if ((await call('launch', { id: p.id })) !== undefined) update('snapshot'); }, 'play');
   }
 }
 
@@ -1039,7 +1054,7 @@ let homeDays = HOME_DAYS;
 const SPOT_EVERY = 9000;
 let spotTimer = null;
 function spotNext() {
-  const list = snap ? snap.projects : [];
+  const list = listed();
   // Not while something else has the eye: another page, a question on screen,
   // the pointer on the spotlight, or the window out of sight or in the
   // background (a game in front of it)
@@ -1054,10 +1069,15 @@ function spotRestart() {
 }
 spotRestart();
 
+// The games the user did not hide, in their order: what Home, the sidebar and
+// the Library list
+const listed = () => (snap ? snap.projects.filter((p) => !p.hidden) : []);
+
 function renderHome() {
+  const games = listed();
   const items = [];
   for (const e of snap.launcher_news || []) items.push({ ...e, day: dayKey(e.title), order: -1, from: null });
-  snap.projects.forEach((p, order) => {
+  games.forEach((p, order) => {
     const fresh = new Set(p.new_entries.map((e) => e.number));
     for (const e of p.latest_news || []) items.push({ ...e, day: dayKey(e.title), order, from: p, isNew: fresh.has(e.number) });
   });
@@ -1088,7 +1108,7 @@ function renderHome() {
   // The spotlight: one project across the top, with its picture, what it
   // brought last and the one thing to do with it
   const newest = items.find((e) => e.from);
-  const lead = snap.projects.find((p) => p.id === spot) || (newest && newest.from) || snap.projects[0];
+  const lead = games.find((p) => p.id === spot) || (newest && newest.from) || games[0];
   const open = (p) => (!snap.install_root && !p.dir ? show('library') : openProject(p.id));
   backdrop($('spot-bg'), lead && artSrc(lead, 'background'), lead && artFocus(lead, 'background'));
   const swapped = $('spot-bg').dataset.id !== (lead ? lead.id : '');
@@ -1110,8 +1130,8 @@ function renderHome() {
         el('span', { class: 'state' }, ...stateLine(lead)),
         updateChip(lead)));
   } else $('spot-content').replaceChildren();
-  $('spot-picks').classList.toggle('dots', snap.projects.length > 5);
-  $('spot-picks').replaceChildren(...(snap.projects.length > 1 ? snap.projects.map((p) =>
+  $('spot-picks').classList.toggle('dots', games.length > 5);
+  $('spot-picks').replaceChildren(...(games.length > 1 ? games.map((p) =>
     el('button', { class: 'pick' + (p === lead ? ' on' : ''), title: p.name, style: `background-image:${gradient(p)}`, onclick: () => { spot = p.id; spotRestart(); render(); } },
       artPicture(p, 'cover'))) : []));
 
@@ -1142,8 +1162,8 @@ function renderHome() {
       return img;
     }));
   }
-  const count = (state) => snap.projects.filter((p) => p.state === state).length;
-  const fresh = snap.projects.filter(hasUpdate);
+  const count = (state) => games.filter((p) => p.state === state).length;
+  const fresh = games.filter(hasUpdate);
   const todo = count('needs_input') + count('needs_build');
   const line = (dot, key, n) => (n ? el('div', { class: 'state' }, el('span', { class: 'dot ' + dot }), t(key, { n })) : null);
   $('home-library').replaceChildren(...[
@@ -1172,7 +1192,7 @@ function renderHome() {
 
   // The sidebar's shortcuts, and the picture far behind everything
   // Each with a "..." that shows on hover: a quick rename
-  $('side-games').replaceChildren(...snap.projects.map((p) => {
+  $('side-games').replaceChildren(...games.map((p) => {
     const more = el('button', { class: 'side-more', title: t('do_rename'), 'aria-label': t('do_rename') }, el('span'), el('span'), el('span'));
     more.addEventListener('click', (e) => { e.stopPropagation(); quickRename(p, more); });
     return el('div', { class: 'side-row' + (renaming === p.id ? ' renaming' : '') },
@@ -1186,21 +1206,48 @@ function renderHome() {
   backdrop($('ambient'), behind && artSrc(behind, 'background'), behind && artFocus(behind, 'background'));
 }
 
+let showHidden = false;
 function renderLibrary() {
+  if (dragging) return;   // the cards stay as they are under the pointer
   $('first-run').hidden = !!snap.install_root;
   $('first-run-title').textContent = snap.missing_root ? t('root_gone_title') : t('first_run_title');
   $('first-run-text').textContent = snap.missing_root ? t('root_gone', { path: snap.missing_root }) : t('first_run');
+  const hidden = snap.projects.filter((p) => p.hidden).length;
+  if (!hidden) showHidden = false;
+  const games = showHidden ? snap.projects : listed();
   const ready = snap.projects.filter((p) => p.state === 'ready').length;
-  $('lib-sub').textContent = t('lib_sub', { n: snap.projects.length, ready });
+  // The user's own order is changed by dragging: said once, under the title
+  const movable = snap.sort === 'custom' && games.length > 1 && !!snap.install_root;
+  $('lib-sub').textContent = t('lib_sub', { n: snap.projects.length, ready }) + (movable ? ' · ' + t('lib_drag') : '');
+
+  // How they are listed, and the way back to the hidden ones
+  $('lib-tools').replaceChildren(
+    hidden ? el('button', { class: 'btn ghost toggle' + (showHidden ? ' on' : ''), 'aria-pressed': String(showHidden), onclick: () => { showHidden = !showHidden; render(); } },
+      icon(showHidden ? 'eye' : 'eyeoff'), t('show_hidden', { n: hidden })) : '',
+    el('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('sort_label') }, ...['custom', 'name', 'recent'].map((sort) =>
+      el('button', { type: 'button', role: 'radio', 'aria-checked': String(snap.sort === sort), class: snap.sort === sort ? 'on' : '',
+        onclick: () => { if (snap.sort !== sort) update('set_library_sort', { sort }); } }, t('sort_' + sort)))));
+
   const cards = $('cards');
+  cards.classList.toggle('movable', movable);
+  if (!games.length) {
+    cards.replaceChildren(el('div', { class: 'empty-lib' }, el('p', { class: 'dim' }, t('all_hidden')),
+      el('button', { class: 'btn ghost', onclick: () => { showHidden = true; render(); } }, icon('eye'), t('show_hidden', { n: hidden }))));
+    return;
+  }
   cards.replaceChildren();
-  for (const p of snap.projects) {
+  for (const p of games) {
     const art = el('div', { class: 'art', style: `background-image:${gradient(p)}` });
     const cover = artPicture(p, 'cover');
     if (cover) art.append(cover);
+    // Hide (or show again) right on the card, when the pointer is on it
+    const eye = el('button', { class: 'card-eye', title: t(p.hidden ? 'do_unhide' : 'do_hide'), 'aria-label': t(p.hidden ? 'do_unhide' : 'do_hide') },
+      icon(p.hidden ? 'eye' : 'eyeoff'));
+    eye.addEventListener('click', (e) => { e.stopPropagation(); setHidden(p, !p.hidden); });
+    eye.addEventListener('pointerdown', (e) => e.stopPropagation());
     const top = el('div', { class: 'card-top' },
       gameMark(p, 'card-logo', 'card-title'),
-      updateChip(p));
+      el('div', { class: 'card-flags' }, p.hidden ? el('span', { class: 'chip' }, t('chip_hidden')) : null, updateChip(p), eye));
     // Until there is a folder to install into, the projects are only shown:
     // the welcome box above is the one thing to do. A project that already
     // has a folder of its own stays in use. A card has no button of its own:
@@ -1208,15 +1255,141 @@ function renderLibrary() {
     const locked = !snap.install_root && !p.dir;
     const card = locked
       ? { class: 'card locked', 'aria-disabled': 'true', title: t('first_run') }
-      : { class: 'card', tabindex: '0', onclick: () => openProject(p.id) };
+      : { class: 'card', tabindex: '0', onclick: () => { if (!dragged) openProject(p.id); } };
     // The name in big at the top already: not again at the bottom
     if (!showsLogo(p)) card.class += ' titled';
-    cards.append(el('div', card,
+    if (p.hidden) card.class += ' hidden-game';
+    const node = el('div', card,
       art, top,
       el('div', { class: 'card-foot' },
-        el('div', {}, el('h3', {}, p.name), el('div', { class: 'state' }, ...stateLine(p))),
-        achBadge(p))));
+        el('div', {}, el('h3', {}, p.name), el('div', { class: 'state' }, ...stateLine(p)),
+          snap.sort === 'recent' ? el('div', { class: 'played dim small' }, playedText(p)) : null),
+        achBadge(p)));
+    node.dataset.id = p.id;
+    if (!locked) node.addEventListener('keydown', (e) => { if (e.key === 'Enter') openProject(p.id); else if (movable && e.ctrlKey && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) { e.preventDefault(); nudge(p.id, /Left|Up/.test(e.key) ? -1 : 1); } });
+    if (movable && !locked) node.addEventListener('pointerdown', (e) => startDrag(e, node));
+    cards.append(node);
   }
+}
+
+function playedText(p) {
+  if (!p.last_played) return t('played_never');
+  const d = new Date(p.last_played * 1000);
+  const ago = daysAgo(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+  return ago <= 0 ? t('played_today') : ago === 1 ? t('played_yesterday') : t('played_days', { n: ago });
+}
+
+// Hidden: out of the library, the sidebar and Home. Undone from the toast,
+// the card (with "Show hidden") or the game's gear menu
+async function setHidden(p, hidden) {
+  const s = await update('set_project_hidden', { id: p.id, hidden });
+  if (s && hidden) toast(t('hidden_done', { name: p.name }), true, { label: t('undo'), go: () => update('set_project_hidden', { id: p.id, hidden: false }) });
+}
+
+// ------------------------------------------------------------ the user's order
+// In "My order" a card is moved by dragging it (with the pointer, not the
+// browser's drag and drop: the window takes that for dropping files). The
+// others slide out of its way; letting go keeps the order. Ctrl+arrows move
+// the focused card. Hidden games keep their place among the others.
+let dragged = false;    // a drag just ended: the click that follows is not a click
+let dragging = null;
+const fullOrder = (shownIds) => {
+  // The ids on screen in their new order, with the ones not on screen (hidden)
+  // put back after the game they followed
+  const out = [...shownIds];
+  snap.projects.forEach((p, i) => {
+    if (out.includes(p.id)) return;
+    const before = snap.projects.slice(0, i).reverse().find((x) => out.includes(x.id));
+    out.splice(before ? out.indexOf(before.id) + 1 : 0, 0, p.id);
+  });
+  return out;
+};
+const saveOrder = (ids) => update('set_library_order', { ids: fullOrder(ids) });
+
+function nudge(id, by) {
+  const ids = [...$('cards').children].map((n) => n.dataset.id).filter(Boolean);
+  const at = ids.indexOf(id);
+  const to = at + by;
+  if (at < 0 || to < 0 || to >= ids.length) return;
+  ids.splice(to, 0, ids.splice(at, 1)[0]);
+  saveOrder(ids).then(() => $('cards').querySelector(`[data-id="${id}"]`)?.focus());
+}
+
+// Where each card is now, to slide them from there to their new place
+function slide(cards, move) {
+  const at = (c) => c.getBoundingClientRect();
+  const before = new Map(cards.map((c) => [c, at(c)]));
+  move();
+  for (const c of cards) {
+    if (c === dragging?.node) continue;
+    c.getAnimations().forEach((x) => x.cancel());
+    const a = before.get(c), b = at(c);
+    if (!a || (a.left === b.left && a.top === b.top)) continue;
+    c.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+  }
+}
+
+function startDrag(e, node) {
+  if (e.button !== 0) return;
+  const start = { x: e.clientX, y: e.clientY };
+  let moved = false;
+  const box = $('cards');
+  const zoom = node.getBoundingClientRect().width / node.offsetWidth || 1;
+  // Where a card's slot is on screen: from the layout, not from where it is
+  // drawn now (the others are still sliding, the dragged one follows the pointer)
+  const slot = (c) => {
+    const r = box.getBoundingClientRect();
+    return { left: r.left + c.offsetLeft * zoom, top: r.top + c.offsetTop * zoom, w: c.offsetWidth * zoom, h: c.offsetHeight * zoom };
+  };
+  let grab = null;
+  const follow = (ev) => {
+    const home = slot(node);
+    node.style.transform = `translate(${(ev.clientX - grab.x - home.left) / zoom}px, ${(ev.clientY - grab.y - home.top) / zoom}px) scale(1.03)`;
+  };
+  const move = (ev) => {
+    if (!moved) {
+      if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 6) return;
+      moved = true;
+      const home = slot(node);
+      grab = { x: start.x - home.left, y: start.y - home.top };
+      dragging = { node };
+      node.classList.add('dragging');
+      box.classList.add('sorting');
+    }
+    // Over another card's slot: it takes that card's place
+    const cards = [...box.children];
+    const over = cards.find((c) => {
+      if (c === node) return false;
+      const r = slot(c);
+      return ev.clientX > r.left && ev.clientX < r.left + r.w && ev.clientY > r.top && ev.clientY < r.top + r.h;
+    });
+    if (over) {
+      const after = cards.indexOf(over) > cards.indexOf(node);
+      slide(cards, () => over[after ? 'after' : 'before'](node));
+    }
+    follow(ev);
+  };
+  const up = () => {
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    document.removeEventListener('pointercancel', up);
+    if (!moved) return;
+    // Back into its slot, then the order is kept
+    const from = node.style.transform;
+    node.style.transform = '';
+    node.animate([{ transform: from }, { transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    node.classList.remove('dragging');
+    $('cards').classList.remove('sorting');
+    dragging = null;
+    dragged = true;
+    setTimeout(() => { dragged = false; }, 0);
+    const ids = [...$('cards').children].map((n) => n.dataset.id).filter(Boolean);
+    if (ids.join() !== listedIds().join()) saveOrder(ids);
+  };
+  const listedIds = () => (showHidden ? snap.projects : listed()).map((p) => p.id);
+  document.addEventListener('pointermove', move);
+  document.addEventListener('pointerup', up);
+  document.addEventListener('pointercancel', up);
 }
 
 const PROJECT_NEWS = 3;
@@ -1252,7 +1425,8 @@ function renderProject() {
   $('p-name').hidden = !!$('p-logo').children.length;
   $('p-tagline').textContent = p.tagline;
   $('p-desc').textContent = p.description;
-  $('p-tags').replaceChildren(...p.tags.map((tag) => el('span', { class: 'chip' }, tag)));
+  $('p-tags').replaceChildren(...p.tags.map((tag) => el('span', { class: 'chip' }, tag)),
+    p.hidden ? el('button', { class: 'chip hidden-chip', title: t('m_unhide'), onclick: () => setHidden(p, false) }, icon('eyeoff'), t('chip_hidden')) : '');
   // Beside the state, the number only; the date and commit are in Details
   const vn = p.version?.number;
   $('p-status').replaceChildren(...stateLine(p), ...(vn != null ? [el('span', { class: 'sep' }, '·'), el('span', { class: 'nowrap' }, t('version_short', { n: vn }))] : []));
@@ -1334,6 +1508,7 @@ function manageItems(p) {
   groups[0].push(['pencil', t('m_rename'), null, false, () => rename(p)]);
   groups[0].push(['image', t('m_artwork'), null, false, () => artwork(p)]);
   if (logoSrc(p)) groups[0].push(['type', t(p.text_title ? 'm_logo' : 'm_text_title'), null, false, () => setTextTitle(p, !p.text_title)]);
+  groups[0].push(p.hidden ? ['eye', t('m_unhide'), null, false, () => setHidden(p, false)] : ['eyeoff', t('m_hide'), t('m_hide_sub'), false, () => setHidden(p, true)]);
   if (p.input_label) groups[1].push(['file', t('m_change_file'), file, busy, () => chooseInput(p, false)]);
   if (p.can_rebuild) groups[1].push(['hammer', t('m_rebuild'), t('m_rebuild_sub'), busy, () => startTask(p, 'build')]);
   groups[2].push(['github', t('do_github'), null, false, () => openLink(p.url), 'ext']);
