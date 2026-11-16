@@ -1193,7 +1193,7 @@ function renderHome() {
   // The sidebar's shortcuts, and the picture far behind everything
   // Each with a "..." that shows on hover: a quick rename
   $('side-games').replaceChildren(...games.map((p) => {
-    const more = el('button', { class: 'side-more', title: t('do_rename'), 'aria-label': t('do_rename') }, el('span'), el('span'), el('span'));
+    const more = el('button', { class: 'side-more', title: t('m_rename'), 'aria-label': t('m_rename') }, el('span'), el('span'), el('span'));
     more.addEventListener('click', (e) => { e.stopPropagation(); quickRename(p, more); });
     return el('div', { class: 'side-row' + (renaming === p.id ? ' renaming' : '') },
       el('button', { class: 'side-game' + (view === 'project' && current === p.id ? ' on' : ''), title: p.name, onclick: () => open(p) },
