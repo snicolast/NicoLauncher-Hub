@@ -26,3 +26,10 @@ rustls = { version = "0.23", default-features = false, features = ["ring", "std"
 rustls-native-certs = "0.7"
 webpki-roots = "0.26"
 zip = { version = "2.6", default-features = false, features = ["deflate"] }
+
+# Windows' own interfaces instead of starting PowerShell: the desktop shortcut
+# (project.rs) and the PC described in a problem report (system.rs). A program
+# that starts PowerShell is what antivirus programs look hardest at.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_System_Com", "Win32_UI_Shell"] }
+windows-registry = "0.6"

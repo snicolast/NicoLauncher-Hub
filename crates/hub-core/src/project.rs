@@ -114,8 +114,9 @@ pub fn launch(project: &Project, dir: &Path) -> Result<()> {
 }
 
 /// Puts a shortcut to the built program on the user's desktop, replacing one
-/// of the same name. Windows only: the shell writes the .lnk, so the desktop
-/// is found wherever the user keeps it (OneDrive moves it).
+/// of the same name. Windows only: Windows' own shell writes the .lnk, and is
+/// asked where the desktop is, so it is found wherever the user keeps it
+/// (OneDrive moves it).
 pub fn desktop_shortcut(project: &Project, dir: &Path) -> Result<()> {
     let exe = project.exe.as_ref().ok_or("This project has nothing to start.")?;
     let path = dir.join(exe);
@@ -125,32 +126,63 @@ pub fn desktop_shortcut(project: &Project, dir: &Path) -> Result<()> {
     if !cfg!(windows) {
         return Err("Desktop shortcuts are only made on Windows.".into());
     }
-    // The values travel in the environment, so nothing in a name or a path
-    // is ever read as part of the script
-    const SCRIPT: &str = "$ErrorActionPreference = 'Stop'; \
-        $name = $env:NICO_LNK_NAME.Split([IO.Path]::GetInvalidFileNameChars()) -join ' '; \
-        $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) ($name + '.lnk'); \
-        $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); \
-        $s.TargetPath = $env:NICO_LNK_EXE; \
-        $s.WorkingDirectory = $env:NICO_LNK_DIR; \
-        $s.IconLocation = $env:NICO_LNK_EXE + ',0'; \
-        $s.Save()";
-    let mut cmd = Command::new("powershell");
-    cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", SCRIPT])
-        .env("NICO_LNK_NAME", &project.name)
-        .env("NICO_LNK_EXE", &path)
-        .env("NICO_LNK_DIR", dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped());
-    crate::runner::no_window(&mut cmd);
-    let out = cmd.output().map_err(|e| format!("Could not make the shortcut: {e}"))?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        let why = String::from_utf8_lossy(&out.stderr);
-        Err(format!("Could not make the shortcut: {}", why.lines().next().unwrap_or("unknown error").trim()))
-    }
+    write_shortcut(&shortcut_file_name(&project.name), &path, dir)
+        .map_err(|e| format!("Could not make the shortcut: {e}"))
+}
+
+/// The shortcut's file name: the project's name with what Windows does not
+/// allow in a file name made spaces.
+fn shortcut_file_name(name: &str) -> String {
+    let clean: String = name
+        .chars()
+        .map(|c| if c.is_control() || r#"<>:"/\|?*"#.contains(c) { ' ' } else { c })
+        .collect();
+    format!("{}.lnk", clean.trim())
+}
+
+/// On a thread of its own, so the shell's objects never meet the window's:
+/// the thread starts and ends its own use of COM.
+#[cfg(windows)]
+fn write_shortcut(file_name: &str, exe: &Path, dir: &Path) -> std::result::Result<(), String> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows::core::{Interface, HSTRING};
+    use windows::Win32::System::Com::{
+        CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize, IPersistFile, CLSCTX_INPROC_SERVER,
+        COINIT_APARTMENTTHREADED,
+    };
+    use windows::Win32::UI::Shell::{FOLDERID_Desktop, IShellLinkW, SHGetKnownFolderPath, ShellLink, KF_FLAG_DEFAULT};
+
+    let (file_name, exe, dir) = (file_name.to_owned(), exe.to_owned(), dir.to_owned());
+    let work = move || -> std::result::Result<(), String> {
+        let write = || -> windows::core::Result<()> {
+            // SAFETY: COM is started on this thread below and ends after this
+            // runs; the string Windows gives for the desktop is freed once read
+            unsafe {
+                let p = SHGetKnownFolderPath(&FOLDERID_Desktop, KF_FLAG_DEFAULT, None)?;
+                let desktop = std::ffi::OsString::from_wide(p.as_wide());
+                CoTaskMemFree(Some(p.0 as *const _));
+                let lnk = Path::new(&desktop).join(&file_name);
+                let link: IShellLinkW = CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER)?;
+                link.SetPath(&HSTRING::from(exe.as_path()))?;
+                link.SetWorkingDirectory(&HSTRING::from(dir.as_path()))?;
+                link.SetIconLocation(&HSTRING::from(exe.as_path()), 0)?;
+                link.cast::<IPersistFile>()?.Save(&HSTRING::from(lnk.as_path()), true)
+            }
+        };
+        // SAFETY: a new thread, so COM is started here once and ended once
+        unsafe {
+            CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok().map_err(|e| e.message())?;
+            let done = write();
+            CoUninitialize();
+            done.map_err(|e| e.message())
+        }
+    };
+    std::thread::spawn(work).join().unwrap_or_else(|_| Err("unknown error".into()))
+}
+
+#[cfg(not(windows))]
+fn write_shortcut(_file_name: &str, _exe: &Path, _dir: &Path) -> std::result::Result<(), String> {
+    Err("Desktop shortcuts are only made on Windows.".into())
 }
 
 /// Whether the copy of the game in this folder is running. Only this copy:
@@ -255,6 +287,13 @@ mod tests {
     use super::*;
     use crate::registry::Registry;
     use std::fs;
+
+    #[test]
+    fn shortcut_names_windows_allows() {
+        assert_eq!(shortcut_file_name("Nico SR2"), "Nico SR2.lnk");
+        assert_eq!(shortcut_file_name("Star Wars: Trilogy / Arcade?"), "Star Wars  Trilogy   Arcade.lnk");
+        assert_eq!(shortcut_file_name("a<b>c\"d|e*f\\g\th"), "a b c d e f g h.lnk");
+    }
 
     #[test]
     fn uninstall_deletes_only_what_the_launcher_may() {
