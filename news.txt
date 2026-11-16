@@ -18,6 +18,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[14] 2026-11-17
+- Launcher 0.3.14: some antivirus programs (Windows Defender among them) flagged the launcher by mistake. It no longer uses PowerShell for desktop shortcuts or for the PC details in problem reports, which is what most likely set them off
+
 [13] 2026-11-16
 - Launcher 0.3.13: a tidier game page, with Play and Update up front and everything else in the gear menu beside them
 - You can rename each game: Rename… in its gear menu, or the ⋯ next to it in the sidebar
