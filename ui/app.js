@@ -118,6 +118,7 @@ const STR = {
     fb_where_issue: 'Opens a report on GitHub', fb_where_disc: 'Opens GitHub Discussions', fb_where_vote: 'Public, with votes',
     fb_sent_title: 'What goes with your message', fb_sent_text: 'Added for you, so nobody has to ask. You see all of it on GitHub before sending, and can remove anything.',
     fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Graphics', portable: 'portable',
+    fb_installed: 'Installed', fb_portable: 'Portable',
     fb_rules_title: 'Before you write',
     fb_rule_roms: 'Never share ROMs, game files or links to them. Messages that do are deleted.',
     fb_rule_search: 'Look at what others sent first: maybe it is already there, and a vote helps more than a copy.',
@@ -255,6 +256,7 @@ const STR = {
     fb_where_issue: 'Abre un informe en GitHub', fb_where_disc: 'Abre GitHub Discussions', fb_where_vote: 'Público, con votos',
     fb_sent_title: 'Lo que va con tu mensaje', fb_sent_text: 'Se añade solo, para que nadie tenga que preguntarlo. Lo ves todo en GitHub antes de enviarlo y puedes quitar lo que quieras.',
     fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Gráfica', portable: 'portátil',
+    fb_installed: 'Instalado', fb_portable: 'Portátil',
     fb_rules_title: 'Antes de escribir',
     fb_rule_roms: 'Nunca compartas ROMs, archivos del juego ni enlaces a ellos. Los mensajes que lo hagan se borran.',
     fb_rule_search: 'Mira primero lo que otros enviaron: quizá ya está, y un voto ayuda más que una copia.',
@@ -1932,9 +1934,9 @@ function feedback(kind, projectId, withLog) {
 
 const shortName = (p) => p.name.replace(/ Native$/, '');
 
-// The launcher's version, and whether it runs portable
+// The launcher's version, and whether it is the installed or the portable copy
 function launcherVersion(say) {
-  return 'v' + snap.version + (snap.portable ? ` (${say('portable')})` : '');
+  return 'v' + snap.version + ' · ' + say(snap.portable ? 'fb_portable' : 'fb_installed');
 }
 
 // What goes with a message about `where` (a project id, or 'launcher'), as
