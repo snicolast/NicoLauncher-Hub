@@ -35,7 +35,7 @@ const STR = {
     rename_text: 'Show this name instead of the logo',
     m_text_title: 'Show name instead of logo', m_logo: 'Show logo instead of name',
     m_artwork: 'Change artwork…', art_title: 'Artwork', art_save: 'Save', art_saved: 'Artwork saved.',
-    art_cover: 'Cover', art_cover_sub: 'Library, sidebar, Home strip', art_bg: 'Background', art_bg_sub: 'Game page, Home',
+    art_cover: 'Cover', art_cover_sub: 'Library, Home strip', art_bg: 'Background', art_bg_sub: 'Game page, Home',
     art_drag: 'Drag to choose what shows', art_preparing: 'Preparing the picture…',
     art_side: 'Sidebar', art_strip: 'Home strip', art_home: 'Home', art_blur: 'Also far behind the whole window, blurred, while this game is open.',
     art_pick: 'Pick a picture', art_pick_hint: 'One of the game\'s screenshots, or any JPG, PNG or WebP from your PC. You can also drop one here.',
@@ -44,6 +44,10 @@ const STR = {
     art_logo: 'Logo', art_logo_sub: 'Instead of the name', art_logo_pick: 'Pick a logo',
     art_logo_hint: 'A PNG with a see-through background looks best. Pick one from your PC, or drop it here.',
     art_logo_name: 'The name', art_card: 'Library', art_yours_logo: 'Your logo',
+    art_icon: 'Icon', art_icon_sub: 'Sidebar, desktop shortcut', art_icon_pick: 'Pick an icon',
+    art_icon_hint: 'A screenshot, or any JPG, PNG, WebP or ICO from your PC. A square picture fits best. You can also drop one here.',
+    art_icon_game: 'Game icon', art_yours_icon: 'Your icon', art_desk: 'Desktop shortcut', art_sizes: 'Small sizes',
+    art_desk_note: 'The shortcut on your desktop changes too. The game\'s own window keeps its icon.',
     installed_title: 'All installed!', installed_body: 'You have just built {name} on your own PC, and it is ready to play. Press Play whenever you want.',
     installed_ask: 'Do you also want a shortcut on your desktop?', shortcut_yes: 'Yes, add it', shortcut_no: 'No, thanks', do_github: 'View on GitHub', do_existing: 'Use a folder I already have',
     details: 'Details', folder: 'Folder', your_file: 'Your file', source: 'Source',
@@ -167,7 +171,7 @@ const STR = {
     rename_text: 'Mostrar este nombre en vez del logo',
     m_text_title: 'Mostrar el nombre en vez del logo', m_logo: 'Mostrar el logo en vez del nombre',
     m_artwork: 'Cambiar imágenes…', art_title: 'Imágenes', art_save: 'Guardar', art_saved: 'Imágenes guardadas.',
-    art_cover: 'Portada', art_cover_sub: 'Biblioteca, barra lateral, tira de Inicio', art_bg: 'Fondo', art_bg_sub: 'Ficha del juego, Inicio',
+    art_cover: 'Portada', art_cover_sub: 'Biblioteca, tira de Inicio', art_bg: 'Fondo', art_bg_sub: 'Ficha del juego, Inicio',
     art_drag: 'Arrastra para elegir qué se ve', art_preparing: 'Preparando la imagen…',
     art_side: 'Barra lateral', art_strip: 'Tira de Inicio', art_home: 'Inicio', art_blur: 'También detrás de toda la ventana, difuminada, mientras este juego está abierto.',
     art_pick: 'Elige una imagen', art_pick_hint: 'Una captura del juego, o cualquier JPG, PNG o WebP de tu PC. También puedes soltarla aquí.',
@@ -176,6 +180,10 @@ const STR = {
     art_logo: 'Logo', art_logo_sub: 'En vez del nombre', art_logo_pick: 'Elige un logo',
     art_logo_hint: 'Queda mejor un PNG con el fondo transparente. Elígelo desde tu PC o suéltalo aquí.',
     art_logo_name: 'El nombre', art_card: 'Biblioteca', art_yours_logo: 'Tu logo',
+    art_icon: 'Icono', art_icon_sub: 'Barra lateral, acceso directo', art_icon_pick: 'Elige un icono',
+    art_icon_hint: 'Una captura, o cualquier JPG, PNG, WebP o ICO de tu PC. Queda mejor una imagen cuadrada. También puedes soltarla aquí.',
+    art_icon_game: 'Icono del juego', art_yours_icon: 'Tu icono', art_desk: 'Acceso directo', art_sizes: 'En pequeño',
+    art_desk_note: 'El acceso directo del escritorio también cambia. La ventana del juego mantiene su icono.',
     installed_title: '¡Todo instalado!', installed_body: 'Acabas de montar {name} en tu propio PC, y ya está listo para jugar. Pulsa Jugar cuando quieras.',
     installed_ask: '¿Quieres también un acceso directo en el escritorio?', shortcut_yes: 'Sí, añádelo', shortcut_no: 'No, gracias', do_github: 'Ver en GitHub', do_existing: 'Usar una carpeta que ya tengo',
     details: 'Detalles', folder: 'Carpeta', your_file: 'Tu archivo', source: 'Código',
@@ -316,6 +324,7 @@ const ICONS = {
   move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
   pencil: '<path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  shortcut: '<path d="M8 18v-5a4 4 0 0 1 4-4h6"/><path d="M14 5l4 4-4 4"/>',
   monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   eye: '<path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff: '<path d="M10.600 5.600A9.700 9.700 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a17 17 0 0 1-2.600 3.400M6.400 6.900C3.900 8.600 2.500 12 2.500 12S6 18.500 12 18.500c1.900 0 3.500-.6 4.900-1.500"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200M3 3l18 18"/>',
@@ -369,6 +378,15 @@ function artPicture(p, kind, cls) {
   if (!src) return null;
   const img = picture(src, cls);
   img.style.objectPosition = artFocus(p, kind);
+  return img;
+}
+
+// The game's icon, square: the user's own (cut where they chose), else the
+// one the registry names, else its cover
+function iconPicture(p, a = p.icon) {
+  if (!a && !p.hub_icon) return artPicture(p, 'cover');
+  const img = picture(a ? artUrl(a.file) : p.hub_icon);
+  if (a) img.style.objectPosition = `${a.focus[0]}% ${a.focus[1]}%`;
   return img;
 }
 
@@ -514,7 +532,7 @@ async function saveName(p, name) {
 // settings change only on Save, and Cancel deletes what was copied. The two
 // are linked while they show the same picture: then the background follows
 // the cover, until the background is given a picture of its own.
-const ART_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
+const ART_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'ico'];
 let artDrop = null;   // the open dialog's handler for a file dropped on the window
 
 function artwork(p) {
@@ -522,10 +540,10 @@ function artwork(p) {
   // was made from (by index), to mark it in the strip
   const copy = (a) => (a ? { file: a.file, focus: [...a.focus], screen: a.screen } : null);
   const same = (a, b) => (!a && !b) || (!!a && !!b && a.file === b.file && a.focus[0] === b.focus[0] && a.focus[1] === b.focus[1]);
-  const draft = { cover: copy(p.cover), background: copy(p.background), logo: copy(p.logo_art) };
+  const draft = { cover: copy(p.cover), background: copy(p.background), logo: copy(p.logo_art), icon: copy(p.icon) };
   // The picture of the user's own, besides the screenshots, for each tab: the
   // one they had, or the last one they picked from their PC
-  const own = { cover: copy(p.cover), background: copy(p.background), logo: copy(p.logo_art) };
+  const own = { cover: copy(p.cover), background: copy(p.background), logo: copy(p.logo_art), icon: copy(p.icon) };
   let linked = same(p.cover, p.background);
   let tab = 'cover';
   let working = false;
@@ -550,7 +568,7 @@ function artwork(p) {
     working = false; draw();
   }
   const pickScreen = (i) => {
-    if (p.screens[i] === p.hero) { set(tab, null); problem = null; draw(); return; }
+    if (tab !== 'icon' && p.screens[i] === p.hero) { set(tab, null); problem = null; draw(); return; }
     const kind = tab;
     prepare({ screen: i }, (art) => set(kind, { ...art, screen: i }));
   };
@@ -571,9 +589,10 @@ function artwork(p) {
     const cover = strip(draft.cover);
     const background = linked ? cover : strip(draft.background);
     const logo = strip(draft.logo);
+    const icon = strip(draft.icon);
     working = true; draw();
     try {
-      snap = await invoke('set_project_art', { id: p.id, cover, background, logo });
+      snap = await invoke('set_project_art', { id: p.id, cover, background, logo, icon });
       close(true);
       render();
       toast(t('art_saved'), true);
@@ -620,7 +639,7 @@ function artwork(p) {
   function draw() {
     // On the logo tab, the logo is shown over the background
     const a = shown(tab === 'logo' ? 'background' : tab);
-    const src = a ? artUrl(a.file) : p.hero;
+    const src = a ? artUrl(a.file) : tab === 'icon' && p.hub_icon ? p.hub_icon : p.hero;
     const pos = a ? `${a.focus[0]}% ${a.focus[1]}%` : '';
     const img = (cls) => {
       const n = el('img', { src: src || '', alt: '', class: 'aw-shown ' + (cls || ''), draggable: 'false' });
@@ -635,14 +654,30 @@ function artwork(p) {
     const hint = a && tab !== 'logo' && !working ? el('span', { class: 'aw-hint' }, icon('move'), t('art_drag')) : null;
     if (hint) hint.hidden = true;
     const wait = working ? el('span', { class: 'aw-wait' }, el('span', { class: 'spinner' }), t('art_preparing')) : null;
-    let stage, also;
-    if (tab === 'cover') {
+    let stage, also, frame;
+    if (tab === 'icon') {
+      // Big, where it can be framed, and at the sizes Windows draws it
+      frame = el('div', { class: 'aw-icon-big', style: `background-image:${gradient(p)}` }, main, hint, wait);
+      stage = el('div', { class: 'aw-icon-stage' }, frame,
+        el('div', { class: 'aw-icon-sizes' }, el('div', { class: 'aw-also-label' }, t('art_sizes')),
+          el('div', { class: 'aw-icon-row' }, ...[64, 48, 32, 16].map((n) => el('span', { class: `aw-icon-s s${n}`, style: `background-image:${gradient(p)}` }, img())))));
+      also = [
+        el('div', { class: 'aw-also-label' }, t('art_side')),
+        el('div', { class: 'aw-side' }, el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
+        el('div', { class: 'aw-also-label' }, t('art_desk')),
+        el('div', { class: 'aw-desk' }, el('span', { class: 'aw-desk-item' },
+          el('span', { class: 'aw-desk-icon', style: `background-image:${gradient(p)}` }, img(), el('span', { class: 'aw-desk-arrow' }, icon('shortcut'))),
+          el('span', { class: 'aw-desk-name' }, p.name))),
+        el('p', { class: 'dim small aw-also-note' }, t('art_desk_note')),
+      ];
+    } else if (tab === 'cover') {
       stage = el('div', { class: 'aw-card', style: `background-image:${gradient(p)}` }, main, el('span', { class: 'aw-card-shade' }),
         logo('aw-card-logo'),
         el('div', { class: 'aw-card-foot' }, showsLogo(pv) ? el('h3', {}, p.name) : null, el('div', { class: 'state' }, ...stateLine(p))), hint, wait);
+      // The sidebar shows the cover only for a game with no icon at all
       also = [
-        el('div', { class: 'aw-also-label' }, t('art_side')),
-        el('div', { class: 'aw-side' }, el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
+        p.hub_icon || draft.icon ? null : el('div', { class: 'aw-also-label' }, t('art_side')),
+        p.hub_icon || draft.icon ? null : el('div', { class: 'aw-side' }, el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
         el('div', { class: 'aw-also-label' }, t('art_strip')),
         el('div', { class: 'aw-pick', style: `background-image:${gradient(p)}` }, img()),
       ];
@@ -669,11 +704,12 @@ function artwork(p) {
         el('p', { class: 'dim small aw-also-note' }, t('art_blur')),
       ];
     }
-    stage.addEventListener('pointerdown', (e) => dragFocus(stage, main, e));
+    frame = frame || stage;
+    frame.addEventListener('pointerdown', (e) => dragFocus(frame, main, e));
     // Once the picture is in, whether it can move in this frame
     main.addEventListener('load', () => {
-      const movable = !!a && overflow(stage, main).some((v) => v > 2);
-      stage.classList.toggle('movable', movable);
+      const movable = !!a && overflow(frame, main).some((v) => v > 2);
+      frame.classList.toggle('movable', movable);
       if (hint) hint.hidden = !movable;
     });
 
@@ -681,22 +717,28 @@ function artwork(p) {
     // button for another from their PC
     const on = (thumb) => !working && thumb;
     const logoTab = tab === 'logo';
+    const iconTab = tab === 'icon';
     // The logo tab: the name (no logo), the user's own logo, one from the PC
     const thumbs = logoTab ? [el('button', { class: 'aw-thumb aw-logo-thumb' + (on(!draft.logo) ? ' on' : ''), disabled: working, onclick: () => { draft.logo = null; problem = null; draw(); } },
       titleText({ ...p, name: shortName(p) }, 'aw-thumb-title'), el('span', { class: 'aw-badge' }, t('art_logo_name')))] : p.screens.map((url, i) => {
-      const isDefault = url === p.hero;
+      const isDefault = !iconTab && url === p.hero;
       const selected = isDefault ? !a : !!a && a.screen === i;
-      return el('button', { class: 'aw-thumb' + (on(selected) ? ' on' : ''), disabled: working, title: isDefault ? t('art_default') : '', onclick: () => pickScreen(i) },
+      return el('button', { class: 'aw-thumb' + (iconTab ? ' aw-icon-thumb' : '') + (on(selected) ? ' on' : ''), disabled: working, title: isDefault ? t('art_default') : '', onclick: () => pickScreen(i) },
         el('img', { src: url, alt: '', draggable: 'false' }),
         isDefault ? el('span', { class: 'aw-badge' }, t('art_default')) : null);
     });
+    // The icon tab starts with the game's own icon
+    if (iconTab && p.hub_icon) {
+      thumbs.unshift(el('button', { class: 'aw-thumb aw-icon-thumb' + (on(!a) ? ' on' : ''), disabled: working, title: t('art_default'), onclick: () => { draft.icon = null; problem = null; draw(); } },
+        el('img', { src: p.hub_icon, alt: '', draggable: 'false' }), el('span', { class: 'aw-badge' }, t('art_icon_game'))));
+    }
     const mine = own[tab] || (tab === 'background' && linked ? own.cover : null);
     if (mine) {
       const current = shown(tab);
       const selected = !!current && current.screen == null && current.file === mine.file;
-      thumbs.push(el('button', { class: 'aw-thumb' + (logoTab ? ' aw-logo-thumb' : '') + (on(selected) ? ' on' : ''), disabled: working, onclick: () => { set(tab, copy(mine)); problem = null; draw(); } },
+      thumbs.push(el('button', { class: 'aw-thumb' + (logoTab ? ' aw-logo-thumb' : iconTab ? ' aw-icon-thumb' : '') + (on(selected) ? ' on' : ''), disabled: working, onclick: () => { set(tab, copy(mine)); problem = null; draw(); } },
         el('img', { src: artUrl(mine.file), alt: '', draggable: 'false' }),
-        el('span', { class: 'aw-badge' }, t(logoTab ? 'art_yours_logo' : 'art_yours'))));
+        el('span', { class: 'aw-badge' }, t(logoTab ? 'art_yours_logo' : iconTab ? 'art_yours_icon' : 'art_yours'))));
     }
     thumbs.push(el('button', { class: 'aw-thumb aw-own', disabled: working, onclick: choose }, el('span', { class: 'aw-own-label' }, icon('folder'), t('art_from_pc'))));
 
@@ -710,21 +752,21 @@ function artwork(p) {
       label, el('small', {}, sub));
     const custom = !!shown(tab);
     const reset = () => {
-      if (tab === 'cover') draft.cover = null; else if (tab === 'logo') draft.logo = null; else set('background', null);
+      if (tab === 'background') set('background', null); else draft[tab] = null;
       problem = null; draw();
     };
     box.replaceChildren(el('div', { class: 'modal-box aw-box' },
       el('div', { class: 'aw-head' },
         el('h2', {}, t('art_title'), el('span', { class: 'aw-of' }, p.name)),
-        el('div', { class: 'aw-seg', role: 'tablist' }, tabButton('cover', t('art_cover'), t('art_cover_sub')), tabButton('background', t('art_bg'), t('art_bg_sub')), tabButton('logo', t('art_logo'), t('art_logo_sub')))),
+        el('div', { class: 'aw-seg', role: 'tablist' }, tabButton('cover', t('art_cover'), t('art_cover_sub')), tabButton('background', t('art_bg'), t('art_bg_sub')), tabButton('logo', t('art_logo'), t('art_logo_sub')), tabButton('icon', t('art_icon'), t('art_icon_sub')))),
       el('div', { class: 'aw-stage' }, stage, el('div', { class: 'aw-also' }, ...also)),
       el('div', { class: 'aw-src' },
-        el('div', { class: 'aw-src-head' }, el('span', { class: 'aw-label' }, t(logoTab ? 'art_logo_pick' : 'art_pick')), el('span', { class: 'dim small' }, t(logoTab ? 'art_logo_hint' : 'art_pick_hint'))),
+        el('div', { class: 'aw-src-head' }, el('span', { class: 'aw-label' }, t(logoTab ? 'art_logo_pick' : iconTab ? 'art_icon_pick' : 'art_pick')), el('span', { class: 'dim small' }, t(logoTab ? 'art_logo_hint' : iconTab ? 'art_icon_hint' : 'art_pick_hint'))),
         el('div', { class: 'aw-strip' }, ...thumbs),
         problem ? el('div', { class: 'aw-problem' }, icon('ban'), el('span', {}, problem)) : null),
       el('div', { class: 'modal-actions aw-actions' },
         el('button', { class: 'btn ghost', disabled: !custom || working, onclick: reset }, icon('refresh'), t('art_reset')),
-        logoTab ? null : el('label', { class: 'aw-check' }, check, el('span', {}, t(tab === 'cover' ? 'art_same_cover' : 'art_same_bg'))),
+        logoTab || iconTab ? null : el('label', { class: 'aw-check' }, check, el('span', {}, t(tab === 'cover' ? 'art_same_cover' : 'art_same_bg'))),
         el('span', { class: 'aw-gap' }),
         el('button', { class: 'btn ghost', onclick: () => close(false) }, t('cancel')),
         el('button', { class: 'btn primary', disabled: working, onclick: save }, t('art_save')))));
@@ -1197,7 +1239,7 @@ function renderHome() {
     more.addEventListener('click', (e) => { e.stopPropagation(); quickRename(p, more); });
     return el('div', { class: 'side-row' + (renaming === p.id ? ' renaming' : '') },
       el('button', { class: 'side-game' + (view === 'project' && current === p.id ? ' on' : ''), title: p.name, onclick: () => open(p) },
-        el('span', { class: 'side-art', style: `background-image:${gradient(p)}` }, artPicture(p, 'cover')),
+        el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, iconPicture(p)),
         el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
         el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) })),
       more);

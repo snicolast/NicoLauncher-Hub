@@ -71,6 +71,10 @@ pub struct ProjectConfig {
     pub background: Option<Art>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logo: Option<Art>,
+    /// Shown in the sidebar and given to its desktop shortcut (as the .ico
+    /// `art::ico_name` names) instead of the registry's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<Art>,
     /// Kept out of the library, the sidebar and Home, by the user's choice.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub hidden: bool,
@@ -179,6 +183,7 @@ impl Config {
             art::Kind::Cover => p.cover.as_ref(),
             art::Kind::Background => p.background.as_ref(),
             art::Kind::Logo => p.logo.as_ref(),
+            art::Kind::Icon => p.icon.as_ref(),
         }
     }
 
@@ -208,9 +213,12 @@ impl Config {
         out
     }
 
-    /// Every picture file the settings name: what `art::prune` keeps.
-    pub fn art_files(&self) -> Vec<&str> {
-        self.projects.values().flat_map(|p| [&p.cover, &p.background, &p.logo]).flatten().map(|a| a.file.as_str()).collect()
+    /// Every picture file the settings name, and the .ico of each icon: what
+    /// `art::prune` keeps.
+    pub fn art_files(&self) -> Vec<String> {
+        let pictures = self.projects.values().flat_map(|p| [&p.cover, &p.background, &p.logo, &p.icon]).flatten().map(|a| a.file.clone());
+        let icos = self.projects.values().filter_map(|p| p.icon.as_ref()).map(art::ico_name);
+        pictures.chain(icos).collect()
     }
 
     /// The folder the user's pictures are kept in, next to the settings.
@@ -391,7 +399,7 @@ mod tests {
 
     #[test]
     fn pictures_the_user_picks() {
-        let text = r#"{ "projects": { "segarally2": { "cover": { "file": "a.jpg", "focus": [20, 70] }, "background": { "file": "b.jpg" } }, "lostworld": { "cover": { "file": "a.jpg" } } } }"#;
+        let text = r#"{ "projects": { "segarally2": { "cover": { "file": "a.jpg", "focus": [20, 70] }, "background": { "file": "b.jpg" }, "icon": { "file": "i.png", "focus": [10, 50] } }, "lostworld": { "cover": { "file": "a.jpg" } } } }"#;
         let c: Config = serde_json::from_str(text).unwrap();
         assert_eq!(c.art("segarally2", art::Kind::Cover).unwrap().focus, [20, 70]);
         assert_eq!(c.art("segarally2", art::Kind::Background).unwrap().focus, [50, 50]);
@@ -399,13 +407,14 @@ mod tests {
         assert!(c.art("other", art::Kind::Cover).is_none());
         let mut files = c.art_files();
         files.sort();
-        assert_eq!(files, ["a.jpg", "a.jpg", "b.jpg"]);
+        assert_eq!(files, ["a.jpg", "a.jpg", "b.jpg", "i-10-50.ico", "i.png"]);
+        assert_eq!(c.art("segarally2", art::Kind::Icon).unwrap().focus, [10, 50]);
         let c = Config { base: PathBuf::from("/portable/NicoLauncher"), ..c };
         assert_eq!(c.art_dir(), PathBuf::from("/portable/NicoLauncher/art"));
         // None, no key
         let none: Config = serde_json::from_str(r#"{ "projects": { "x": {} } }"#).unwrap();
         let out = serde_json::to_string(&none).unwrap();
-        assert!(!out.contains("cover") && !out.contains("background"), "{out}");
+        assert!(!out.contains("cover") && !out.contains("background") && !out.contains("icon"), "{out}");
     }
 
     #[test]

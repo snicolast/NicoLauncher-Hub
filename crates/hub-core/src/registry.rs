@@ -82,6 +82,11 @@ pub struct Art {
     /// Launchers older than 0.3.13 skip it and show the name.
     #[serde(default)]
     pub hub_logo: Option<String>,
+    /// A square icon kept in the Hub (a PNG): the sidebar's, and the one a
+    /// desktop shortcut has until the user picks their own (the game's exe
+    /// has it too). Launchers older than 0.3.15 skip it.
+    #[serde(default)]
+    pub hub_icon: Option<String>,
     #[serde(default)]
     pub screens: Vec<String>,
 }
@@ -110,6 +115,11 @@ impl Project {
             (None, Some(rel)) => Some(self.raw_url(rel)),
             (None, None) => None,
         }
+    }
+
+    /// The icon to show, as a URL: the one in the Hub.
+    pub fn icon_url(&self) -> Option<String> {
+        self.art.hub_icon.as_deref().map(hub_raw_url)
     }
 
     /// Where GitHub serves a file of the repository's branch.
@@ -141,7 +151,7 @@ impl Registry {
             }
             p.requires.validate().map_err(|e| format!("{e} ({})", p.id))?;
             let s = &p.scripts;
-            let files = [&p.exe, &p.news, &s.install, &s.build, &s.update, &p.update_state, &p.art.hero, &p.art.logo, &p.art.hub_logo];
+            let files = [&p.exe, &p.news, &s.install, &s.build, &s.update, &p.update_state, &p.art.hero, &p.art.logo, &p.art.hub_logo, &p.art.hub_icon];
             for rel in files.into_iter().flatten().chain(&p.art.screens) {
                 if !is_plain_relative(rel) {
                     return Err(format!("Bad path in the registry ({}): {rel}", p.id));
@@ -205,6 +215,11 @@ mod tests {
         assert!(entry(r#"{"hub_logo":"../x.png"}"#).is_err());
         let sr2 = Registry::bundled();
         assert!(sr2.find("segarally2").unwrap().logo_url().unwrap().ends_with("/NicoLauncher-Hub/main/art/logos/segarally2.png"));
+        for p in &sr2.projects {
+            assert_eq!(p.icon_url().unwrap(), format!("https://raw.githubusercontent.com/snicolast/NicoLauncher-Hub/main/art/icons/{}.png", p.id));
+        }
+        assert_eq!(entry("{}").unwrap().projects[0].icon_url(), None);
+        assert!(entry(r#"{"hub_icon":"../x.png"}"#).is_err());
     }
 
     #[test]

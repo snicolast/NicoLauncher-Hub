@@ -456,6 +456,7 @@ html.idle *, html.idle *::before, html.idle *::after { animation-play-state: pau
 @keyframes pop-in { from { opacity: 0; transform: translate(-4px, -50%); } }
 .side-art { width: 44px; aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; flex: none; background-size: cover; border: 1px solid var(--line); }
 .side-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.side-art.side-icon { width: 30px; aspect-ratio: 1; border-radius: 7px; margin: 0 7px; }
 .side-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The picture of the project in view, far behind everything */
@@ -735,6 +736,7 @@ main { isolation: isolate; }
 .aw-side .dot { margin-left: auto; flex: none; }
 .aw-pick { width: 120px; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background-size: cover; border: 2px solid rgba(255, 255, 255, .5); box-shadow: 0 8px 22px rgba(0, 0, 0, .5); }
 .aw-pick img, .aw-side .side-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.side-art.side-icon { width: 30px; aspect-ratio: 1; border-radius: 7px; margin: 0 7px; }
 .aw-home { position: relative; aspect-ratio: 16 / 8; border-radius: 10px; overflow: hidden; isolation: isolate; background-size: cover; border: 1px solid var(--line-2); }
 .aw-home > img.aw-shown { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
 .aw-home-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 11, 20, .8), rgba(8, 11, 20, 0) 70%); }
@@ -760,6 +762,30 @@ main { isolation: isolate; }
 .aw-gap { flex: 1; }
 .aw-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--dim); margin-left: 6px; cursor: pointer; }
 .aw-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+/* The icon tab: the icon big (it is framed there) and at the sizes Windows uses */
+.aw-icon-stage { display: flex; align-items: center; gap: 34px; padding: 26px 30px; border-radius: 14px; border: 1px solid var(--line); background: radial-gradient(120% 140% at 0% 0%, rgba(79, 140, 255, .1), transparent 60%), rgba(255, 255, 255, .025); aspect-ratio: 16 / 9; }
+.aw-icon-big { position: relative; flex: none; height: 100%; aspect-ratio: 1; border-radius: 22%; overflow: hidden; isolation: isolate; background-size: cover; border: 1px solid var(--line-2); box-shadow: 0 14px 34px rgba(0, 0, 0, .45); user-select: none; touch-action: none; }
+.aw-icon-big.movable { cursor: grab; }
+.aw-icon-big.dragging { cursor: grabbing; }
+.aw-icon-big > img.aw-shown { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
+.aw-icon-big.dragging .aw-hint { opacity: 0; }
+.aw-icon-sizes { display: flex; flex-direction: column; gap: 14px; }
+.aw-icon-row { display: flex; align-items: flex-end; gap: 18px; }
+.aw-icon-s { flex: none; overflow: hidden; background-size: cover; box-shadow: 0 4px 12px rgba(0, 0, 0, .4); }
+.aw-icon-s img, .aw-desk-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.aw-icon-s.s64 { width: 64px; height: 64px; border-radius: 14px; }
+.aw-icon-s.s48 { width: 48px; height: 48px; border-radius: 10px; }
+.aw-icon-s.s32 { width: 32px; height: 32px; border-radius: 7px; }
+.aw-icon-s.s16 { width: 16px; height: 16px; border-radius: 3px; }
+.aw-desk { display: flex; padding: 14px 0 10px 14px; border-radius: 10px; border: 1px solid var(--line-2); background: radial-gradient(90% 120% at 85% 110%, #2f6be0 0%, rgba(47, 107, 224, 0) 60%), radial-gradient(70% 90% at 100% 0%, #6aa2ff 0%, rgba(106, 162, 255, 0) 55%), linear-gradient(160deg, #0d2a6b, #071534); }
+.aw-desk-item { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 82px; padding: 6px 4px; border-radius: 4px; background: rgba(255, 255, 255, .14); outline: 1px solid rgba(255, 255, 255, .28); }
+.aw-desk-icon { position: relative; width: 48px; height: 48px; border-radius: 10px; overflow: visible; background-size: cover; }
+.aw-desk-icon img { border-radius: 10px; }
+.aw-desk-arrow { position: absolute; left: -2px; bottom: -2px; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 3px; background: #fff; color: #1d5fd6; box-shadow: 0 1px 3px rgba(0, 0, 0, .4); }
+.aw-desk-arrow svg { width: 13px; height: 13px; stroke-width: 2.6; }
+.aw-desk-name { font-family: "Segoe UI", var(--font, sans-serif); font-size: 12px; line-height: 1.25; text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); word-break: break-word; }
+.aw-icon-thumb { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a2140, #0d1120); }
+.aw-icon-thumb img { width: auto !important; height: 70% !important; aspect-ratio: 1; border-radius: 22%; object-fit: cover; margin-top: 6px; }
 @media (max-width: 1000px) { .aw-stage { grid-template-columns: 1fr; } .aw-also { display: none; } }
 
 /* ---------------------------------------------------------------- a game's name as its title

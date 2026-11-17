@@ -24,6 +24,7 @@
       "art": {
         "hero": "docs/img/death_star.jpg",
         "hub_logo": "art/logos/swtrilogy.png",
+        "hub_icon": "art/icons/swtrilogy.png",
         "screens": ["docs/img/menu.jpg", "docs/img/death_star.jpg", "docs/img/hoth.jpg", "docs/img/endor.jpg", "docs/img/yavin.jpg"]
       }
     },
@@ -50,6 +51,7 @@
       "art": {
         "hero": "docs/img/hero.jpg",
         "hub_logo": "art/logos/lostworld.png",
+        "hub_icon": "art/icons/lostworld.png",
         "screens": ["docs/img/hero.jpg", "docs/img/main_menu.jpg", "docs/img/stage_select.jpg", "docs/img/widescreen.jpg"]
       }
     },
@@ -76,6 +78,7 @@
       "art": {
         "hero": "docs/img/village.jpg",
         "hub_logo": "art/logos/segarally2.png",
+        "hub_icon": "art/icons/segarally2.png",
         "screens": ["docs/img/village.jpg", "docs/img/menu.jpg", "docs/img/forest.jpg", "docs/img/snow.jpg"]
       }
     }
