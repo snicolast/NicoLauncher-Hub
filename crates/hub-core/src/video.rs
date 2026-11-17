@@ -9,6 +9,8 @@ pub const FEED_URL: &str = "https://www.youtube.com/feeds/videos.xml?channel_id=
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Video {
+    /// The 11 characters after watch?v=, for the player inside the launcher.
+    pub id: String,
     pub title: String,
     /// The day it was published, as YYYY-MM-DD.
     pub date: String,
@@ -44,6 +46,7 @@ pub fn parse(feed: &str) -> Option<Video> {
         let Some(title) = between(entry, "<title>", "</title>") else { continue };
         let date = between(entry, "<published>", "</published>").and_then(|d| d.get(..10)).unwrap_or("");
         let video = Video {
+            id: id.to_string(),
             title: unescape(title.trim()),
             date: date.to_string(),
             url: format!("https://www.youtube.com/watch?v={id}"),
@@ -83,6 +86,7 @@ mod tests {
         let v = parse(&feed).unwrap();
         assert_eq!(v.title, "Rally & \"more\"");
         assert_eq!(v.date, "2026-11-10");
+        assert_eq!(v.id, "bbbbbbbb_-b");
         assert_eq!(v.url, "https://www.youtube.com/watch?v=bbbbbbbb_-b");
         assert_eq!(v.thumbnail, "https://i.ytimg.com/vi/bbbbbbbb_-b/mqdefault.jpg");
     }
