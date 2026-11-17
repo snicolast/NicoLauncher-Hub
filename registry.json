@@ -89,7 +89,12 @@
       "name": "Nico VC2",
       "tagline": "An unofficial recomp of the 1995 arcade light-gun game Virtua Cop 2.",
       "description": "The next recomp: the original arcade code, recompiled to C++ to run natively on PC. More soon.",
-      "tags": ["Sega Model 2", "1995", "Light gun"]
+      "tags": ["Sega Model 2", "1995", "Light gun"],
+      "art": {
+        "hero": "art/soon/virtuacop2.jpg",
+        "logo": "art/logos/virtuacop2.png",
+        "icon": "art/icons/virtuacop2.png"
+      }
     }
   ]
 }

@@ -1272,6 +1272,7 @@ function renderHome() {
         updateChip(lead)));
   } else $('spot-content').replaceChildren();
   $('spot-bg').classList.toggle('soon', !!lead && isSoon(lead));
+  $('spot-content').classList.toggle('soon', !!lead && isSoon(lead));
   $('spot-picks').classList.toggle('dots', spotList.length > 5);
   $('spot-picks').replaceChildren(...(spotList.length > 1 ? spotList.map((p) =>
     el('button', { class: 'pick' + (p === lead ? ' on' : '') + (isSoon(p) ? ' soon' : ''), title: isSoon(p) ? `${p.name} · ${soonText(p)}` : p.name, style: `background-image:${gradient(p)}`, onclick: () => { spot = p.id; spotRestart(); render(); } },
