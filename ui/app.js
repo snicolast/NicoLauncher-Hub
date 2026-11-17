@@ -93,7 +93,8 @@ const STR = {
     ph_place: 'Putting the game in its place', ph_tests: 'Checking that everything came out right',
     ph_check_update: 'Looking for the new version', ph_pc_tools: 'Installing what this PC needs to build the game',
     nav_home: 'Home', home_news: 'Latest news', side_games: 'Games', details: 'Details',
-    home_more: 'Show earlier news', home_library: 'Your library', home_open_library: 'Open Library', home_video: 'Latest video on snicolast', home_video_watch: 'Watch on YouTube',
+    home_more: 'Show earlier news', home_library: 'Your library', home_open_library: 'Open Library', home_video: 'Latest video on snicolast', home_video_watch: 'Watch on YouTube', home_video_play: 'Play here',
+    video_blocked: 'This video can\'t be played inside the launcher.',
     count_ready: '{n} ready to play', count_updates: '{n} with something new', count_todo: '{n} still to set up', count_missing: '{n} not installed',
     home_empty: 'No news could be loaded. Check your connection and press Refresh.',
     today: 'Today', yesterday: 'Yesterday',
@@ -229,7 +230,8 @@ const STR = {
     ph_place: 'Colocando el juego en su sitio', ph_tests: 'Comprobando que todo ha salido bien',
     ph_check_update: 'Buscando la versión nueva', ph_pc_tools: 'Instalando lo que este PC necesita para montar el juego',
     nav_home: 'Inicio', home_news: 'Últimas noticias', side_games: 'Juegos', details: 'Ver detalles',
-    home_more: 'Ver noticias anteriores', home_library: 'Tu biblioteca', home_open_library: 'Abrir la Biblioteca', home_video: 'Último vídeo en snicolast', home_video_watch: 'Ver en YouTube',
+    home_more: 'Ver noticias anteriores', home_library: 'Tu biblioteca', home_open_library: 'Abrir la Biblioteca', home_video: 'Último vídeo en snicolast', home_video_watch: 'Ver en YouTube', home_video_play: 'Reproducir aquí',
+    video_blocked: 'Este vídeo no se puede ver dentro del launcher.',
     count_ready: '{n} listos para jugar', count_updates: '{n} con novedades', count_todo: '{n} a medio preparar', count_missing: '{n} sin instalar',
     home_empty: 'No se han podido cargar las noticias. Comprueba la conexión y pulsa Actualizar lista.',
     today: 'Hoy', yesterday: 'Ayer',
@@ -328,6 +330,7 @@ const ICONS = {
   monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   eye: '<path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff: '<path d="M10.600 5.600A9.700 9.700 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a17 17 0 0 1-2.600 3.400M6.400 6.900C3.900 8.600 2.500 12 2.500 12S6 18.500 12 18.500c1.900 0 3.500-.6 4.900-1.500"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200M3 3l18 18"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 };
 const icon = (name) => {
@@ -422,6 +425,73 @@ function titleText(p, cls) {
 // click without any effect
 function openLink(url) {
   T.opener.openUrl(url).catch((e) => toast(t('link_failed', { url, error: e })));
+}
+
+// The newest video plays first in a player over the launcher, from
+// youtube-nocookie.com; YouTube itself (and its comments) is one click away,
+// in the user's browser. Closing the player stops the video. A video whose
+// owner does not let it play elsewhere says so, with the same way out.
+const YT_EMBED = 'https://www.youtube-nocookie.com';
+let videoClose = null;
+function watchVideo(video) {
+  const id = video.id || (/[?&]v=([\w-]{11})/.exec(video.url) || [])[1];
+  if (!id || !/^[\w-]{11}$/.test(id)) { openLink(video.url); return; }
+  if (videoClose) videoClose();
+  const params = new URLSearchParams({ autoplay: '1', rel: '0', playsinline: '1', enablejsapi: '1', hl: lang });
+  if (/^https?:/.test(location.origin)) params.set('origin', location.origin);
+  const frame = el('iframe', {
+    src: `${YT_EMBED}/embed/${id}?${params}`, title: video.title,
+    allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen', allowfullscreen: '',
+    referrerpolicy: 'strict-origin-when-cross-origin',
+  });
+  const screen = el('div', { class: 'vp-frame' }, frame);
+  const onYouTube = () => { close(); openLink(video.url); };
+  const blocked = () => {
+    if (screen.classList.contains('blocked')) return;
+    screen.classList.add('blocked');
+    const img = el('img', { src: video.thumbnail, alt: '', draggable: 'false' });
+    img.addEventListener('error', () => img.remove());
+    screen.replaceChildren(img, el('div', { class: 'vp-blocked' },
+      el('p', {}, t('video_blocked')),
+      el('button', { class: 'btn primary', onclick: onYouTube }, icon('external'), t('home_video_watch'))));
+  };
+  // The player talks back only once told someone listens: what YouTube's own
+  // script does, without loading it
+  let heard = false, pings = 0, pinger = null;
+  const onMessage = (e) => {
+    if (e.origin !== YT_EMBED || e.source !== frame.contentWindow) return;
+    let data; try { data = JSON.parse(e.data); } catch { return; }
+    heard = true;
+    if (data && data.event === 'onError') blocked();
+  };
+  window.addEventListener('message', onMessage);
+  frame.addEventListener('load', () => {
+    clearInterval(pinger);
+    const ping = () => {
+      if (heard || ++pings > 40 || !frame.contentWindow) { clearInterval(pinger); return; }
+      frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), YT_EMBED);
+    };
+    pinger = setInterval(ping, 250);
+    ping();
+  });
+  const node = el('div', { class: 'modal video-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': video.title },
+    el('div', { class: 'vp-box' },
+      el('div', { class: 'vp-head' },
+        el('div', { class: 'vp-title' }, el('strong', {}, video.title),
+          el('span', { class: 'dim small' }, [video.date && dayLabel(video.date), 'YouTube'].filter(Boolean).join(' · '))),
+        el('button', { class: 'btn ghost small', onclick: onYouTube }, icon('external'), t('home_video_watch')),
+        el('button', { class: 'vp-close', title: t('close'), 'aria-label': t('close'), onclick: () => close() }, icon('close'))),
+      screen));
+  node.addEventListener('click', (e) => { if (e.target === node) close(); });
+  function close() {
+    if (videoClose !== close) return;
+    videoClose = null;
+    clearInterval(pinger);
+    window.removeEventListener('message', onMessage);
+    node.remove();   // the frame goes with it, and the sound stops
+  }
+  videoClose = close;
+  document.body.append(node);
 }
 
 function toast(text, good, action) {
@@ -1223,7 +1293,7 @@ function renderHome() {
   $('home-video-panel').hidden = !video;
   if (video && $('home-video').dataset.url !== video.url) {
     $('home-video').dataset.url = video.url;
-    $('home-video').title = t('home_video_watch');
+    $('home-video').title = t('home_video_play');
     const img = el('img', { src: video.thumbnail, alt: '', draggable: 'false' });
     img.addEventListener('error', () => img.remove());
     $('home-video').replaceChildren(
@@ -2261,7 +2331,7 @@ $('self-update').addEventListener('click', () => askLauncherUpdate());
 $('announce').addEventListener('click', () => openAnnouncements());
 $('lib-refresh').addEventListener('click', () => refresh());
 $('home-refresh').addEventListener('click', () => refresh());
-$('home-video').addEventListener('click', () => { const u = $('home-video').dataset.url; if (u) openLink(u); });
+$('home-video').addEventListener('click', () => { if (snap && snap.latest_video) watchVideo(snap.latest_video); });
 $('home-more').addEventListener('click', () => { homeDays = HOME_DAYS_ALL; renderHome(); });
 // The launcher draws its own title bar: these are its three buttons. Dragging
 // and the double click to maximize come from data-tauri-drag-region.
@@ -2299,6 +2369,7 @@ document.addEventListener('keydown', (e) => {
     else if (closeAsk) closeAsk();
     else if (clClose) clClose();
     else if (annClose) annClose();
+    else if (videoClose) videoClose();
     else if (!$('lightbox').hidden) $('lightbox').hidden = true;
     else if (view === 'project') goBack();
   }

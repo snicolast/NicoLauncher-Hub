@@ -20,7 +20,9 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder};
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::UpdaterExt;
 
 struct Hub {
@@ -883,14 +885,14 @@ fn main() {
     config.base = places.config.parent().map(PathBuf::from).unwrap_or_default();
     config.portable = places.portable.is_some();
     let mut context = tauri::generate_context!();
-    // Tauri does not pass a window's `data_directory` from the config to its
-    // webview, which then keeps its data in %LOCALAPPDATA%: a portable
-    // launcher opens its windows itself, with the folder set on each.
+    // The launcher opens its windows itself. Tauri does not pass a window's
+    // `data_directory` from the config to its webview, which then keeps its
+    // data in %LOCALAPPDATA%: a portable launcher sets the folder on each.
+    // And a link that asks for a new window (YouTube's own, in the video
+    // player) opens in the user's browser instead of a bare window.
     let webview_dir = places.webview.clone();
-    if webview_dir.is_some() {
-        for window in &mut context.config_mut().app.windows {
-            window.create = false;
-        }
+    for window in &mut context.config_mut().app.windows {
+        window.create = false;
     }
     // What a portable update left aside, once the old launcher has closed
     if let Ok(exe) = std::env::current_exe() {
@@ -898,12 +900,19 @@ fn main() {
     }
     tauri::Builder::default()
         .setup(move |app| {
-            if let Some(dir) = webview_dir {
-                for window in app.config().app.windows.clone() {
-                    WebviewWindowBuilder::from_config(app.handle(), &window)?
-                        .data_directory(dir.clone())
-                        .build()?;
+            for window in app.config().app.windows.clone() {
+                let handle = app.handle().clone();
+                let mut builder = WebviewWindowBuilder::from_config(app.handle(), &window)?
+                    .on_new_window(move |url, _| {
+                        if matches!(url.scheme(), "https" | "http") {
+                            let _ = handle.opener().open_url(url.as_str(), None::<&str>);
+                        }
+                        NewWindowResponse::Deny
+                    });
+                if let Some(dir) = &webview_dir {
+                    builder = builder.data_directory(dir.clone());
                 }
+                builder.build()?;
             }
             // Pictures left from a launcher closed while one was picked
             let handle = app.handle().clone();
