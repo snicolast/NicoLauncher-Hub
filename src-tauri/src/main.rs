@@ -566,16 +566,17 @@ fn art_dir(hub: &Hub) -> PathBuf {
     art::dir(hub.places.config.parent().unwrap_or(Path::new(".")))
 }
 
-/// A picture for a project's cover or background, copied into the launcher's
-/// pictures folder: a file the user picked, or one of the project's
+/// A picture for a project's cover, background, logo or icon, copied into the
+/// launcher's pictures folder: a file the user picked, or one of the project's
 /// screenshots (from its folder when it is installed, from GitHub otherwise).
-/// Only made ready: the settings change when the user saves. A big picture
+/// Returned as the settings would keep it, centred. Only made ready: the
+/// settings change when the user saves. A big picture
 /// takes a moment, so it runs off the main thread.
 #[tauri::command(async)]
-fn prepare_art(hub: tauri::State<Hub>, id: String, kind: art::Kind, path: Option<PathBuf>, screen: Option<usize>) -> Result<String, String> {
+fn prepare_art(hub: tauri::State<Hub>, id: String, kind: art::Kind, path: Option<PathBuf>, screen: Option<usize>) -> Result<Art, String> {
     let p = find_project(&hub, &id)?;
     let dir = art_dir(&hub);
-    match (path, screen) {
+    let file = match (path, screen) {
         (Some(path), _) => art::from_file(&dir, &id, kind, &path),
         // Screenshots are not logos
         (None, Some(_)) if kind == art::Kind::Logo => Err("Choose a logo from your PC.".into()),
@@ -588,7 +589,10 @@ fn prepare_art(hub: tauri::State<Hub>, id: String, kind: art::Kind, path: Option
             }
         }
         (None, None) => Err("No picture was chosen.".into()),
-    }
+    }?;
+    // An icon with see-through parts is shown as it is
+    let clear = kind == art::Kind::Icon && art::see_through(&dir, &file);
+    Ok(Art { file, focus: [50, 50], clear })
 }
 
 /// Saves the user's pictures for a project; None puts the registry's back.
@@ -604,7 +608,8 @@ fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, backg
             return Err("That picture is not there any more. Choose it again.".into());
         }
     }
-    let icon = icon.map(Art::clean);
+    // Whether it is see-through is the file's to say
+    let icon = icon.map(|a| Art { clear: art::see_through(&dir, &a.file), ..a.clean() });
     let ico = icon.as_ref().map(|a| art::write_ico(&dir, a)).transpose()?;
     let icon_changed = hub.config.lock().unwrap().art(&id, art::Kind::Icon) != icon.as_ref();
     change_config(&hub, |c| {

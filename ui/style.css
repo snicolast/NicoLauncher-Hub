@@ -802,6 +802,10 @@ main { isolation: isolate; }
 .aw-desk-name { font-family: "Segoe UI", var(--font, sans-serif); font-size: 12px; line-height: 1.25; text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); word-break: break-word; }
 .aw-icon-thumb { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a2140, #0d1120); }
 .aw-icon-thumb img { width: auto !important; height: 70% !important; aspect-ratio: 1; border-radius: 22%; object-fit: cover; margin-top: 6px; }
+/* An icon with see-through parts: as it is, with nothing behind it */
+.side-art.side-icon.clear, .aw-icon-big.clear, .aw-icon-s.clear, .aw-desk-icon.clear { background: none; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+.side-icon.clear img, .aw-icon-big.clear > img.aw-shown, .aw-icon-s.clear img, .aw-desk-icon.clear img { object-fit: contain; border-radius: 0; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45)); }
+.aw-icon-thumb.clear img { border-radius: 0; object-fit: contain; }
 @media (max-width: 1000px) { .aw-stage { grid-template-columns: 1fr; } .aw-also { display: none; } }
 
 /* ---------------------------------------------------------------- a game's name as its title
