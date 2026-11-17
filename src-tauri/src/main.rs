@@ -117,6 +117,9 @@ struct ProjectView {
     background: Option<Art>,
     /// The user's own logo, shown instead of `logo` (the registry's).
     logo_art: Option<Art>,
+    /// The registry's icon (a URL), and the user's own, shown instead.
+    hub_icon: Option<String>,
+    icon: Option<Art>,
     input_label: Option<String>,
     dir: Option<PathBuf>,
     input: Option<PathBuf>,
@@ -201,6 +204,8 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 cover: own_art(&p.id, art::Kind::Cover),
                 background: own_art(&p.id, art::Kind::Background),
                 logo_art: own_art(&p.id, art::Kind::Logo),
+                hub_icon: p.icon_url(),
+                icon: own_art(&p.id, art::Kind::Icon),
                 input_label: p.input.as_ref().map(|i| i.label.clone()),
                 // Before it is installed, show the news from GitHub instead
                 latest_news: remote.get(&p.id).cloned().unwrap_or_else(|| local.clone()),
@@ -586,18 +591,22 @@ fn prepare_art(hub: tauri::State<Hub>, id: String, kind: art::Kind, path: Option
 
 /// Saves the user's pictures for a project; None puts the registry's back.
 /// The pictures that were made ready and not saved, or that these replace,
-/// are deleted.
-#[tauri::command]
-fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, background: Option<Art>, logo: Option<Art>) -> Result<Snapshot, String> {
-    find_project(&hub, &id)?;
+/// are deleted. A new icon gets its .ico made, and the shortcut on the
+/// desktop, if there is one, gets the new icon (or the game's own back).
+#[tauri::command(async)]
+fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, background: Option<Art>, logo: Option<Art>, icon: Option<Art>) -> Result<Snapshot, String> {
+    let p = find_project(&hub, &id)?;
     let dir = art_dir(&hub);
-    for a in [&cover, &background, &logo].into_iter().flatten() {
+    for a in [&cover, &background, &logo, &icon].into_iter().flatten() {
         if !art::valid_name(&a.file) || !dir.join(&a.file).is_file() {
             return Err("That picture is not there any more. Choose it again.".into());
         }
     }
+    let icon = icon.map(Art::clean);
+    let ico = icon.as_ref().map(|a| art::write_ico(&dir, a)).transpose()?;
+    let icon_changed = hub.config.lock().unwrap().art(&id, art::Kind::Icon) != icon.as_ref();
     change_config(&hub, |c| {
-        let pc = c.projects.entry(id).or_default();
+        let pc = c.projects.entry(id.clone()).or_default();
         pc.cover = cover.map(Art::clean);
         pc.background = background.map(Art::clean);
         // A new logo is put up to be seen, not left behind the name
@@ -605,8 +614,17 @@ fn set_project_art(hub: tauri::State<Hub>, id: String, cover: Option<Art>, backg
             pc.text_title = false;
         }
         pc.logo = logo.map(Art::clean);
+        pc.icon = icon;
     })?;
     prune_art(&hub);
+    // The icon is saved either way: a shortcut that cannot be changed now
+    // (the desktop on a drive that is not there) is no reason to say it is not
+    if icon_changed {
+        let game = hub.config.lock().unwrap().project_dir(&id);
+        if let Some(game) = game {
+            let _ = project::refresh_shortcut(&p, &game, ico.as_deref());
+        }
+    }
     Ok(snapshot_of(&hub))
 }
 
@@ -622,8 +640,8 @@ fn prune_art(hub: &Hub) {
     if hub.config_error.lock().unwrap().is_some() {
         return;
     }
-    let config = hub.config.lock().unwrap();
-    art::prune(&art_dir(hub), &config.art_files());
+    let files = hub.config.lock().unwrap().art_files();
+    art::prune(&art_dir(hub), &files.iter().map(String::as_str).collect::<Vec<_>>());
 }
 
 /// The `art:` protocol: the window asks for a picture of the pictures folder
@@ -632,7 +650,7 @@ fn art_response(dir: &Path, name: &str) -> tauri::http::Response<Vec<u8>> {
     let builder = tauri::http::Response::builder();
     match art::read(dir, name) {
         // A name is never given to another picture: the window may keep it
-        Some(bytes) => builder.header("Content-Type", if name.ends_with(".png") { "image/png" } else { "image/jpeg" }).header("Cache-Control", "max-age=31536000, immutable").body(bytes),
+        Some(bytes) => builder.header("Content-Type", if name.ends_with(".png") { "image/png" } else if name.ends_with(".ico") { "image/x-icon" } else { "image/jpeg" }).header("Cache-Control", "max-age=31536000, immutable").body(bytes),
         None => builder.status(404).body(Vec::new()),
     }
     .expect("a response with fixed headers")
@@ -654,8 +672,14 @@ fn launch(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
 #[tauri::command]
 fn desktop_shortcut(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     let p = find_project(&hub, &id)?;
-    let dir = hub.config.lock().unwrap().project_dir(&id).ok_or("Not installed.")?;
-    project::desktop_shortcut(&p, &dir)
+    let (dir, icon) = {
+        let config = hub.config.lock().unwrap();
+        (config.project_dir(&id).ok_or("Not installed.")?, config.art(&id, art::Kind::Icon).cloned())
+    };
+    // The user's icon, its .ico made again if it is gone
+    let art_dir = art_dir(&hub);
+    let ico = icon.and_then(|a| Some(art_dir.join(art::ico_name(&a))).filter(|f| f.is_file()).or_else(|| art::write_ico(&art_dir, &a).ok()));
+    project::desktop_shortcut(&p, &dir, ico.as_deref())
 }
 
 /// Windows version and graphics card, for the Feedback page's reports

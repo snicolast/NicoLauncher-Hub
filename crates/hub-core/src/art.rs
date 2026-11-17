@@ -1,7 +1,8 @@
 //! Pictures the user picked for a project: a cover (the library card, the
-//! sidebar, the strip on Home), a background (the project's page, Home's
-//! spotlight, the blurred picture behind the window) and a logo (shown over
-//! them in place of the project's name).
+//! strip on Home), a background (the project's page, Home's spotlight, the
+//! blurred picture behind the window), a logo (shown over them in place of the
+//! project's name) and an icon (the sidebar, and the desktop shortcut, which
+//! gets it as an .ico made next to it).
 //!
 //! The picture is copied into the launcher's own `art` folder, made smaller and
 //! saved as a JPEG (a logo as a PNG, to keep what is see-through), instead of pointing at the user's file: a file that is
@@ -28,12 +29,22 @@ pub const MAX_BYTES: u64 = 50 * 1024 * 1024;
 /// that big.
 pub const MAX_WIDTH: u32 = 2560;
 pub const MAX_HEIGHT: u32 = 1600;
-/// The kinds of file the picker offers.
-pub const EXTENSIONS: [&str; 4] = ["jpg", "jpeg", "png", "webp"];
+/// The kinds of file the picker offers (an .ico is meant for the icon, but
+/// any kind takes it).
+pub const EXTENSIONS: [&str; 5] = ["jpg", "jpeg", "png", "webp", "ico"];
 /// A logo is made to fit in this: it is never drawn bigger than a few hundred
 /// pixels, twice that on a 4K screen.
 pub const LOGO_MAX_WIDTH: u32 = 1600;
 pub const LOGO_MAX_HEIGHT: u32 = 800;
+/// An icon is kept at most this big on its longer side: a square of it is
+/// cut out where the user chooses, and drawn at most 256 pixels wide.
+pub const ICON_MAX: u32 = 1024;
+/// The sizes in the .ico of a desktop shortcut: what Windows draws, from
+/// "Extra large icons" down to the details view.
+pub const ICO_SIZES: [u32; 6] = [256, 64, 48, 32, 24, 16];
+/// How round its corners are, as a part of its side: the launcher draws it so
+/// (`border-radius: 22%`).
+const ICON_ROUND: f32 = 0.22;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -41,6 +52,7 @@ pub enum Kind {
     Cover,
     Background,
     Logo,
+    Icon,
 }
 
 impl Kind {
@@ -49,12 +61,13 @@ impl Kind {
             Kind::Cover => "cover",
             Kind::Background => "background",
             Kind::Logo => "logo",
+            Kind::Icon => "icon",
         }
     }
 
     fn extension(self) -> &'static str {
         match self {
-            Kind::Logo => "png",
+            Kind::Logo | Kind::Icon => "png",
             _ => "jpg",
         }
     }
@@ -89,10 +102,11 @@ pub fn dir(settings_dir: &Path) -> PathBuf {
 }
 
 /// A name the launcher could have given a file it made: lower case letters,
-/// digits and dashes, then `.jpg` (or `.png`, a logo). Nothing else is read from, or deleted in,
-/// the folder, so no path from the window can reach another file.
+/// digits and dashes, then `.jpg` (or `.png`, a logo or an icon, or `.ico`, an
+/// icon for a shortcut). Nothing else is read from, or deleted in, the folder,
+/// so no path from the window can reach another file.
 pub fn valid_name(name: &str) -> bool {
-    let Some(stem) = name.strip_suffix(".jpg").or_else(|| name.strip_suffix(".png")) else { return false };
+    let Some(stem) = [".jpg", ".png", ".ico"].iter().find_map(|ext| name.strip_suffix(ext)) else { return false };
     !stem.is_empty() && stem.len() <= 120 && stem.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
@@ -123,6 +137,7 @@ pub fn from_url(dir: &Path, id: &str, kind: Kind, url: &str) -> Result<String> {
 pub fn save(dir: &Path, id: &str, kind: Kind, bytes: &[u8]) -> Result<String> {
     let jpeg = match kind {
         Kind::Logo => prepare_logo(bytes)?,
+        Kind::Icon => prepare_icon(bytes)?,
         _ => prepare(bytes)?,
     };
     std::fs::create_dir_all(dir).map_err(err("Could not create the pictures folder"))?;
@@ -161,14 +176,7 @@ pub fn prepare(bytes: &[u8]) -> Result<Vec<u8>> {
 pub fn prepare_logo(bytes: &[u8]) -> Result<Vec<u8>> {
     let picture = decode(bytes)?.into_rgba8();
     let (w, h) = picture.dimensions();
-    let mut found: Option<(u32, u32, u32, u32)> = None;
-    for (x, y, p) in picture.enumerate_pixels() {
-        if p.0[3] > 8 {
-            let b = found.get_or_insert((x, y, x, y));
-            *b = (b.0.min(x), b.1.min(y), b.2.max(x), b.3.max(y));
-        }
-    }
-    let (x0, y0, x1, y1) = found.ok_or("That picture is all see-through: there is nothing in it to show.")?;
+    let (x0, y0, x1, y1) = visible(&picture).ok_or("That picture is all see-through: there is nothing in it to show.")?;
     let picture = if (x0, y0, x1, y1) != (0, 0, w - 1, h - 1) {
         image::imageops::crop_imm(&picture, x0, y0, x1 - x0 + 1, y1 - y0 + 1).to_image()
     } else {
@@ -185,6 +193,104 @@ pub fn prepare_logo(bytes: &[u8]) -> Result<Vec<u8>> {
     Ok(out)
 }
 
+/// An icon as the PNG that is kept. A picture with a see-through margin (an
+/// icon made as one, a logo) is cut to what is in it and set in the middle of
+/// a see-through square, whole; any other (a screenshot, a photo) keeps its
+/// shape, and the square shown is cut from it where the user chooses.
+pub fn prepare_icon(bytes: &[u8]) -> Result<Vec<u8>> {
+    let picture = decode(bytes)?.into_rgba8();
+    let (x0, y0, x1, y1) = visible(&picture).ok_or("That picture is all see-through: there is nothing in it to show.")?;
+    let (w, h) = picture.dimensions();
+    let picture = if (x0, y0, x1, y1) != (0, 0, w - 1, h - 1) {
+        let inner = image::imageops::crop_imm(&picture, x0, y0, x1 - x0 + 1, y1 - y0 + 1).to_image();
+        let side = inner.width().max(inner.height());
+        let mut square = image::RgbaImage::new(side, side);
+        image::imageops::overlay(&mut square, &inner, ((side - inner.width()) / 2) as i64, ((side - inner.height()) / 2) as i64);
+        square
+    } else {
+        picture
+    };
+    let picture = DynamicImage::ImageRgba8(picture);
+    let picture = if picture.width() > ICON_MAX || picture.height() > ICON_MAX {
+        picture.resize(ICON_MAX, ICON_MAX, image::imageops::FilterType::CatmullRom)
+    } else {
+        picture
+    };
+    let mut out = Vec::new();
+    picture.write_to(&mut Cursor::new(&mut out), image::ImageFormat::Png).map_err(err("Could not save the picture"))?;
+    Ok(out)
+}
+
+/// The box around what is not see-through in a picture, as its first and
+/// last columns and rows. None when all of it is.
+fn visible(picture: &image::RgbaImage) -> Option<(u32, u32, u32, u32)> {
+    let mut found: Option<(u32, u32, u32, u32)> = None;
+    for (x, y, p) in picture.enumerate_pixels() {
+        if p.0[3] > 8 {
+            let b = found.get_or_insert((x, y, x, y));
+            *b = (b.0.min(x), b.1.min(y), b.2.max(x), b.3.max(y));
+        }
+    }
+    found
+}
+
+/// The name of the .ico made from an icon: its own, and where its square is
+/// cut, so a new square is a new file (Windows keeps the pictures of icons it
+/// has drawn, by file).
+pub fn ico_name(icon: &Art) -> String {
+    let stem = icon.file.strip_suffix(".png").unwrap_or(&icon.file);
+    format!("{stem}-{}-{}.ico", icon.focus[0].min(100), icon.focus[1].min(100))
+}
+
+/// Makes the .ico of an icon in `dir` (see `ico_name`), for a desktop
+/// shortcut: the square the user chose, with the corners rounded as the
+/// launcher draws them, at each of ICO_SIZES. Returns its path.
+pub fn write_ico(dir: &Path, icon: &Art) -> Result<PathBuf> {
+    let bytes = read(dir, &icon.file).ok_or("That icon is not there any more. Choose it again.")?;
+    let picture = decode(&bytes)?.into_rgba8();
+    let ico = ico_bytes(&picture, icon.focus)?;
+    let path = dir.join(ico_name(icon));
+    let tmp = path.with_extension("ico.tmp");
+    std::fs::write(&tmp, ico).map_err(err("Could not save the icon"))?;
+    std::fs::rename(&tmp, &path).map_err(err("Could not save the icon"))?;
+    Ok(path)
+}
+
+/// The .ico's bytes: a square of `picture` cut at `focus` (the point, in
+/// percents, kept in sight, as the window's `object-position` does).
+fn ico_bytes(picture: &image::RgbaImage, focus: [u8; 2]) -> Result<Vec<u8>> {
+    let (w, h) = picture.dimensions();
+    let side = w.min(h);
+    let at = |extra: u32, f: u8| (extra as u64 * f.min(100) as u64 / 100) as u32;
+    let square = image::imageops::crop_imm(picture, at(w - side, focus[0]), at(h - side, focus[1]), side, side).to_image();
+    let frames = ICO_SIZES
+        .iter()
+        .map(|&n| {
+            let mut small = image::imageops::resize(&square, n, n, image::imageops::FilterType::Lanczos3);
+            round_corners(&mut small);
+            image::codecs::ico::IcoFrame::as_png(small.as_raw(), n, n, image::ExtendedColorType::Rgba8)
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(err("Could not make the icon"))?;
+    let mut out = Vec::new();
+    image::codecs::ico::IcoEncoder::new(&mut out).encode_images(&frames).map_err(err("Could not make the icon"))?;
+    Ok(out)
+}
+
+/// Makes the corners of a square see-through, with soft edges.
+fn round_corners(square: &mut image::RgbaImage) {
+    let n = square.width() as f32;
+    let r = n * ICON_ROUND;
+    for (x, y, p) in square.enumerate_pixels_mut() {
+        // The distance of the pixel's middle from the nearest corner's circle
+        let (cx, cy) = (x as f32 + 0.5, y as f32 + 0.5);
+        let dx = (r - cx).max(cx - (n - r)).max(0.0);
+        let dy = (r - cy).max(cy - (n - r)).max(0.0);
+        let cover = (r - (dx * dx + dy * dy).sqrt() + 0.5).clamp(0.0, 1.0);
+        p.0[3] = (p.0[3] as f32 * cover).round() as u8;
+    }
+}
+
 /// The picture in `bytes`, of any kind the launcher reads.
 fn decode(bytes: &[u8]) -> Result<DynamicImage> {
     let mut reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format().map_err(err("Could not read the picture"))?;
@@ -193,7 +299,7 @@ fn decode(bytes: &[u8]) -> Result<DynamicImage> {
     limits.max_image_height = Some(20_000);
     reader.limits(limits);
     let picture = reader.decode().map_err(|e| match e {
-        image::ImageError::Unsupported(_) => "That is not a picture the launcher can read. Choose a JPG, PNG or WebP file.".to_string(),
+        image::ImageError::Unsupported(_) => "That is not a picture the launcher can read. Choose a JPG, PNG, WebP or ICO file.".to_string(),
         e => format!("Could not read the picture: {e}"),
     })?;
     Ok(picture)
@@ -266,6 +372,7 @@ mod tests {
         assert!(!valid_name("Cover.jpg"));
         assert!(valid_name("segarally2-logo-1763251200000-0.png"));
         assert!(!valid_name("cover.gif"));
+        assert!(valid_name("segarally2-icon-1763251200000-0-50-50.ico"));
         assert!(!valid_name(&format!("{}.jpg", "a".repeat(121))));
     }
 
@@ -316,9 +423,67 @@ mod tests {
     }
 
     #[test]
+    fn an_icon_with_a_see_through_margin_is_set_whole_in_a_square() {
+        // A 100x40 picture, see-through but for a 30x10 block
+        let mut img = image::RgbaImage::from_pixel(100, 40, image::Rgba([0, 0, 0, 0]));
+        for y in 12..22 {
+            for x in 20..50 {
+                img.put_pixel(x, y, image::Rgba([255, 255, 255, 255]));
+            }
+        }
+        let mut png = Vec::new();
+        DynamicImage::ImageRgba8(img).write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+        let back = image::load_from_memory(&prepare_icon(&png).unwrap()).unwrap().into_rgba8();
+        assert_eq!(back.dimensions(), (30, 30));
+        assert_eq!(back.get_pixel(15, 2).0[3], 0, "above the block is see-through");
+        assert_eq!(back.get_pixel(15, 15).0[3], 255);
+        // A screenshot keeps its shape, made smaller
+        let shot = image::load_from_memory(&prepare_icon(&png_bytes(2048, 1152, 255)).unwrap()).unwrap();
+        assert_eq!((shot.width(), shot.height()), (ICON_MAX, 576));
+        assert!(prepare_icon(&png_bytes(10, 10, 0)).unwrap_err().contains("see-through"));
+    }
+
+    #[test]
+    fn the_ico_is_the_chosen_square_with_round_corners() {
+        // Left half red, right half blue: the focus picks which one shows
+        let img = image::RgbaImage::from_fn(300, 100, |x, _| if x < 150 { image::Rgba([255, 0, 0, 255]) } else { image::Rgba([0, 0, 255, 255]) });
+        let left = ico_bytes(&img, [0, 50]).unwrap();
+        let right = ico_bytes(&img, [100, 50]).unwrap();
+        let decoder = image::codecs::ico::IcoDecoder::new(Cursor::new(&left)).unwrap();
+        let big = DynamicImage::from_decoder(decoder).unwrap().into_rgba8();
+        assert_eq!(big.dimensions(), (256, 256), "the biggest size is read first");
+        assert_eq!(big.get_pixel(128, 128).0, [255, 0, 0, 255]);
+        assert_eq!(big.get_pixel(0, 0).0[3], 0, "a corner is see-through");
+        assert_eq!(big.get_pixel(128, 0).0[3], 255, "the middle of a side is not");
+        let blue = DynamicImage::from_decoder(image::codecs::ico::IcoDecoder::new(Cursor::new(&right)).unwrap()).unwrap().into_rgba8();
+        assert_eq!(blue.get_pixel(128, 128).0, [0, 0, 255, 255]);
+        // Each size Windows asks for is in it
+        assert_eq!(u16::from_le_bytes([left[4], left[5]]) as usize, ICO_SIZES.len());
+    }
+
+    #[test]
+    fn the_ico_is_written_next_to_its_icon_and_kept_by_name() {
+        let dir = temp("ico");
+        let file = save(&dir, "segarally2", Kind::Icon, &png(400, 200, 255)).unwrap();
+        assert!(file.starts_with("segarally2-icon-") && file.ends_with(".png"), "{file}");
+        let icon = Art { file, focus: [30, 50] };
+        let path = write_ico(&dir, &icon).unwrap();
+        let name = path.file_name().unwrap().to_str().unwrap();
+        assert_eq!(name, ico_name(&icon));
+        assert!(name.ends_with("-30-50.ico") && valid_name(name), "{name}");
+        assert_ne!(ico_name(&Art { focus: [31, 50], ..icon.clone() }), name, "a new square, a new file");
+        prune(&dir, &[icon.file.as_str(), name]);
+        assert!(path.is_file());
+        prune(&dir, &[icon.file.as_str()]);
+        assert!(!path.exists());
+        assert!(write_ico(&dir, &Art { file: "gone-icon-1-0.png".into(), focus: [50, 50] }).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn what_is_not_a_picture_is_refused() {
         let e = prepare(b"PK\x03\x04 not a picture at all").unwrap_err();
-        assert!(e.contains("JPG, PNG or WebP") || e.contains("Could not read"), "{e}");
+        assert!(e.contains("JPG, PNG, WebP or ICO") || e.contains("Could not read"), "{e}");
     }
 
     #[test]

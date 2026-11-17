@@ -116,8 +116,9 @@ pub fn launch(project: &Project, dir: &Path) -> Result<()> {
 /// Puts a shortcut to the built program on the user's desktop, replacing one
 /// of the same name. Windows only: Windows' own shell writes the .lnk, and is
 /// asked where the desktop is, so it is found wherever the user keeps it
-/// (OneDrive moves it).
-pub fn desktop_shortcut(project: &Project, dir: &Path) -> Result<()> {
+/// (OneDrive moves it). Its icon is `icon` (an .ico the user chose), or else
+/// the program's own.
+pub fn desktop_shortcut(project: &Project, dir: &Path, icon: Option<&Path>) -> Result<()> {
     let exe = project.exe.as_ref().ok_or("This project has nothing to start.")?;
     let path = dir.join(exe);
     if !path.is_file() {
@@ -126,8 +127,20 @@ pub fn desktop_shortcut(project: &Project, dir: &Path) -> Result<()> {
     if !cfg!(windows) {
         return Err("Desktop shortcuts are only made on Windows.".into());
     }
-    write_shortcut(&shortcut_file_name(&project.name), &path, dir)
+    write_shortcut(&shortcut_file_name(&project.name), &path, dir, icon.unwrap_or(&path), false)
+        .map(|_| ())
         .map_err(|e| format!("Could not make the shortcut: {e}"))
+}
+
+/// Gives the shortcut on the desktop its new icon (see `desktop_shortcut`),
+/// when there is one: none is made. Ok(false) when there was none.
+pub fn refresh_shortcut(project: &Project, dir: &Path, icon: Option<&Path>) -> Result<bool> {
+    let Some(path) = project.exe.as_ref().map(|e| dir.join(e)).filter(|p| p.is_file()) else { return Ok(false) };
+    if !cfg!(windows) {
+        return Ok(false);
+    }
+    write_shortcut(&shortcut_file_name(&project.name), &path, dir, icon.unwrap_or(&path), true)
+        .map_err(|e| format!("Could not change the shortcut: {e}"))
 }
 
 /// The shortcut's file name: the project's name with what Windows does not
@@ -142,8 +155,10 @@ fn shortcut_file_name(name: &str) -> String {
 
 /// On a thread of its own, so the shell's objects never meet the window's:
 /// the thread starts and ends its own use of COM.
+/// Ok(false), and nothing written, when `only_if_there` and the desktop has
+/// no shortcut of that name.
 #[cfg(windows)]
-fn write_shortcut(file_name: &str, exe: &Path, dir: &Path) -> std::result::Result<(), String> {
+fn write_shortcut(file_name: &str, exe: &Path, dir: &Path, icon: &Path, only_if_there: bool) -> std::result::Result<bool, String> {
     use std::os::windows::ffi::OsStringExt;
     use windows::core::{Interface, HSTRING};
     use windows::Win32::System::Com::{
@@ -152,9 +167,9 @@ fn write_shortcut(file_name: &str, exe: &Path, dir: &Path) -> std::result::Resul
     };
     use windows::Win32::UI::Shell::{FOLDERID_Desktop, IShellLinkW, SHGetKnownFolderPath, ShellLink, KF_FLAG_DEFAULT};
 
-    let (file_name, exe, dir) = (file_name.to_owned(), exe.to_owned(), dir.to_owned());
-    let work = move || -> std::result::Result<(), String> {
-        let write = || -> windows::core::Result<()> {
+    let (file_name, exe, dir, icon) = (file_name.to_owned(), exe.to_owned(), dir.to_owned(), icon.to_owned());
+    let work = move || -> std::result::Result<bool, String> {
+        let write = || -> windows::core::Result<bool> {
             // SAFETY: COM is started on this thread below and ends after this
             // runs; the string Windows gives for the desktop is freed once read
             unsafe {
@@ -162,11 +177,15 @@ fn write_shortcut(file_name: &str, exe: &Path, dir: &Path) -> std::result::Resul
                 let desktop = std::ffi::OsString::from_wide(p.as_wide());
                 CoTaskMemFree(Some(p.0 as *const _));
                 let lnk = Path::new(&desktop).join(&file_name);
+                if only_if_there && !lnk.is_file() {
+                    return Ok(false);
+                }
                 let link: IShellLinkW = CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER)?;
                 link.SetPath(&HSTRING::from(exe.as_path()))?;
                 link.SetWorkingDirectory(&HSTRING::from(dir.as_path()))?;
-                link.SetIconLocation(&HSTRING::from(exe.as_path()), 0)?;
-                link.cast::<IPersistFile>()?.Save(&HSTRING::from(lnk.as_path()), true)
+                link.SetIconLocation(&HSTRING::from(icon.as_path()), 0)?;
+                link.cast::<IPersistFile>()?.Save(&HSTRING::from(lnk.as_path()), true)?;
+                Ok(true)
             }
         };
         // SAFETY: a new thread, so COM is started here once and ended once
@@ -181,7 +200,7 @@ fn write_shortcut(file_name: &str, exe: &Path, dir: &Path) -> std::result::Resul
 }
 
 #[cfg(not(windows))]
-fn write_shortcut(_file_name: &str, _exe: &Path, _dir: &Path) -> std::result::Result<(), String> {
+fn write_shortcut(_file_name: &str, _exe: &Path, _dir: &Path, _icon: &Path, _only_if_there: bool) -> std::result::Result<bool, String> {
     Err("Desktop shortcuts are only made on Windows.".into())
 }
 
