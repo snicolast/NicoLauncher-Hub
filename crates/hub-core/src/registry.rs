@@ -21,6 +21,46 @@ pub const SCHEMA: u32 = 1;
 pub struct Registry {
     pub schema: u32,
     pub projects: Vec<Project>,
+    /// Projects on the way: shown greyed out, with nothing to install or play.
+    /// Launchers older than 0.3.16 skip the whole list.
+    #[serde(default)]
+    pub coming_soon: Vec<Teaser>,
+}
+
+/// A project that is announced but not out: its name, a few words and its
+/// pictures, all kept in the Hub (it may have no public repository yet).
+/// When it comes out, it moves to `projects` under the same id.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Teaser {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub tagline: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    /// When it is expected, in a few words ("2027", "this summer"): shown as
+    /// "Coming 2027". Without it, "Coming soon".
+    #[serde(default)]
+    pub when: Option<String>,
+    #[serde(default)]
+    pub art: TeaserArt,
+}
+
+/// Paths in the Hub, next to registry.json.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct TeaserArt {
+    /// A wide picture for its card, its page and Home.
+    #[serde(default)]
+    pub hero: Option<String>,
+    #[serde(default)]
+    pub logo: Option<String>,
+    /// Square, for the sidebar.
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub screens: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -138,15 +178,13 @@ impl Registry {
             ));
         }
         for p in &reg.projects {
-            let id_ok = !p.id.is_empty()
-                && p.id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
             let repo_ok = p.repo.split('/').count() == 2
                 && p.repo.chars().all(|c| c.is_ascii_alphanumeric() || "-_./".contains(c))
                 && !p.repo.contains("..");
             let branch_ok = !p.branch.is_empty()
                 && p.branch.chars().all(|c| c.is_ascii_alphanumeric() || "-_./".contains(c))
                 && !p.branch.contains("..");
-            if !id_ok || !repo_ok || !branch_ok {
+            if !id_ok(&p.id) || !repo_ok || !branch_ok {
                 return Err(format!("Bad project entry in the registry: {:?}", p.id));
             }
             p.requires.validate().map_err(|e| format!("{e} ({})", p.id))?;
@@ -155,6 +193,17 @@ impl Registry {
             for rel in files.into_iter().flatten().chain(&p.art.screens) {
                 if !is_plain_relative(rel) {
                     return Err(format!("Bad path in the registry ({}): {rel}", p.id));
+                }
+            }
+        }
+        for t in &reg.coming_soon {
+            if !id_ok(&t.id) {
+                return Err(format!("Bad project entry in the registry: {:?}", t.id));
+            }
+            let a = &t.art;
+            for rel in [&a.hero, &a.logo, &a.icon].into_iter().flatten().chain(&a.screens) {
+                if !is_plain_relative(rel) {
+                    return Err(format!("Bad path in the registry ({}): {rel}", t.id));
                 }
             }
         }
@@ -174,6 +223,32 @@ impl Registry {
 
     pub fn find(&self, id: &str) -> Option<&Project> {
         self.projects.iter().find(|p| p.id == id)
+    }
+
+    /// The projects still to come, without one that is out already (listed in
+    /// `projects` too, as when it has just moved there).
+    pub fn teasers(&self) -> impl Iterator<Item = &Teaser> {
+        self.coming_soon.iter().filter(|t| self.find(&t.id).is_none())
+    }
+}
+
+/// An id fit for a folder name and a settings key.
+fn id_ok(id: &str) -> bool {
+    !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+impl Teaser {
+    pub fn hero_url(&self) -> Option<String> {
+        self.art.hero.as_deref().map(hub_raw_url)
+    }
+    pub fn logo_url(&self) -> Option<String> {
+        self.art.logo.as_deref().map(hub_raw_url)
+    }
+    pub fn icon_url(&self) -> Option<String> {
+        self.art.icon.as_deref().map(hub_raw_url)
+    }
+    pub fn screen_urls(&self) -> Vec<String> {
+        self.art.screens.iter().map(|s| hub_raw_url(s)).collect()
     }
 }
 
@@ -220,6 +295,29 @@ mod tests {
         }
         assert_eq!(entry("{}").unwrap().projects[0].icon_url(), None);
         assert!(entry(r#"{"hub_icon":"../x.png"}"#).is_err());
+    }
+
+    #[test]
+    fn projects_to_come_are_listed_apart() {
+        let reg = Registry::bundled();
+        for t in reg.teasers() {
+            assert!(reg.find(&t.id).is_none());
+        }
+
+        let text = |soon: &str| format!(r#"{{"schema":1,"projects":[{{"id":"a","name":"A","repo":"o/r","branch":"main"}}],"coming_soon":[{soon}]}}"#);
+        let reg = Registry::parse(&text(r#"{"id":"b","name":"B","when":"2027","art":{"hero":"art/soon/b.jpg","screens":["art/soon/b1.jpg"]}}"#)).unwrap();
+        let b = &reg.coming_soon[0];
+        assert_eq!(b.hero_url().unwrap(), "https://raw.githubusercontent.com/snicolast/NicoLauncher-Hub/main/art/soon/b.jpg");
+        assert_eq!(b.screen_urls().len(), 1);
+        assert_eq!(b.when.as_deref(), Some("2027"));
+        assert_eq!(b.icon_url(), None);
+        // Out already: listed only once, as a project
+        let out = Registry::parse(&text(r#"{"id":"a","name":"A"}"#)).unwrap();
+        assert_eq!(out.teasers().count(), 0);
+        assert!(Registry::parse(&text(r#"{"id":"../b","name":"B"}"#)).is_err());
+        assert!(Registry::parse(&text(r#"{"id":"b","name":"B","art":{"hero":"../x.jpg"}}"#)).is_err());
+        // A list without it, as before
+        assert!(Registry::parse(r#"{"schema":1,"projects":[]}"#).unwrap().coming_soon.is_empty());
     }
 
     #[test]

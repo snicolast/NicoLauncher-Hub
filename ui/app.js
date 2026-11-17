@@ -101,6 +101,8 @@ const STR = {
     sort_label: 'Order of the games', sort_custom: 'My order', sort_name: 'A–Z', sort_recent: 'Recently played',
     lib_drag: 'Drag a game to move it.', show_hidden: 'Show hidden ({n})',
     m_hide: 'Hide from library', m_hide_sub: 'Also from the sidebar and Home', m_unhide: 'Show in library',
+    soon: 'Coming soon', soon_when: 'Coming {when}', soon_short: 'Soon', soon_state: 'Not out yet',
+    soon_note: 'Not out yet: there is nothing to install or play for now. When it comes out, it will be here like the others.',
     do_hide: 'Hide', do_unhide: 'Show again', chip_hidden: 'Hidden', hidden_done: '{name} is hidden. Show hidden games from the Library.', undo: 'Undo',
     all_hidden: 'All your games are hidden.',
     played_today: 'Played today', played_yesterday: 'Played yesterday', played_days: 'Played {n} days ago', played_never: 'Not played yet',
@@ -239,6 +241,8 @@ const STR = {
     sort_label: 'Orden de los juegos', sort_custom: 'Mi orden', sort_name: 'A–Z', sort_recent: 'Jugados hace poco',
     lib_drag: 'Arrastra un juego para moverlo.', show_hidden: 'Ver ocultos ({n})',
     m_hide: 'Ocultar de la biblioteca', m_hide_sub: 'También de la barra lateral y de Inicio', m_unhide: 'Mostrar en la biblioteca',
+    soon: 'Próximamente', soon_when: 'Llega {when}', soon_short: 'Pronto', soon_state: 'Aún no ha salido',
+    soon_note: 'Aún no ha salido: por ahora no hay nada que instalar ni jugar. Cuando salga, aparecerá aquí como los demás.',
     do_hide: 'Ocultar', do_unhide: 'Volver a mostrar', chip_hidden: 'Oculto', hidden_done: '{name} está oculto. Los ocultos se ven desde la Biblioteca.', undo: 'Deshacer',
     all_hidden: 'Todos tus juegos están ocultos.',
     played_today: 'Jugado hoy', played_yesterday: 'Jugado ayer', played_days: 'Jugado hace {n} días', played_never: 'Sin jugar todavía',
@@ -1174,7 +1178,7 @@ let homeDays = HOME_DAYS;
 const SPOT_EVERY = 9000;
 let spotTimer = null;
 function spotNext() {
-  const list = listed();
+  const list = [...listed(), ...teasers()];
   // Not while something else has the eye: another page, a question on screen,
   // the pointer on the spotlight, or the window out of sight or in the
   // background (a game in front of it)
@@ -1192,6 +1196,13 @@ spotRestart();
 // The games the user did not hide, in their order: what Home, the sidebar and
 // the Library list
 const listed = () => (snap ? snap.projects.filter((p) => !p.hidden) : []);
+// Projects on the way (the registry's coming_soon): after the others, greyed
+// out, with a page of their own and nothing to install or play
+const teasers = () => (snap && snap.coming_soon) || [];
+const findTeaser = (id) => teasers().find((s) => s.id === id);
+const isSoon = (p) => teasers().includes(p);
+const soonText = (s) => (s.when ? t('soon_when', { when: s.when }) : t('soon'));
+const soonBadge = (s, cls = '') => el('span', { class: 'soon-badge ' + cls }, icon('lock'), soonText(s));
 
 function renderHome() {
   const games = listed();
@@ -1228,14 +1239,24 @@ function renderHome() {
   // The spotlight: one project across the top, with its picture, what it
   // brought last and the one thing to do with it
   const newest = items.find((e) => e.from);
-  const lead = games.find((p) => p.id === spot) || (newest && newest.from) || games[0];
-  const open = (p) => (!snap.install_root && !p.dir ? show('library') : openProject(p.id));
+  // The ones to come take their turn in the spotlight too, after the others
+  const spotList = [...games, ...teasers()];
+  const lead = spotList.find((p) => p.id === spot) || (newest && newest.from) || spotList[0];
+  const open = (p) => (!snap.install_root && !p.dir && !isSoon(p) ? show('library') : openProject(p.id));
   backdrop($('spot-bg'), lead && artSrc(lead, 'background'), lead && artFocus(lead, 'background'));
   const swapped = $('spot-bg').dataset.id !== (lead ? lead.id : '');
   $('spot-bg').dataset.id = lead ? lead.id : '';
   $('spot-content').classList.remove('swap');
   if (swapped) { void $('spot-content').offsetWidth; $('spot-content').classList.add('swap'); }
-  if (lead) {
+  if (lead && isSoon(lead)) {
+    $('spot-bg').style.backgroundImage = gradient(lead);
+    $('spot-content').replaceChildren(
+      el('div', { class: 'hero-logo' }, gameMark(lead, 'in', 'spot-title')),
+      el('p', { class: 'tagline' }, lead.tagline),
+      el('div', { class: 'hero-actions' },
+        soonBadge(lead, 'lg'),
+        el('button', { class: 'btn lg glass', onclick: () => open(lead) }, t('details'))));
+  } else if (lead) {
     $('spot-bg').style.backgroundImage = gradient(lead);
     const last = items.find((e) => e.from === lead);
     $('spot-content').replaceChildren(
@@ -1250,9 +1271,10 @@ function renderHome() {
         el('span', { class: 'state' }, ...stateLine(lead)),
         updateChip(lead)));
   } else $('spot-content').replaceChildren();
-  $('spot-picks').classList.toggle('dots', games.length > 5);
-  $('spot-picks').replaceChildren(...(games.length > 1 ? games.map((p) =>
-    el('button', { class: 'pick' + (p === lead ? ' on' : ''), title: p.name, style: `background-image:${gradient(p)}`, onclick: () => { spot = p.id; spotRestart(); render(); } },
+  $('spot-bg').classList.toggle('soon', !!lead && isSoon(lead));
+  $('spot-picks').classList.toggle('dots', spotList.length > 5);
+  $('spot-picks').replaceChildren(...(spotList.length > 1 ? spotList.map((p) =>
+    el('button', { class: 'pick' + (p === lead ? ' on' : '') + (isSoon(p) ? ' soon' : ''), title: isSoon(p) ? `${p.name} · ${soonText(p)}` : p.name, style: `background-image:${gradient(p)}`, onclick: () => { spot = p.id; spotRestart(); render(); } },
       artPicture(p, 'cover'))) : []));
 
   const block = (b) => el('div', { class: 'feed-block' + (b.from ? ' link' : ''), onclick: b.from ? () => open(b.from) : null },
@@ -1274,6 +1296,8 @@ function renderHome() {
   if (shots.length === 3) shots.pop();
   // (its name follows a rename at once)
   $('shots-title').textContent = lead ? lead.name : '';
+  // (a project still to come may have no pictures yet)
+  $('home-shots-panel').hidden = !shots.length;
   if ($('home-shots').dataset.id !== (lead ? lead.id : '')) {
     $('home-shots').dataset.id = lead ? lead.id : '';
     $('home-shots').replaceChildren(...shots.map((src) => {
@@ -1322,9 +1346,14 @@ function renderHome() {
         el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
         el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) })),
       more);
-  }));
-  const behind = view === 'project' ? snap.projects.find((p) => p.id === current) : lead;
+  }), ...teasers().map((s) => el('div', { class: 'side-row soon' },
+    el('button', { class: 'side-game soon' + (view === 'project' && current === s.id ? ' on' : ''), title: `${s.name} · ${soonText(s)}`, onclick: () => openProject(s.id) },
+      el('span', { class: 'side-art side-icon', style: `background-image:${gradient(s)}` }, iconPicture(s)),
+      el('span', { class: 'side-name' }, s.name),
+      el('span', { class: 'side-soon' }, t('soon_short'))))));
+  const behind = view === 'project' ? snap.projects.find((p) => p.id === current) || findTeaser(current) : lead;
   backdrop($('ambient'), behind && artSrc(behind, 'background'), behind && artFocus(behind, 'background'));
+  $('ambient').classList.toggle('soon', !!behind && isSoon(behind));
 }
 
 let showHidden = false;
@@ -1389,6 +1418,19 @@ function renderLibrary() {
     node.dataset.id = p.id;
     if (!locked) node.addEventListener('keydown', (e) => { if (e.key === 'Enter') openProject(p.id); else if (movable && e.ctrlKey && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) { e.preventDefault(); nudge(p.id, /Left|Up/.test(e.key) ? -1 : 1); } });
     if (movable && !locked) node.addEventListener('pointerdown', (e) => startDrag(e, node));
+    cards.append(node);
+  }
+  // Then the ones to come: their page only, nothing to move or hide
+  for (const s of teasers()) {
+    const art = el('div', { class: 'art', style: `background-image:${gradient(s)}` });
+    const cover = artPicture(s, 'cover');
+    if (cover) art.append(cover);
+    const node = el('div', { class: 'card soon' + (showsLogo(s) ? '' : ' titled'), tabindex: '0', title: soonText(s), onclick: () => openProject(s.id) },
+      art,
+      el('div', { class: 'card-top' }, gameMark(s, 'card-logo', 'card-title'), el('div', { class: 'card-flags' }, soonBadge(s))),
+      el('div', { class: 'card-foot' },
+        el('div', {}, el('h3', {}, s.name), el('div', { class: 'state' }, el('span', { class: 'dot' }), t('soon_state')))));
+    node.addEventListener('keydown', (e) => { if (e.key === 'Enter') openProject(s.id); });
     cards.append(node);
   }
 }
@@ -1480,7 +1522,7 @@ function startDrag(e, node) {
     // Over another card's slot: it takes that card's place
     const cards = [...box.children];
     const over = cards.find((c) => {
-      if (c === node) return false;
+      if (c === node || c.classList.contains('soon')) return false;
       const r = slot(c);
       return ev.clientX > r.left && ev.clientX < r.left + r.w && ev.clientY > r.top && ev.clientY < r.top + r.h;
     });
@@ -1518,7 +1560,11 @@ let projectNewsAll = false;
 let shownProject = null;  // so the hero pictures are not reloaded on every render
 function renderProject() {
   const p = snap.projects.find((x) => x.id === current);
-  if (!p) { show('library'); return; }
+  const soon = !p && findTeaser(current);
+  if (!p && !soon) { show('library'); return; }
+  $('view-project').classList.toggle('soon-page', !!soon);
+  $('p-details-block').hidden = !!soon;
+  if (soon) { renderTeaser(soon); return; }
   const busy = !!snap.busy;
   $('back-label').textContent = t(cameFrom === 'home' ? 'nav_home' : 'nav_library');
   if (shownProject !== p.id) {
@@ -1606,6 +1652,43 @@ function renderProject() {
   news.replaceChildren(...(rows.length ? rows : [el('p', { class: 'dim' }, t('no_news'))]));
   news.classList.toggle('timeline', rows.length > 0);
   renderAchievements(p);
+}
+
+// The page of a project still to come: its pictures and words, and in place
+// of Play, when it comes
+function renderTeaser(s) {
+  $('back-label').textContent = t(cameFrom === 'home' ? 'nav_home' : 'nav_library');
+  closeManageMenu();
+  if (shownProject !== s.id) {
+    shownProject = s.id;
+    $('p-bg').style.backgroundImage = gradient(s);
+    $('p-screens').replaceChildren(...s.screens.map((src) => {
+      const img = picture(src);
+      img.classList.add('in');
+      img.addEventListener('click', () => { $('lightbox-img').src = src; $('lightbox').hidden = false; });
+      return img;
+    }));
+    $('view-project').scrollTop = 0;
+  }
+  backdrop($('p-bg'), s.hero, '');
+  const mark = showsLogo(s) ? 'logo ' + logoSrc(s) : 'text ' + s.name;
+  if ($('p-logo').dataset.mark !== mark) {
+    $('p-logo').dataset.mark = mark;
+    $('p-logo').replaceChildren(gameMark(s, '', 'page-title'));
+  }
+  $('p-screens-block').hidden = !s.screens.length;
+  $('p-name').textContent = s.name;
+  $('p-name').hidden = !!$('p-logo').children.length;
+  $('p-tagline').textContent = s.tagline;
+  $('p-desc').textContent = s.description;
+  $('p-tags').replaceChildren(...s.tags.map((tag) => el('span', { class: 'chip' }, tag)));
+  $('p-actions').replaceChildren(soonBadge(s, 'lg'));
+  $('p-status').replaceChildren();
+  $('p-note').hidden = true;
+  $('p-ach-strip').hidden = true;
+  $('p-news-title').textContent = soonText(s);
+  $('p-news').classList.remove('timeline');
+  $('p-news').replaceChildren(el('p', { class: 'dim' }, t('soon_note')));
 }
 
 // ------------------------------------------------------------ game menu

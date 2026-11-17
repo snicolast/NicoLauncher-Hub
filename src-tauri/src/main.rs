@@ -78,6 +78,23 @@ struct Snapshot {
     /// How the library lists the projects: `projects` come in that order.
     sort: Sort,
     projects: Vec<ProjectView>,
+    /// Projects on the way, shown greyed out after the others.
+    coming_soon: Vec<TeaserView>,
+}
+
+#[derive(Serialize)]
+struct TeaserView {
+    id: String,
+    name: String,
+    tagline: String,
+    description: String,
+    tags: Vec<String>,
+    when: Option<String>,
+    /// Pictures in the Hub, as GitHub URLs.
+    hero: Option<String>,
+    logo: Option<String>,
+    hub_icon: Option<String>,
+    screens: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -264,6 +281,21 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
         announcements,
         sort: config.sort,
         projects,
+        coming_soon: registry
+            .teasers()
+            .map(|t| TeaserView {
+                id: t.id.clone(),
+                name: t.name.clone(),
+                tagline: t.tagline.clone(),
+                description: t.description.clone(),
+                tags: t.tags.clone(),
+                when: t.when.clone().filter(|w| !w.trim().is_empty()),
+                hero: t.hero_url(),
+                logo: t.logo_url(),
+                hub_icon: t.icon_url(),
+                screens: t.screen_urls(),
+            })
+            .collect(),
     }
 }
 
@@ -1000,10 +1032,11 @@ mod tests {
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
             let snap = snapshot_of(&hub);
-            tx.send(snap.launcher_update.is_some()).unwrap();
+            tx.send((snap.launcher_update.is_some(), snap.coming_soon.iter().map(|t| t.id.clone()).collect::<Vec<_>>())).unwrap();
         });
-        let update = rx.recv_timeout(std::time::Duration::from_secs(10)).expect("the snapshot never came back");
+        let (update, soon) = rx.recv_timeout(std::time::Duration::from_secs(10)).expect("the snapshot never came back");
         assert!(update);
+        assert_eq!(soon.len(), Registry::bundled().teasers().count());
     }
 
     // Read before updating: nothing to show again after the restart, and
