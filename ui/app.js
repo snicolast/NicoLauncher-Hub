@@ -386,6 +386,9 @@ function artPicture(p, kind, cls) {
 
 // The game's icon, square: the user's own (cut where they chose), else the
 // one the registry names, else its cover
+// An icon with see-through parts (the games' own, or one the user picked
+// made so) is shown as it is: nothing behind it, its own corners
+const iconClear = (p, a = p.icon) => (a ? !!a.clear : !!p.hub_icon);
 function iconPicture(p, a = p.icon) {
   if (!a && !p.hub_icon) return artPicture(p, 'cover');
   const img = picture(a ? artUrl(a.file) : p.hub_icon);
@@ -608,7 +611,7 @@ let artDrop = null;   // the open dialog's handler for a file dropped on the win
 function artwork(p) {
   // A picture: its file, its focus, and in the dialog only, the screenshot it
   // was made from (by index), to mark it in the strip
-  const copy = (a) => (a ? { file: a.file, focus: [...a.focus], screen: a.screen } : null);
+  const copy = (a) => (a ? { file: a.file, focus: [...a.focus], clear: !!a.clear, screen: a.screen } : null);
   const same = (a, b) => (!a && !b) || (!!a && !!b && a.file === b.file && a.focus[0] === b.focus[0] && a.focus[1] === b.focus[1]);
   const draft = { cover: copy(p.cover), background: copy(p.background), logo: copy(p.logo_art), icon: copy(p.icon) };
   // The picture of the user's own, besides the screenshots, for each tab: the
@@ -630,8 +633,8 @@ function artwork(p) {
   async function prepare(args, done) {
     working = true; problem = null; draw();
     try {
-      const file = await invoke('prepare_art', { id: p.id, kind: tab, ...args });
-      done({ file, focus: [50, 50] });
+      const art = await invoke('prepare_art', { id: p.id, kind: tab, ...args });
+      done({ file: art.file, focus: art.focus, clear: !!art.clear });
     } catch (e) {
       problem = String(e);
     }
@@ -655,7 +658,7 @@ function artwork(p) {
     if (!saved) call('discard_art');
   };
   const save = async () => {
-    const strip = (a) => (a ? { file: a.file, focus: a.focus } : null);
+    const strip = (a) => (a ? { file: a.file, focus: a.focus, clear: !!a.clear } : null);
     const cover = strip(draft.cover);
     const background = linked ? cover : strip(draft.background);
     const logo = strip(draft.logo);
@@ -727,16 +730,19 @@ function artwork(p) {
     let stage, also, frame;
     if (tab === 'icon') {
       // Big, where it can be framed, and at the sizes Windows draws it
-      frame = el('div', { class: 'aw-icon-big', style: `background-image:${gradient(p)}` }, main, hint, wait);
+      // A see-through icon gets nothing behind it, and keeps its corners
+      const clear = iconClear(p, a);
+      const under = (cls) => (clear ? { class: cls + ' clear' } : { class: cls, style: `background-image:${gradient(p)}` });
+      frame = el('div', under('aw-icon-big'), main, hint, wait);
       stage = el('div', { class: 'aw-icon-stage' }, frame,
         el('div', { class: 'aw-icon-sizes' }, el('div', { class: 'aw-also-label' }, t('art_sizes')),
-          el('div', { class: 'aw-icon-row' }, ...[64, 48, 32, 16].map((n) => el('span', { class: `aw-icon-s s${n}`, style: `background-image:${gradient(p)}` }, img())))));
+          el('div', { class: 'aw-icon-row' }, ...[64, 48, 32, 16].map((n) => el('span', under(`aw-icon-s s${n}`), img())))));
       also = [
         el('div', { class: 'aw-also-label' }, t('art_side')),
-        el('div', { class: 'aw-side' }, el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
+        el('div', { class: 'aw-side' }, el('span', under('side-art side-icon'), img()), el('span', { class: 'side-name' }, shortName(p)), el('span', { class: 'dot ' + p.state })),
         el('div', { class: 'aw-also-label' }, t('art_desk')),
         el('div', { class: 'aw-desk' }, el('span', { class: 'aw-desk-item' },
-          el('span', { class: 'aw-desk-icon', style: `background-image:${gradient(p)}` }, img(), el('span', { class: 'aw-desk-arrow' }, icon('shortcut'))),
+          el('span', under('aw-desk-icon'), img(), el('span', { class: 'aw-desk-arrow' }, icon('shortcut'))),
           el('span', { class: 'aw-desk-name' }, p.name))),
         el('p', { class: 'dim small aw-also-note' }, t('art_desk_note')),
       ];
@@ -799,14 +805,14 @@ function artwork(p) {
     });
     // The icon tab starts with the game's own icon
     if (iconTab && p.hub_icon) {
-      thumbs.unshift(el('button', { class: 'aw-thumb aw-icon-thumb' + (on(!a) ? ' on' : ''), disabled: working, title: t('art_default'), onclick: () => { draft.icon = null; problem = null; draw(); } },
+      thumbs.unshift(el('button', { class: 'aw-thumb aw-icon-thumb clear' + (on(!a) ? ' on' : ''), disabled: working, title: t('art_default'), onclick: () => { draft.icon = null; problem = null; draw(); } },
         el('img', { src: p.hub_icon, alt: '', draggable: 'false' }), el('span', { class: 'aw-badge' }, t('art_icon_game'))));
     }
     const mine = own[tab] || (tab === 'background' && linked ? own.cover : null);
     if (mine) {
       const current = shown(tab);
       const selected = !!current && current.screen == null && current.file === mine.file;
-      thumbs.push(el('button', { class: 'aw-thumb' + (logoTab ? ' aw-logo-thumb' : iconTab ? ' aw-icon-thumb' : '') + (on(selected) ? ' on' : ''), disabled: working, onclick: () => { set(tab, copy(mine)); problem = null; draw(); } },
+      thumbs.push(el('button', { class: 'aw-thumb' + (logoTab ? ' aw-logo-thumb' : iconTab ? ' aw-icon-thumb' + (mine.clear ? ' clear' : '') : '') + (on(selected) ? ' on' : ''), disabled: working, onclick: () => { set(tab, copy(mine)); problem = null; draw(); } },
         el('img', { src: artUrl(mine.file), alt: '', draggable: 'false' }),
         el('span', { class: 'aw-badge' }, t(logoTab ? 'art_yours_logo' : iconTab ? 'art_yours_icon' : 'art_yours'))));
     }
@@ -1309,7 +1315,8 @@ function renderHome() {
     more.addEventListener('click', (e) => { e.stopPropagation(); quickRename(p, more); });
     return el('div', { class: 'side-row' + (renaming === p.id ? ' renaming' : '') },
       el('button', { class: 'side-game' + (view === 'project' && current === p.id ? ' on' : ''), title: p.name, onclick: () => open(p) },
-        el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, iconPicture(p)),
+        iconClear(p) ? el('span', { class: 'side-art side-icon clear' }, iconPicture(p))
+          : el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, iconPicture(p)),
         el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
         el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) })),
       more);

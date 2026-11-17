@@ -82,6 +82,10 @@ pub struct Art {
     /// percents of its width and height: [50, 50] is the middle.
     #[serde(default = "middle")]
     pub focus: [u8; 2],
+    /// An icon with see-through parts (one made as an icon, a logo): shown
+    /// as it is, with nothing behind it and its own corners.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub clear: bool,
 }
 
 fn middle() -> [u8; 2] {
@@ -193,15 +197,15 @@ pub fn prepare_logo(bytes: &[u8]) -> Result<Vec<u8>> {
     Ok(out)
 }
 
-/// An icon as the PNG that is kept. A picture with a see-through margin (an
-/// icon made as one, a logo) is cut to what is in it and set in the middle of
-/// a see-through square, whole; any other (a screenshot, a photo) keeps its
+/// An icon as the PNG that is kept. A picture with see-through parts (an icon
+/// made as one, a logo) loses its empty margin and is set in the middle of a
+/// see-through square, whole; any other (a screenshot, a photo) keeps its
 /// shape, and the square shown is cut from it where the user chooses.
 pub fn prepare_icon(bytes: &[u8]) -> Result<Vec<u8>> {
     let picture = decode(bytes)?.into_rgba8();
     let (x0, y0, x1, y1) = visible(&picture).ok_or("That picture is all see-through: there is nothing in it to show.")?;
     let (w, h) = picture.dimensions();
-    let picture = if (x0, y0, x1, y1) != (0, 0, w - 1, h - 1) {
+    let picture = if (x0, y0, x1, y1) != (0, 0, w - 1, h - 1) || (w != h && has_see_through(&picture)) {
         let inner = image::imageops::crop_imm(&picture, x0, y0, x1 - x0 + 1, y1 - y0 + 1).to_image();
         let side = inner.width().max(inner.height());
         let mut square = image::RgbaImage::new(side, side);
@@ -234,6 +238,15 @@ fn visible(picture: &image::RgbaImage) -> Option<(u32, u32, u32, u32)> {
     found
 }
 
+/// Whether a picture in `dir` has see-through parts (see `Art::clear`).
+pub fn see_through(dir: &Path, name: &str) -> bool {
+    read(dir, name).and_then(|b| decode(&b).ok()).is_some_and(|p| has_see_through(&p.into_rgba8()))
+}
+
+fn has_see_through(picture: &image::RgbaImage) -> bool {
+    picture.pixels().any(|p| p.0[3] < 250)
+}
+
 /// The name of the .ico made from an icon: its own, and where its square is
 /// cut, so a new square is a new file (Windows keeps the pictures of icons it
 /// has drawn, by file).
@@ -243,8 +256,9 @@ pub fn ico_name(icon: &Art) -> String {
 }
 
 /// Makes the .ico of an icon in `dir` (see `ico_name`), for a desktop
-/// shortcut: the square the user chose, with the corners rounded as the
-/// launcher draws them, at each of ICO_SIZES. Returns its path.
+/// shortcut: the square the user chose at each of ICO_SIZES, with the corners
+/// rounded as the launcher draws them (one with see-through parts keeps its
+/// own). Returns its path.
 pub fn write_ico(dir: &Path, icon: &Art) -> Result<PathBuf> {
     let bytes = read(dir, &icon.file).ok_or("That icon is not there any more. Choose it again.")?;
     let picture = decode(&bytes)?.into_rgba8();
@@ -257,17 +271,21 @@ pub fn write_ico(dir: &Path, icon: &Art) -> Result<PathBuf> {
 }
 
 /// The .ico's bytes: a square of `picture` cut at `focus` (the point, in
-/// percents, kept in sight, as the window's `object-position` does).
+/// percents, kept in sight, as the window's `object-position` does). Its
+/// corners are rounded unless it has see-through parts of its own.
 fn ico_bytes(picture: &image::RgbaImage, focus: [u8; 2]) -> Result<Vec<u8>> {
     let (w, h) = picture.dimensions();
     let side = w.min(h);
     let at = |extra: u32, f: u8| (extra as u64 * f.min(100) as u64 / 100) as u32;
     let square = image::imageops::crop_imm(picture, at(w - side, focus[0]), at(h - side, focus[1]), side, side).to_image();
+    let round = !has_see_through(&square);
     let frames = ICO_SIZES
         .iter()
         .map(|&n| {
             let mut small = image::imageops::resize(&square, n, n, image::imageops::FilterType::Lanczos3);
-            round_corners(&mut small);
+            if round {
+                round_corners(&mut small);
+            }
             image::codecs::ico::IcoFrame::as_png(small.as_raw(), n, n, image::ExtendedColorType::Rgba8)
         })
         .collect::<std::result::Result<Vec<_>, _>>()
@@ -437,7 +455,14 @@ mod tests {
         assert_eq!(back.dimensions(), (30, 30));
         assert_eq!(back.get_pixel(15, 2).0[3], 0, "above the block is see-through");
         assert_eq!(back.get_pixel(15, 15).0[3], 255);
-        // A screenshot keeps its shape, made smaller
+        // See-through inside but with no margin: made square too
+        let mut holed = image::RgbaImage::from_pixel(60, 30, image::Rgba([9, 9, 9, 255]));
+        holed.put_pixel(30, 15, image::Rgba([0, 0, 0, 0]));
+        let mut png2 = Vec::new();
+        DynamicImage::ImageRgba8(holed).write_to(&mut Cursor::new(&mut png2), image::ImageFormat::Png).unwrap();
+        let sq = image::load_from_memory(&prepare_icon(&png2).unwrap()).unwrap();
+        assert_eq!((sq.width(), sq.height()), (60, 60));
+                // A screenshot keeps its shape, made smaller
         let shot = image::load_from_memory(&prepare_icon(&png_bytes(2048, 1152, 255)).unwrap()).unwrap();
         assert_eq!((shot.width(), shot.height()), (ICON_MAX, 576));
         assert!(prepare_icon(&png_bytes(10, 10, 0)).unwrap_err().contains("see-through"));
@@ -459,6 +484,25 @@ mod tests {
         assert_eq!(blue.get_pixel(128, 128).0, [0, 0, 255, 255]);
         // Each size Windows asks for is in it
         assert_eq!(u16::from_le_bytes([left[4], left[5]]) as usize, ICO_SIZES.len());
+        // One with see-through parts keeps its own corners
+        let mut clear = image::RgbaImage::from_pixel(100, 100, image::Rgba([0, 200, 0, 255]));
+        clear.put_pixel(50, 50, image::Rgba([0, 0, 0, 0]));
+        let kept = DynamicImage::from_decoder(image::codecs::ico::IcoDecoder::new(Cursor::new(ico_bytes(&clear, [50, 50]).unwrap())).unwrap()).unwrap().into_rgba8();
+        assert_eq!(kept.get_pixel(0, 0).0[3], 255, "a corner is not cut");
+    }
+
+    #[test]
+    fn a_picture_with_see_through_parts_is_told() {
+        let dir = temp("clear");
+        let solid = save(&dir, "x", Kind::Icon, &png(40, 30, 255)).unwrap();
+        let clear = save(&dir, "x", Kind::Icon, &png(40, 30, 0x80)).unwrap();
+        assert!(!see_through(&dir, &solid));
+        assert!(see_through(&dir, &clear));
+        assert!(!see_through(&dir, "gone-icon-1-0.png"));
+        let art: Art = serde_json::from_str(r#"{ "file": "a.png" }"#).unwrap();
+        assert!(!art.clear);
+        assert!(!serde_json::to_string(&art).unwrap().contains("clear"), "false is not written");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -466,7 +510,7 @@ mod tests {
         let dir = temp("ico");
         let file = save(&dir, "segarally2", Kind::Icon, &png(400, 200, 255)).unwrap();
         assert!(file.starts_with("segarally2-icon-") && file.ends_with(".png"), "{file}");
-        let icon = Art { file, focus: [30, 50] };
+        let icon = Art { file, focus: [30, 50], clear: false };
         let path = write_ico(&dir, &icon).unwrap();
         let name = path.file_name().unwrap().to_str().unwrap();
         assert_eq!(name, ico_name(&icon));
@@ -476,7 +520,7 @@ mod tests {
         assert!(path.is_file());
         prune(&dir, &[icon.file.as_str()]);
         assert!(!path.exists());
-        assert!(write_ico(&dir, &Art { file: "gone-icon-1-0.png".into(), focus: [50, 50] }).is_err());
+        assert!(write_ico(&dir, &Art { file: "gone-icon-1-0.png".into(), focus: [50, 50], clear: false }).is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -521,6 +565,6 @@ mod tests {
     fn focus_is_kept_inside_the_picture() {
         let art: Art = serde_json::from_str(r#"{ "file": "a.jpg" }"#).unwrap();
         assert_eq!(art.focus, [50, 50]);
-        assert_eq!(Art { file: "a.jpg".into(), focus: [250, 30] }.clean().focus, [100, 30]);
+        assert_eq!(Art { file: "a.jpg".into(), focus: [250, 30], clear: false }.clean().focus, [100, 30]);
     }
 }
