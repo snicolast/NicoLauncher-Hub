@@ -18,6 +18,11 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[15] 2026-11-18
+- Launcher 0.3.15: the latest video now plays right inside the launcher. If a video can't be played there, a button opens it on YouTube
+- Games in the sidebar now show their icon. Want a different one? In the game's gear menu: Change artwork… > Icon (a screenshot of the game or any picture from your PC). The desktop shortcut uses it too
+- Problem reports now say whether the launcher is installed or portable
+
 [14] 2026-11-17
 - Launcher 0.3.14: some antivirus programs (Windows Defender among them) flagged the launcher by mistake. It no longer uses PowerShell for desktop shortcuts or for the PC details in problem reports, which is what most likely set them off
 
