@@ -18,6 +18,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[16] 2026-11-18
+- Launcher 0.3.16: projects on the way now show up as "Coming soon", in the Library, the sidebar and on Home, with a page of their own
+- First one: Nico VC2 is coming soon (early preview)
+
 [15] 2026-11-18
 - Launcher 0.3.15: the latest video now plays right inside the launcher. If a video can't be played there, a button opens it on YouTube
 - Games in the sidebar now show their icon. Want a different one? In the game's gear menu: Change artwork… > Icon (a screenshot of the game or any picture from your PC). The desktop shortcut uses it too
