@@ -18,6 +18,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[17] 2026-11-19
+- Launcher 0.3.17: each game now shows the systems it runs on: small icons on its card in the Library, and a Platforms block on its page
+- Nico SWT also runs on macOS: its page has a Guide button with the steps to install it from GitHub (the launcher installs the Windows version)
+
 [16] 2026-11-18
 - Launcher 0.3.16: projects on the way now show up as "Coming soon", in the Library, the sidebar and on Home, with a page of their own
 - First one: Nico VC2 is coming soon (early preview)
