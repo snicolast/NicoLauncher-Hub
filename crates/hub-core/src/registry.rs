@@ -101,6 +101,27 @@ pub struct Project {
     /// `manifest.txt`. When set, an install writes them too.
     #[serde(default)]
     pub update_state: Option<String>,
+    /// The systems it runs on, shown as small icons on its card and page.
+    /// The launcher installs the Windows version only; the others say where
+    /// their own guide is. Without the list: Windows only. Launchers older
+    /// than 0.3.17 skip it.
+    #[serde(default)]
+    pub platforms: Vec<Platform>,
+}
+
+/// One system a project runs on, or will soon.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Platform {
+    /// `windows`, `macos` or `linux`. Another name is kept but not shown, so
+    /// a newer list does not break this launcher.
+    pub os: String,
+    /// The install guide in the project's repository (`docs/MACOS.md`), for
+    /// a system the launcher does not install on.
+    #[serde(default)]
+    pub guide: Option<String>,
+    /// Announced but not ready yet: shown dimmed, as "Coming soon".
+    #[serde(default)]
+    pub soon: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -162,6 +183,11 @@ impl Project {
         self.art.hub_icon.as_deref().map(hub_raw_url)
     }
 
+    /// Where GitHub shows a file of the repository's branch, as a page.
+    pub fn page_url(&self, rel: &str) -> String {
+        format!("https://github.com/{}/blob/{}/{}", self.repo, self.branch, rel)
+    }
+
     /// Where GitHub serves a file of the repository's branch.
     pub fn raw_url(&self, rel: &str) -> String {
         format!("https://raw.githubusercontent.com/{}/{}/{}", self.repo, self.branch, rel)
@@ -190,7 +216,8 @@ impl Registry {
             p.requires.validate().map_err(|e| format!("{e} ({})", p.id))?;
             let s = &p.scripts;
             let files = [&p.exe, &p.news, &s.install, &s.build, &s.update, &p.update_state, &p.art.hero, &p.art.logo, &p.art.hub_logo, &p.art.hub_icon];
-            for rel in files.into_iter().flatten().chain(&p.art.screens) {
+            let guides = p.platforms.iter().filter_map(|x| x.guide.as_ref());
+            for rel in files.into_iter().flatten().chain(&p.art.screens).chain(guides) {
                 if !is_plain_relative(rel) {
                     return Err(format!("Bad path in the registry ({}): {rel}", p.id));
                 }
@@ -318,6 +345,23 @@ mod tests {
         assert!(Registry::parse(&text(r#"{"id":"b","name":"B","art":{"hero":"../x.jpg"}}"#)).is_err());
         // A list without it, as before
         assert!(Registry::parse(r#"{"schema":1,"projects":[]}"#).unwrap().coming_soon.is_empty());
+    }
+
+    #[test]
+    fn platforms_and_their_guides() {
+        let entry = |plats: &str| Registry::parse(&format!(r#"{{"schema":1,"projects":[{{"id":"a","name":"A","repo":"o/r","branch":"main","platforms":{plats}}}]}}"#));
+        let reg = entry(r#"[{"os":"windows"},{"os":"macos","guide":"docs/MACOS.md"},{"os":"linux","soon":true},{"os":"amiga"}]"#).unwrap();
+        let p = &reg.projects[0];
+        assert_eq!(p.platforms.len(), 4);
+        assert!(p.platforms[2].soon && !p.platforms[1].soon);
+        assert_eq!(p.page_url(p.platforms[1].guide.as_ref().unwrap()), "https://github.com/o/r/blob/main/docs/MACOS.md");
+        assert!(entry(r#"[{"os":"macos","guide":"../x.md"}]"#).is_err());
+        assert!(entry(r#"[{"guide":"x.md"}]"#).is_err());
+        // Without the list, as before
+        assert!(Registry::parse(r#"{"schema":1,"projects":[{"id":"a","name":"A","repo":"o/r","branch":"main"}]}"#).unwrap().projects[0].platforms.is_empty());
+        let swt = Registry::bundled();
+        let mac = swt.find("swtrilogy").unwrap().platforms.iter().find(|x| x.os == "macos").unwrap();
+        assert_eq!(mac.guide.as_deref(), Some("docs/MACOS.md"));
     }
 
     #[test]
