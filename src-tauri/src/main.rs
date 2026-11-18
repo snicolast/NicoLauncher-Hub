@@ -113,6 +113,13 @@ struct AnnouncementView {
 }
 
 #[derive(Serialize)]
+struct PlatformView {
+    os: String,
+    guide: Option<String>,
+    soon: bool,
+}
+
+#[derive(Serialize)]
 struct ProjectView {
     id: String,
     /// The name the user gave it, or the registry's.
@@ -140,6 +147,9 @@ struct ProjectView {
     hub_icon: Option<String>,
     icon: Option<Art>,
     input_label: Option<String>,
+    /// Where it runs (Windows when the registry does not say), with each
+    /// guide as a GitHub page.
+    platforms: Vec<PlatformView>,
     dir: Option<PathBuf>,
     input: Option<PathBuf>,
     state: State,
@@ -226,6 +236,11 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 hub_icon: p.icon_url(),
                 icon: own_art(&p.id, art::Kind::Icon),
                 input_label: p.input.as_ref().map(|i| i.label.clone()),
+                platforms: if p.platforms.is_empty() {
+                    vec![PlatformView { os: "windows".into(), guide: None, soon: false }]
+                } else {
+                    p.platforms.iter().map(|x| PlatformView { os: x.os.clone(), guide: x.guide.as_deref().map(|g| p.page_url(g)), soon: x.soon }).collect()
+                },
                 // Before it is installed, show the news from GitHub instead
                 latest_news: remote.get(&p.id).cloned().unwrap_or_else(|| local.clone()),
                 news: if installed { local } else { remote.get(&p.id).cloned().unwrap_or_default() },

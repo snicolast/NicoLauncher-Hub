@@ -103,6 +103,10 @@ const STR = {
     m_hide: 'Hide from library', m_hide_sub: 'Also from the sidebar and Home', m_unhide: 'Show in library',
     soon: 'Coming soon', soon_when: 'Coming {when}', soon_short: 'Soon', soon_state: 'Not out yet',
     soon_note: 'Not out yet: there is nothing to install or play for now. When it comes out, it will be here like the others.',
+    plat_windows: 'Windows', plat_macos: 'macOS', plat_linux: 'Linux',
+    platforms: 'Platforms', plat_here: 'Installs and plays here', plat_github: 'Install from GitHub', plat_soon: 'Coming soon', plat_guide: 'Guide',
+    plat_note: 'This launcher installs the Windows version. On {list}, follow the install guide on GitHub for now.',
+    plat_and: ' and ',
     do_hide: 'Hide', do_unhide: 'Show again', chip_hidden: 'Hidden', hidden_done: '{name} is hidden. Show hidden games from the Library.', undo: 'Undo',
     all_hidden: 'All your games are hidden.',
     played_today: 'Played today', played_yesterday: 'Played yesterday', played_days: 'Played {n} days ago', played_never: 'Not played yet',
@@ -243,6 +247,10 @@ const STR = {
     m_hide: 'Ocultar de la biblioteca', m_hide_sub: 'También de la barra lateral y de Inicio', m_unhide: 'Mostrar en la biblioteca',
     soon: 'Próximamente', soon_when: 'Llega {when}', soon_short: 'Pronto', soon_state: 'Aún no ha salido',
     soon_note: 'Aún no ha salido: por ahora no hay nada que instalar ni jugar. Cuando salga, aparecerá aquí como los demás.',
+    plat_windows: 'Windows', plat_macos: 'macOS', plat_linux: 'Linux',
+    platforms: 'Plataformas', plat_here: 'Se instala y juega aquí', plat_github: 'Se instala desde GitHub', plat_soon: 'Próximamente', plat_guide: 'Guía',
+    plat_note: 'Este launcher instala la versión de Windows. En {list}, por ahora hay que seguir la guía de instalación de GitHub.',
+    plat_and: ' y ',
     do_hide: 'Ocultar', do_unhide: 'Volver a mostrar', chip_hidden: 'Oculto', hidden_done: '{name} está oculto. Los ocultos se ven desde la Biblioteca.', undo: 'Deshacer',
     all_hidden: 'Todos tus juegos están ocultos.',
     played_today: 'Jugado hoy', played_yesterday: 'Jugado ayer', played_days: 'Jugado hace {n} días', played_never: 'Sin jugar todavía',
@@ -306,6 +314,7 @@ const ICONS = {
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   back: '<path d="M15 5l-7 7 7 7"/>',
   github: '<path d="M9 19c-4 1.300-4-2-6-2.500M15 22v-3.500a3 3 0 0 0-.8-2.300c2.800-.3 5.800-1.400 5.800-6.200a4.800 4.800 0 0 0-1.300-3.300 4.500 4.500 0 0 0-.1-3.300s-1.100-.3-3.500 1.300a12 12 0 0 0-6.200 0C6.500 1.100 5.400 1.400 5.400 1.400a4.500 4.500 0 0 0-.1 3.300A4.800 4.800 0 0 0 4 8c0 4.800 3 5.900 5.800 6.200A3 3 0 0 0 9 16.500V22"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.600v.200"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   coffee: '<path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M16 10h1.500a2.500 2.500 0 0 1 0 5H16"/><path d="M8 3v2.500M11.500 3v2.500"/>',
   youtube: '<rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10 9.200v5.600l5-2.800z" fill="currentColor" stroke="none"/>',
@@ -1398,7 +1407,7 @@ function renderLibrary() {
     eye.addEventListener('pointerdown', (e) => e.stopPropagation());
     const top = el('div', { class: 'card-top' },
       gameMark(p, 'card-logo', 'card-title'),
-      el('div', { class: 'card-flags' }, p.hidden ? el('span', { class: 'chip' }, t('chip_hidden')) : null, updateChip(p), eye));
+      el('div', { class: 'card-flags' }, p.hidden ? el('span', { class: 'chip' }, t('chip_hidden')) : null, updateChip(p), platStrip(p), eye));
     // Until there is a folder to install into, the projects are only shown:
     // the welcome box above is the one thing to do. A project that already
     // has a folder of its own stays in use. A card has no button of its own:
@@ -1565,6 +1574,7 @@ function renderProject() {
   if (!p && !soon) { show('library'); return; }
   $('view-project').classList.toggle('soon-page', !!soon);
   $('p-details-block').hidden = !!soon;
+  $('p-plat-block').hidden = true;
   if (soon) { renderTeaser(soon); return; }
   const busy = !!snap.busy;
   $('back-label').textContent = t(cameFrom === 'home' ? 'nav_home' : 'nav_library');
@@ -1652,6 +1662,7 @@ function renderProject() {
   if (groups.length > shown) rows.push(el('button', { class: 'btn ghost small news-more', onclick: () => { projectNewsAll = true; renderProject(); } }, t('home_more')));
   news.replaceChildren(...(rows.length ? rows : [el('p', { class: 'dim' }, t('no_news'))]));
   news.classList.toggle('timeline', rows.length > 0);
+  renderPlatforms(p);
   renderAchievements(p);
 }
 
@@ -1804,6 +1815,46 @@ $('view-project').addEventListener('scroll', () => closeManageMenu());
 let achSeen = 0;
 const achKnown = new Map();   // project id -> ids unlocked, while the launcher runs
 const unlockedOf = (p) => p.achievements.filter((a) => a.unlocked > 0);
+
+// ------------------------------------------------------------ platforms
+// Where a game runs: small icons on its card, a block on its page. The
+// launcher installs the Windows version; the others have their own guide
+// on GitHub. Windows is drawn here; the apple and the penguin are masks
+// (img/platforms), painted in the text colour
+const PLATFORMS = ['windows', 'macos', 'linux'];
+const WINDOWS_GLYPH = '<path fill="currentColor" d="m6648 4741v1863c0 4-1 7-1 11-6 46-48 79-95 73l-1850-245c-45-2-81-39-81-84v-1620h1c0-47 38-85 84-85l1850 3h7c47 0 85 38 85 84zm-2227-3v1586c-6 46-48 79-95 73l-1744-217c-43-4-77-40-77-84v-1355c0-46 38-84 85-84l1739-4h8c46 0 84 38 84 85zm0-1911v1545c0 46-38 84-84 84h-1756c-47 0-85-38-85-84v-1324c0-42 32-79 74-84l1748-220c6-1 12-2 19-2 46 0 84 38 84 85zm2142 1629h-1857c-47 0-85-38-85-84v-1589h1c0-42 31-78 73-84l1850-242c6-1 12-2 18-2 47 0 85 38 85 85v1832c0 46-38 84-85 84z"/>';
+function platGlyph(os) {
+  const s = el('span', { class: 'pico' });
+  if (os === 'windows') s.innerHTML = `<svg viewBox="2480 2480 4240 4240">${WINDOWS_GLYPH}</svg>`;
+  else s.classList.add('pmask', 'pm-' + os);
+  return s;
+}
+// The ones this launcher knows (a newer list may name others), Windows when
+// the registry says nothing
+const platsOf = (p) => (p.platforms?.length ? p.platforms : [{ os: 'windows' }]).filter((x) => PLATFORMS.includes(x.os));
+const platList = (xs) => xs.map((x) => t('plat_' + x.os)).join(t('plat_and'));
+// Installed from GitHub, not from here
+const fromGithub = (x) => x.os !== 'windows' && !x.soon;
+// On a card, top right: where it runs today
+function platStrip(p) {
+  const xs = platsOf(p).filter((x) => !x.soon);
+  if (!xs.length) return null;
+  return el('span', { class: 'plat-strip', title: platList(xs) }, ...xs.map((x) => platGlyph(x.os)));
+}
+// On its page: one row each, the guide beside the ones from GitHub, and why
+function renderPlatforms(p) {
+  const xs = platsOf(p);
+  $('p-plat-block').hidden = !xs.length;
+  const rows = xs.map((x) => el('div', { class: 'plat-row' + (x.soon ? ' soon' : '') },
+    el('span', { class: 'plat-ico' }, platGlyph(x.os)),
+    el('div', { class: 'plat-text' }, el('strong', {}, t('plat_' + x.os)),
+      el('span', { class: 'dim' }, t(x.soon ? 'plat_soon' : fromGithub(x) ? 'plat_github' : 'plat_here'))),
+    fromGithub(x) ? el('a', { class: 'btn ghost small plat-guide', href: '#', title: x.guide || p.url,
+      onclick: (e) => { e.preventDefault(); openLink(x.guide || p.url); } }, t('plat_guide'), icon('external')) : null));
+  const others = xs.filter(fromGithub);
+  if (others.length) rows.push(el('div', { class: 'note plat-note' }, icon('info'), el('span', {}, t('plat_note', { list: platList(others) }))));
+  $('p-plat').replaceChildren(...rows);
+}
 
 function achBadge(p) {
   if (!p.achievements.length) return null;

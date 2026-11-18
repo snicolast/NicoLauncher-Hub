@@ -21,6 +21,10 @@
       },
       "requires": { "python": "3.10", "cmake": "3.27", "msvc": true },
       "update_state": "save/update",
+      "platforms": [
+        { "os": "windows" },
+        { "os": "macos", "guide": "docs/MACOS.md" }
+      ],
       "art": {
         "hero": "docs/img/death_star.jpg",
         "hub_logo": "art/logos/swtrilogy.png",
