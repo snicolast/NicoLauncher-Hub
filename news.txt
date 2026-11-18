@@ -20,7 +20,7 @@
 
 [16] 2026-11-18
 - Launcher 0.3.16: projects on the way now show up as "Coming soon", in the Library, the sidebar and on Home, with a page of their own
-- First one: Nico VC2 is coming soon
+- First one: Nico VC2 is coming soon (early preview)
 
 [15] 2026-11-18
 - Launcher 0.3.15: the latest video now plays right inside the launcher. If a video can't be played there, a button opens it on YouTube
