@@ -1,0 +1,13 @@
+The dlss_bridge-*.dll files in this folder contain the NVIDIA DLSS SDK
+(the NGX library, nvsdk_ngx_s.lib), Copyright (c) NVIDIA Corporation.
+NVIDIA, DLSS and RTX are trademarks of NVIDIA Corporation.
+
+They are parts of the games listed in registry.json, not stand-alone products:
+each one works only with the game and the version named in the .txt next to
+it. The NVIDIA DLSS SDK in them is under NVIDIA's own license, in
+LICENSE-NVIDIA-DLSS-SDK-<version>.txt in this folder, not under the license of
+this repository. The rest of each DLL is the game's own code (tools/dlss_bridge
+and src/video/dlss*.cpp in its repository), under the game's license.
+
+nvngx_dlss.dll, NVIDIA's DLSS runtime, is not kept here: NicoLauncher
+downloads it from NVIDIA's repository (https://github.com/NVIDIA/DLSS).
