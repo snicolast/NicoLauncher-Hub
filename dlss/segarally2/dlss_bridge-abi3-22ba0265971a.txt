@@ -1,0 +1,8 @@
+dlss_bridge-abi3-22ba0265971a.dll
+Game:            https://github.com/snicolast/SegaRally2Native/commit/22ba0265971aa07ffb2aa59ccddbe223a1a0d5f2
+Built from:      tools/dlss_bridge, src/video/dlss.cpp, src/video/dlss_bridge.cpp
+Bridge ABI:      3 (DLSS_BRIDGE_ABI in src/video/dlss_bridge.h)
+NVIDIA DLSS SDK: v310.9.16 (nvsdk_ngx_s.lib, license: ../LICENSE-NVIDIA-DLSS-SDK-v310.9.16.txt)
+SHA256:          19fb48ce1701e40ddcd93cf306efbd821ccd10f2308915385a9568c02b978df9
+Size:            310272 bytes
+Built by:        https://github.com/snicolast/NicoLauncher-Hub/actions/runs/44617245677
