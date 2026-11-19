@@ -1,0 +1,154 @@
+# Builds a game's dlss_bridge.dll with MSVC and proposes it for dlss/<game>/
+# in a pull request. The games built by NicoLauncher (llvm-mingw) reach DLSS
+# only through that DLL, and NVIDIA's NGX library links with MSVC alone, so it
+# cannot be built on the player's PC. Their hub.toml downloads it from here.
+#
+# Run by hand from Actions: "DLSS bridge" > Run workflow, pick the game. Only
+# tools/dlss_bridge and src/video of the game are built: no ROM and nothing
+# made from one is involved.
+name: DLSS bridge
+
+on:
+  workflow_dispatch:
+    inputs:
+      game:
+        description: Game (its id in registry.json)
+        type: choice
+        options: [segarally2, swtrilogy, lostworld]
+      ref:
+        description: Commit or branch of the game (empty = its branch in registry.json)
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the game
+        id: game
+        env:
+          GAME: ${{ inputs.game }}
+          REF: ${{ inputs.ref }}
+        run: |
+          python - <<'EOF'
+          import json, os
+          game = os.environ["GAME"]
+          p = next(p for p in json.load(open("registry.json", encoding="utf-8"))["projects"] if p["id"] == game)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"repo={p['repo']}\n")
+              out.write(f"ref={os.environ['REF'].strip() or p['branch']}\n")
+          EOF
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.game.outputs.repo }}
+          ref: ${{ steps.game.outputs.ref }}
+          path: game
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build
+        working-directory: game
+        run: |
+          cmake -S tools/dlss_bridge -B build/dlss_bridge -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/dlss_bridge
+
+      # The game's own loader against the DLL just built: it loads and agrees on the ABI
+      - name: Test
+        working-directory: game
+        run: ctest --test-dir build/dlss_bridge --output-on-failure
+
+      - name: Put it in dlss/
+        id: put
+        env:
+          GAME: ${{ inputs.game }}
+          REPO: ${{ steps.game.outputs.repo }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          commit=$(git -C game rev-parse HEAD)
+          short=${commit:0:12}
+          abi=$(sed -n 's/^#define DLSS_BRIDGE_ABI \([0-9]\+\).*/\1/p' game/src/video/dlss_bridge.h)
+          sdk=$(sed -n 's/^set(NGX_TAG \(v[0-9.]\+\)).*/\1/p' game/tools/dlss_bridge/CMakeLists.txt)
+          [ -n "$abi" ] && [ -n "$sdk" ] || { echo "Could not read DLSS_BRIDGE_ABI or NGX_TAG"; exit 1; }
+          name=dlss_bridge-abi$abi-$short.dll
+          mkdir -p dlss/$GAME
+          cp game/build/dlss_bridge/dlss_bridge.dll dlss/$GAME/$name
+          cp game/build/dlss_bridge/ngx-$sdk/LICENSE.txt dlss/LICENSE-NVIDIA-DLSS-SDK-$sdk.txt
+          sha=$(sha256sum dlss/$GAME/$name | cut -d' ' -f1)
+          size=$(stat -c %s dlss/$GAME/$name)
+          url=https://raw.githubusercontent.com/${{ github.repository }}/main/dlss/$GAME/$name
+          cat > dlss/$GAME/${name%.dll}.txt <<EOF
+          $name
+          Game:            https://github.com/$REPO/commit/$commit
+          Built from:      tools/dlss_bridge, src/video/dlss.cpp, src/video/dlss_bridge.cpp
+          Bridge ABI:      $abi (DLSS_BRIDGE_ABI in src/video/dlss_bridge.h)
+          NVIDIA DLSS SDK: $sdk (nvsdk_ngx_s.lib, license: ../LICENSE-NVIDIA-DLSS-SDK-$sdk.txt)
+          SHA256:          $sha
+          Size:            $size bytes
+          Built by:        $RUN_URL
+          EOF
+          cat dlss/$GAME/${name%.dll}.txt
+          {
+            echo "name=$name"; echo "commit=$commit"; echo "short=$short"; echo "abi=$abi"
+            echo "sdk=$sdk"; echo "sha=$sha"; echo "url=$url"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GAME: ${{ inputs.game }}
+          REPO: ${{ steps.game.outputs.repo }}
+          NAME: ${{ steps.put.outputs.name }}
+          COMMIT: ${{ steps.put.outputs.commit }}
+          SHORT: ${{ steps.put.outputs.short }}
+          ABI: ${{ steps.put.outputs.abi }}
+          SDK: ${{ steps.put.outputs.sdk }}
+          SHA: ${{ steps.put.outputs.sha }}
+          URL: ${{ steps.put.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          branch=dlss-bridge/$GAME-abi$ABI-$SHORT
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add dlss
+          git commit -m "dlss_bridge.dll for $GAME (ABI $ABI, $REPO@$SHORT, DLSS SDK $SDK)"
+          git push origin "$branch"
+          cat > body.md <<EOF
+          \`dlss_bridge.dll\` for **$GAME**, built with MSVC by $RUN_URL
+
+          - Game commit: https://github.com/$REPO/commit/$COMMIT
+          - Bridge ABI: $ABI
+          - NVIDIA DLSS SDK: $SDK
+          - SHA256: \`$SHA\`
+
+          For the game's \`hub.toml\`, once this is merged:
+
+          \`\`\`toml
+          [[fetch]]
+          name = "DLSS bridge"
+          url = "$URL"
+          sha256 = "$SHA"
+          to = "dlss_bridge.dll"
+          \`\`\`
+          EOF
+          title="dlss_bridge.dll for $GAME (ABI $ABI, $SHORT)"
+          if ! gh pr create --base main --head "$branch" --title "$title" --body-file body.md; then
+            compare="${{ github.server_url }}/${{ github.repository }}/compare/main...$branch?expand=1"
+            echo "Could not open the pull request (Settings > Actions > Allow GitHub Actions to create pull requests). Open it from: $compare"
+            { echo "Open the pull request: $compare"; echo; cat body.md; } >> "$GITHUB_STEP_SUMMARY"
+          fi
