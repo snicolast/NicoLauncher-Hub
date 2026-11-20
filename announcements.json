@@ -1,4 +1,25 @@
 {
   "schema": 1,
-  "announcements": []
+  "announcements": [
+    {
+      "id": "2026-11-swt-linux-help-ports",
+      "date": "2026-11-21",
+      "expires": "2027-03-01",
+      "level": "info",
+      "label": "Help wanted",
+      "title": "Nico SWT now runs on Linux. Help port SR2 and TLW too",
+      "image": "art/announcements/2026-11-swt-linux.jpg",
+      "body": [
+        "Nico SWT has a native Linux version, thanks to vojenfr, and it joins the macOS version made by Nutcasey. To try it, open Nico SWT and press Guide beside your system.",
+        "Nico SR2 and Nico TLW still run only on Windows. If you know some C++ and have a Mac or a Linux PC, you can help bring them over:",
+        "- Open a pull request on the game's repository straight away",
+        "- Or write on GitHub first, if you would rather talk it through",
+        "The Nico SWT ports are a good place to start, and every port is credited in the launcher."
+      ],
+      "buttons": [
+        { "label": "Write on GitHub", "url": "https://github.com/snicolast/NicoLauncher-Hub/discussions" },
+        { "label": "Game repositories", "url": "https://github.com/snicolast?tab=repositories" }
+      ]
+    }
+  ]
 }
