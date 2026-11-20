@@ -23,7 +23,8 @@
       "update_state": "save/update",
       "platforms": [
         { "os": "windows" },
-        { "os": "macos", "guide": "docs/MACOS.md" }
+        { "os": "macos", "guide": "docs/MACOS.md" },
+        { "os": "linux", "guide": "docs/LINUX.md" }
       ],
       "art": {
         "hero": "docs/img/death_star.jpg",
