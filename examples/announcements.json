@@ -8,6 +8,7 @@
       "level": "info",
       "label": "Help wanted",
       "title": "Help bring the recomps to Linux, Steam Deck and Mac",
+      "image": "art/announcements/2026-11-help-wanted.jpg",
       "body": [
         "Every recomp is open source, and I want them to be the best way there is to play these games. Some things are bigger than one person, and that is where you come in:",
         "- A Linux port, and with it the Steam Deck",
@@ -35,6 +36,7 @@
       "game": "segarally2",
       "label": "Testers wanted",
       "title": "Sega Rally 2 on Steam Deck: testers wanted",
+      "image": "https://raw.githubusercontent.com/snicolast/SegaRally2Native/main/docs/img/snow.jpg",
       "body": [
         "If you have a Steam Deck, I would like to know how Sega Rally 2 Native runs on it through Proton: what works, what does not, and how smooth it feels.",
         "A short report with your settings is enough, and it helps decide what the Linux port needs first."

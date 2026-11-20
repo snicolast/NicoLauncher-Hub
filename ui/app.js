@@ -2205,8 +2205,14 @@ let annClose = null;
 const annAll = () => (snap && snap.announcements) || [];
 const annUnseen = () => annAll().filter((a) => !a.seen);
 
+// Pictures of announcements not seen yet are fetched ahead, so the window
+// shows them at once when it opens
+const annFetched = new Set();
 function renderAnnounce() {
   const unseen = annUnseen();
+  for (const a of unseen) {
+    if (a.image && !annFetched.has(a.image)) { annFetched.add(a.image); new Image().src = a.image; }
+  }
   const b = $('announce');
   b.hidden = !annAll().length;
   b.classList.toggle('unread', unseen.length > 0);
@@ -2248,12 +2254,25 @@ function openAnnouncements(startId) {
     const a = all[i];
     shown.add(a.id);
     const p = a.game && snap.projects.find((x) => x.id === a.game);
-    const head = el('div', { class: 'ann-head' + (p ? ' game' : '') });
-    if (p) {
-      head.style.backgroundImage = gradient(p);
-      if (p.hero) head.append(picture(p.hero, 'ann-hero'));
-      head.append(gameMark(p, 'ann-logo', 'ann-title'));
-    } else head.append(el('span', { class: 'ann-art', 'aria-hidden': 'true' }, icon('megaphone')));
+    const head = el('div', { class: 'ann-head' });
+    // The game's picture and logo, or a large megaphone
+    const usual = () => {
+      head.classList.toggle('game', !!p);
+      if (p) {
+        head.style.backgroundImage = gradient(p);
+        head.prepend(...[p.hero ? picture(p.hero, 'ann-hero') : null, gameMark(p, 'ann-logo', 'ann-title')].filter(Boolean));
+      } else head.prepend(el('span', { class: 'ann-art', 'aria-hidden': 'true' }, icon('megaphone')));
+    };
+    // The announcement's own picture fills the top instead, cut to the frame
+    // from its middle. Until it arrives the frame keeps its size, so nothing
+    // jumps; if it cannot be loaded the window looks as without one
+    if (a.image) {
+      head.classList.add('pic');
+      const img = el('img', { src: a.image, alt: '', class: 'ann-hero', draggable: 'false' });
+      img.addEventListener('load', () => img.classList.add('in'));
+      img.addEventListener('error', () => { img.remove(); head.classList.remove('pic'); usual(); });
+      head.append(img);
+    } else usual();
     head.append(
       el('div', { class: 'ann-tags' },
         el('span', { class: 'ann-badge' }, icon('megaphone'), a.label || t('ann_label')),
