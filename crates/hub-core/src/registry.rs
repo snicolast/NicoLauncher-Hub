@@ -362,6 +362,9 @@ mod tests {
         let swt = Registry::bundled();
         let mac = swt.find("swtrilogy").unwrap().platforms.iter().find(|x| x.os == "macos").unwrap();
         assert_eq!(mac.guide.as_deref(), Some("docs/MACOS.md"));
+        let linux = swt.find("swtrilogy").unwrap().platforms.iter().find(|x| x.os == "linux").unwrap();
+        assert_eq!(linux.guide.as_deref(), Some("docs/LINUX.md"));
+        assert!(!linux.soon);
     }
 
     #[test]
