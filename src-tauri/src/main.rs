@@ -120,6 +120,14 @@ struct PlatformView {
 }
 
 #[derive(Serialize)]
+struct CreditView {
+    github: String,
+    role: String,
+    os: Option<String>,
+    url: String,
+}
+
+#[derive(Serialize)]
 struct ProjectView {
     id: String,
     /// The name the user gave it, or the registry's.
@@ -150,6 +158,8 @@ struct ProjectView {
     /// Where it runs (Windows when the registry does not say), with each
     /// guide as a GitHub page.
     platforms: Vec<PlatformView>,
+    /// Its contributors, for the Credits page.
+    credits: Vec<CreditView>,
     dir: Option<PathBuf>,
     input: Option<PathBuf>,
     state: State,
@@ -241,6 +251,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 } else {
                     p.platforms.iter().map(|x| PlatformView { os: x.os.clone(), guide: x.guide.as_deref().map(|g| p.page_url(g)), soon: x.soon }).collect()
                 },
+                credits: p.credits.iter().map(|c| CreditView { github: c.github.clone(), role: c.role.clone(), os: c.os.clone(), url: c.profile_url() }).collect(),
                 // Before it is installed, show the news from GitHub instead
                 latest_news: remote.get(&p.id).cloned().unwrap_or_else(|| local.clone()),
                 news: if installed { local } else { remote.get(&p.id).cloned().unwrap_or_default() },

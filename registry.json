@@ -25,6 +25,10 @@
         { "os": "windows" },
         { "os": "macos", "guide": "docs/MACOS.md" }
       ],
+      "credits": [
+        { "github": "Nutcasey", "role": "port", "os": "macos" },
+        { "github": "vojenfr", "role": "port", "os": "linux" }
+      ],
       "art": {
         "hero": "docs/img/death_star.jpg",
         "hub_logo": "art/logos/swtrilogy.png",
