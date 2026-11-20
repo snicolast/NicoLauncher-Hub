@@ -31,6 +31,11 @@ pub struct Announcement {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     pub title: String,
+    /// A picture at the top of the window: a path in this repository
+    /// (`art/announcements/...`) or a raw.githubusercontent.com URL. Read as
+    /// a URL; anything else is dropped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
     /// Plain text: a line is a paragraph, "- " starts an item of a list.
     #[serde(default)]
     pub body: Vec<String>,
@@ -71,6 +76,7 @@ pub fn parse(text: &str) -> Result<Vec<Announcement>> {
             // Only web pages, opened in the browser: nothing else is a link
             a.buttons.retain(|b| b.url.starts_with("https://") && !b.label.trim().is_empty());
             a.buttons.truncate(MAX_BUTTONS);
+            a.image = a.image.as_deref().and_then(image_url);
             a
         })
         .collect();
@@ -79,6 +85,19 @@ pub fn parse(text: &str) -> Result<Vec<Announcement>> {
     list.sort_by(|a, b| b.date.cmp(&a.date));
     Ok(list)
 }
+
+/// Where the window loads a picture from. Only GitHub's raw files: the
+/// launcher's page refuses pictures from anywhere else, and a picture in this
+/// repository is reviewed like the rest of the announcement.
+fn image_url(image: &str) -> Option<String> {
+    let image = image.trim();
+    if let Some(rest) = image.strip_prefix(IMAGE_HOST) {
+        return crate::registry::is_plain_relative(rest).then(|| image.to_string());
+    }
+    crate::registry::is_plain_relative(image).then(|| crate::registry::hub_raw_url(&image.replace('\\', "/")))
+}
+
+const IMAGE_HOST: &str = "https://raw.githubusercontent.com/";
 
 pub fn fetch() -> Result<Vec<Announcement>> {
     parse(&http_get(URL)?.into_string().map_err(err("Bad announcements file"))?)
@@ -108,7 +127,8 @@ mod tests {
           "buttons": [ { "label": "I can help", "url": "https://github.com/x" },
                        { "label": "Bad", "url": "file:///C:/Windows" },
                        { "label": "Two", "url": "https://a" }, { "label": "Three", "url": "https://b" } ] },
-        { "id": "sr2", "date": "2026-11-13", "level": "urgent!!", "game": "segarally2", "title": "Testers" },
+        { "id": "sr2", "date": "2026-11-13", "level": "urgent!!", "game": "segarally2", "title": "Testers",
+          "image": "art/announcements/sr2-deck.jpg" },
         { "id": "", "title": "No id" },
         { "id": "broken", "title": 5 },
         { "id": "help", "date": "2026-11-15", "title": "Same id again" }
@@ -131,6 +151,30 @@ mod tests {
         assert_eq!(labels, ["I can help", "Two"]);
         assert_eq!(list[1].level, "info");
         assert_eq!(list[2].level, "info");
+    }
+
+    #[test]
+    fn images_come_from_github_only() {
+        let list = parse(SAMPLE).unwrap();
+        assert_eq!(list[0].image, None);
+        assert_eq!(
+            list[1].image.as_deref(),
+            Some("https://raw.githubusercontent.com/snicolast/NicoLauncher-Hub/main/art/announcements/sr2-deck.jpg")
+        );
+        let one = |image: &str| {
+            let text = format!(r#"{{"announcements":[{{"id":"a","title":"A","image":{image:?}}}]}}"#);
+            parse(&text).unwrap().remove(0).image
+        };
+        let raw = "https://raw.githubusercontent.com/snicolast/SegaRally2Native/main/docs/img/hero.jpg";
+        assert_eq!(one(raw).as_deref(), Some(raw));
+        assert_eq!(one("http://raw.githubusercontent.com/a/b/main/x.png"), None);
+        assert_eq!(one("https://example.com/x.png"), None);
+        assert_eq!(one("https://raw.githubusercontent.com/../x.png"), None);
+        assert_eq!(one("../x.png"), None);
+        assert_eq!(one("/x.png"), None);
+        assert_eq!(one("C:\\x.png"), None);
+        assert_eq!(one("file:///C:/x.png"), None);
+        assert_eq!(one(""), None);
     }
 
     #[test]
