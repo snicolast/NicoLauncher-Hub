@@ -18,6 +18,11 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[18] 2026-11-21
+- Launcher 0.3.18: Credits now show everyone who worked on each game: its creator and the people who brought it to other systems, with a link to their GitHub
+- Nico SWT also runs on Linux: its page has a Guide button with the steps to install it from GitHub (the launcher installs the Windows version)
+- Notices can now come with a picture
+
 [17] 2026-11-19
 - Launcher 0.3.17: each game now shows the systems it runs on: small icons on its card in the Library, and a Platforms block on its page
 - Nico SWT also runs on macOS: its page has a Guide button with the steps to install it from GitHub (the launcher installs the Windows version)
