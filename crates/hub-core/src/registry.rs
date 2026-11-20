@@ -107,6 +107,29 @@ pub struct Project {
     /// than 0.3.17 skip it.
     #[serde(default)]
     pub platforms: Vec<Platform>,
+    /// Who else made part of it (a port to another system, say), shown on
+    /// the Credits page under its author. Launchers older than 0.3.18 skip it.
+    #[serde(default)]
+    pub credits: Vec<Credit>,
+}
+
+/// One contributor of a project, credited by their GitHub account.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Credit {
+    /// Their GitHub login: the name shown and the profile linked.
+    pub github: String,
+    /// What they did: `port` (to `os`), or words of their own, shown as
+    /// they are.
+    pub role: String,
+    /// The system of a port: `macos`, `linux`, `windows`.
+    #[serde(default)]
+    pub os: Option<String>,
+}
+
+impl Credit {
+    pub fn profile_url(&self) -> String {
+        format!("https://github.com/{}", self.github)
+    }
 }
 
 /// One system a project runs on, or will soon.
@@ -194,6 +217,16 @@ impl Project {
     }
 }
 
+/// A GitHub login: letters, digits and single hyphens, at most 39.
+fn login_ok(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 39
+        && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+        && !s.starts_with('-')
+        && !s.ends_with('-')
+        && !s.contains("--")
+}
+
 impl Registry {
     pub fn parse(text: &str) -> Result<Registry> {
         let reg: Registry = serde_json::from_str(text).map_err(err("Bad registry"))?;
@@ -214,6 +247,11 @@ impl Registry {
                 return Err(format!("Bad project entry in the registry: {:?}", p.id));
             }
             p.requires.validate().map_err(|e| format!("{e} ({})", p.id))?;
+            for c in &p.credits {
+                if !login_ok(&c.github) || c.role.trim().is_empty() {
+                    return Err(format!("Bad credit in the registry ({}): {:?}", p.id, c.github));
+                }
+            }
             let s = &p.scripts;
             let files = [&p.exe, &p.news, &s.install, &s.build, &s.update, &p.update_state, &p.art.hero, &p.art.logo, &p.art.hub_logo, &p.art.hub_icon];
             let guides = p.platforms.iter().filter_map(|x| x.guide.as_ref());
@@ -365,6 +403,27 @@ mod tests {
         let linux = swt.find("swtrilogy").unwrap().platforms.iter().find(|x| x.os == "linux").unwrap();
         assert_eq!(linux.guide.as_deref(), Some("docs/LINUX.md"));
         assert!(!linux.soon);
+    }
+
+    #[test]
+    fn credits_of_contributors() {
+        let entry = |credits: &str| Registry::parse(&format!(r#"{{"schema":1,"projects":[{{"id":"a","name":"A","repo":"o/r","branch":"main","credits":{credits}}}]}}"#));
+        let reg = entry(r#"[{"github":"Some-One","role":"port","os":"macos"},{"github":"x2","role":"Sound fixes"}]"#).unwrap();
+        let c = &reg.projects[0].credits;
+        assert_eq!(c.len(), 2);
+        assert_eq!(c[0].os.as_deref(), Some("macos"));
+        assert_eq!(c[0].profile_url(), "https://github.com/Some-One");
+        assert_eq!(c[1].os, None);
+        for bad in ["../x", "a b", "-a", "a--b", "", "a/b"] {
+            assert!(entry(&format!(r#"[{{"github":"{bad}","role":"port"}}]"#)).is_err(), "{bad}");
+        }
+        assert!(entry(r#"[{"github":"a","role":" "}]"#).is_err());
+        assert!(entry(r#"[{"role":"port"}]"#).is_err());
+        // Without the list, as before
+        assert!(Registry::parse(r#"{"schema":1,"projects":[{"id":"a","name":"A","repo":"o/r","branch":"main"}]}"#).unwrap().projects[0].credits.is_empty());
+        let swt = Registry::bundled();
+        let ports: Vec<_> = swt.find("swtrilogy").unwrap().credits.iter().map(|c| (c.github.as_str(), c.os.as_deref())).collect();
+        assert_eq!(ports, [("Nutcasey", Some("macos")), ("vojenfr", Some("linux"))]);
     }
 
     #[test]

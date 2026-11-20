@@ -11,7 +11,7 @@ const STR = {
     nav_library: 'Library', nav_settings: 'Settings', nav_credits: 'Credits',
     by_author: 'by', refresh: 'Refresh', lib_sub: '{n} projects · {ready} ready to play',
     first_run_title: 'Welcome', about: 'About', screenshots: 'Screenshots', language_help: 'The language of the launcher.',
-    credits_projects: 'Projects', show_log: 'Show log', hide_log: 'Hide log', installed_version: 'Installed news',
+    credits_projects: 'Projects and credits', show_log: 'Show log', hide_log: 'Hide log', installed_version: 'Installed news',
     first_run: 'Choose the folder where projects will be installed. Each one gets a folder of its own inside it.',
     root_gone_title: 'The install folder is not there', root_gone: '{path} was not found: it was deleted or moved, or its drive is not connected. Choose the folder where projects will be installed.',
     choose_folder: 'Choose folder',
@@ -69,7 +69,8 @@ const STR = {
     license_point_games: 'It never downloads or shares built games or ROMs, and it must not be changed to do so. You use your own copy of each game.',
     license_point_warranty: 'It is an unofficial fan project, provided as is: no warranty, and no obligation of support or updates.',
     license_full: 'Full text', license_accept: 'I accept', license_scroll: 'Scroll to the end of the text to accept.', license_decline: 'Exit',
-    credits_author: 'NicoLauncher and the projects it lists are made by snicolast.',
+    credits_author: 'Creator of NicoLauncher and every recomp it lists. Ports to other systems are made by contributors, credited below.',
+    credits_original: 'Recomp and Windows version', credits_creator: 'Creator', credits_port: '{os} port', credits_profile: 'GitHub profile of {name}',
     credits_rules_title: 'What this launcher does not do',
     credits_rule_roms: 'It does not include, download or link to game ROMs. You use your own copy.',
     credits_rule_builds: 'It does not download or share built games. Each project is built on your PC from its source code.',
@@ -155,7 +156,7 @@ const STR = {
     nav_library: 'Biblioteca', nav_settings: 'Ajustes', nav_credits: 'Créditos',
     by_author: 'por', refresh: 'Actualizar lista', lib_sub: '{n} proyectos · {ready} listos para jugar',
     first_run_title: 'Bienvenido', about: 'Acerca de', screenshots: 'Capturas', language_help: 'El idioma del launcher.',
-    credits_projects: 'Proyectos', show_log: 'Ver log', hide_log: 'Ocultar log', installed_version: 'Novedades instaladas',
+    credits_projects: 'Proyectos y créditos', show_log: 'Ver log', hide_log: 'Ocultar log', installed_version: 'Novedades instaladas',
     first_run: 'Elige la carpeta donde se instalarán los proyectos. Cada uno tendrá su propia carpeta dentro.',
     root_gone_title: 'La carpeta de instalación no está', root_gone: 'No se encontró {path}: se borró o se movió, o su unidad no está conectada. Elige la carpeta donde se instalarán los proyectos.',
     choose_folder: 'Elegir carpeta',
@@ -213,7 +214,8 @@ const STR = {
     license_point_games: 'Nunca descarga ni comparte juegos compilados ni ROMs, y no se puede modificar para que lo haga. Usas tu propia copia de cada juego.',
     license_point_warranty: 'Es un proyecto de fans no oficial, que se ofrece tal cual: sin garantía y sin obligación de soporte ni de actualizaciones.',
     license_full: 'Texto completo (en inglés, que es el que vale)', license_accept: 'Acepto', license_scroll: 'Baja hasta el final del texto para poder aceptar.', license_decline: 'Salir',
-    credits_author: 'NicoLauncher y los proyectos que lista son obra de snicolast.',
+    credits_author: 'Creador de NicoLauncher y de cada recomp de la lista. Los ports a otros sistemas son obra de colaboradores, que salen abajo.',
+    credits_original: 'Recomp y versión Windows', credits_creator: 'Creador', credits_port: 'Port a {os}', credits_profile: 'Perfil de GitHub de {name}',
     credits_rules_title: 'Lo que este launcher no hace',
     credits_rule_roms: 'No incluye, descarga ni enlaza ROMs de juegos. Usas tu propia copia.',
     credits_rule_builds: 'No descarga ni comparte juegos compilados. Cada proyecto se compila en tu PC desde su código fuente.',
@@ -1966,10 +1968,33 @@ function renderSettings() {
   for (const b of $('s-lang').children) b.classList.toggle('on', b.dataset.lang === lang);
 }
 
+// One card per project: its repository, snicolast first as its creator, then
+// whoever else made part of it (the registry's credits: a port to another
+// system, or words of their own)
+const AUTHOR = { github: 'snicolast', url: 'https://github.com/snicolast' };
+function creditRow(c, glyph, role, me) {
+  return el('div', { class: 'cr-person' + (me ? ' me' : '') },
+    el('span', { class: 'cr-os' }, glyph),
+    el('span', { class: 'cr-role' }, role),
+    el('span', { class: 'cr-who' }, c.github, me ? el('span', { class: 'cr-tag' }, t('credits_creator')) : null),
+    el('button', { class: 'cr-gh', title: t('credits_profile', { name: c.github }), onclick: () => openLink(c.url) }, icon('github'), c.github));
+}
+function creditOf(c) {
+  const known = c.os && PLATFORMS.includes(c.os);
+  const role = c.role === 'port' && known ? t('credits_port', { os: t('plat_' + c.os) }) : c.role;
+  return creditRow(c, known ? platGlyph(c.os) : icon('heart'), role, false);
+}
 function renderCredits() {
   $('c-repos').replaceChildren(...snap.projects.map((p) =>
-    el('button', { onclick: () => openLink(p.url) }, icon('github'), p.name,
-      el('span', { class: 'dim' }, p.url.replace('https://github.com/', '')))));
+    el('div', { class: 'cr-proj' },
+      el('div', { class: 'cr-head' },
+        iconClear(p) ? el('span', { class: 'side-art side-icon clear' }, iconPicture(p))
+          : el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, iconPicture(p)),
+        el('strong', {}, p.name),
+        el('button', { class: 'cr-repo', title: p.url, onclick: () => openLink(p.url) }, icon('github'), p.url.replace('https://github.com/', ''))),
+      el('div', { class: 'cr-people' },
+        creditRow(AUTHOR, platGlyph('windows'), t('credits_original'), true),
+        ...(p.credits || []).map(creditOf)))));
 }
 
 // ---------------------------------------------------------------- feedback
