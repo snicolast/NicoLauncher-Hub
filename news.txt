@@ -18,6 +18,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[19] 2026-11-22
+- Launcher 0.3.19: Credits also list the people who added features to a game, not only ports
+- Nico SR2 credits BrianGilbert, who added OGS-TS telemetry for motion rigs and haptics
+
 [18] 2026-11-21
 - Launcher 0.3.18: Credits now show everyone who worked on each game: its creator and the people who brought it to other systems, with a link to their GitHub
 - Nico SWT also runs on Linux: its page has a Guide button with the steps to install it from GitHub (the launcher installs the Windows version)
