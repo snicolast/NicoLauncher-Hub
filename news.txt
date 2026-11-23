@@ -18,6 +18,12 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[21] 2026-11-24
+- Launcher 0.3.21: Feedback is new. Ideas, recomp proposals and messages are sent straight from the launcher, only snicolast reads them, and no GitHub account is needed
+- GitHub Discussions is closing: from now on, send ideas and messages from the launcher's Feedback page
+- Problem reports still open an issue on GitHub, as before, and now include your processor
+- If the mailbox does not answer, your message is kept and sent later on its own
+
 [20] 2026-11-23
 - Launcher 0.3.20: if files of the build tools go missing (an antivirus can remove them), the launcher notices before building and downloads them again, instead of the game failing to build
 - The latest video on Home now shows a sharp, high-resolution preview
