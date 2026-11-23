@@ -906,3 +906,26 @@ main { isolation: isolate; }
 .plat-text .dim { font-size: 12.5px; }
 .plat-guide { flex: none; text-decoration: none; }
 .plat-note { margin-top: 6px; }
+
+/* Feedback: private messages, sent from the launcher */
+.fb-card:disabled { cursor: default; opacity: .55; transform: none; box-shadow: none; }
+.fb-foot.private > span:first-child .ico { color: rgb(var(--tone)); }
+.fb-outbox { display: flex; align-items: center; gap: 9px; max-width: 1040px; margin-top: 14px; padding: 10px 14px; border-radius: 12px; font-size: 13px; color: var(--dim); background: rgba(255, 255, 255, .03); border: 1px solid var(--line); }
+.fb-outbox[hidden] { display: none; }
+.fb-outbox .ico { width: 16px; height: 16px; color: var(--accent-2); }
+.fb-to-bug { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--dim); }
+.fb-to-bug .ico { width: 16px; height: 16px; color: var(--bad); }
+.fb-to-bug button.link { font: inherit; padding: 0; border: 0; background: none; color: var(--accent-2); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.fb-to-bug button.link:hover { color: var(--text); }
+.fb-status { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 10px 13px; border-radius: 10px; font-size: 13px; color: #ffd9a0; background: rgba(255, 184, 77, .08); border: 1px solid rgba(255, 184, 77, .35); }
+.fb-status[hidden] { display: none; }
+.fb-status .ico { width: 16px; height: 16px; margin-top: 1px; color: #ffb84d; }
+.fb-go-note .ico { width: 14px; height: 14px; vertical-align: -2px; margin-right: 6px; }
+.fb-box .btn .spinner { width: 14px; height: 14px; border-top-color: #fff; }
+.fb-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 18px 8px 4px; animation: rise .4s var(--ease) backwards; }
+.fb-done h2 { margin: 16px 0 6px; }
+.fb-done p { max-width: 420px; line-height: 1.55; }
+.fb-done .modal-actions { align-self: stretch; justify-content: center; }
+.fb-done-badge { --tone: 61, 220, 151; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: rgb(var(--tone)); background: rgba(var(--tone), .14); border: 1px solid rgba(var(--tone), .4); box-shadow: 0 0 0 8px rgba(var(--tone), .06); }
+.fb-done.later .fb-done-badge { --tone: 255, 184, 77; }
+.fb-done-badge .ico { width: 30px; height: 30px; }
