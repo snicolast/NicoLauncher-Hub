@@ -25,6 +25,18 @@ pub struct Registry {
     /// Launchers older than 0.3.16 skip the whole list.
     #[serde(default)]
     pub coming_soon: Vec<Teaser>,
+    /// The author's private mailbox (https), where the Feedback page sends
+    /// ideas, recomp proposals and messages (docs/feedback.md). Without it,
+    /// those cards are greyed out. Launchers older than 0.3.21 skip it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feedback_inbox: Option<String>,
+}
+
+impl Registry {
+    /// The mailbox's address, when it is a web address the launcher may use.
+    pub fn inbox(&self) -> Option<&str> {
+        self.feedback_inbox.as_deref().map(str::trim).filter(|u| u.starts_with("https://") && u.len() > 8)
+    }
 }
 
 /// A project that is announced but not out: its name, a few words and its

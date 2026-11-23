@@ -116,21 +116,21 @@ const STR = {
     ach_toast_one: '{name}: achievement unlocked, {ach}', ach_toast_many: '{name}: {n} achievements unlocked',
     act_setup: 'install', act_build: 'build', act_update: 'update',
     nav_feedback: 'Feedback', fb_sub: 'Something broken, an idea, or a game you would love to see next? Every message is read.',
-    fb_see_all: 'See what others sent',
+    fb_see_all: 'See reported problems',
     fb_bug_title: 'Report a problem', fb_bug_text: 'A game or the launcher does not work as it should: it closes, looks wrong, or an install fails.',
     fb_idea_title: 'Suggest an improvement', fb_idea_text: 'A change you would like in a game or in the launcher: a setting, a control, a new feature.',
-    fb_recomp_title: 'Propose a recomp', fb_recomp_text: 'Which arcade or console game would you love to see running natively next? Others can vote for it.',
+    fb_recomp_title: 'Propose a recomp', fb_recomp_text: 'Which arcade or console game would you love to see running natively next?',
     fb_recomp_warn: 'Name the game only: no ROMs, game files or links to them.',
     fb_talk_title: 'Ask or comment', fb_talk_text: 'A question, a thank-you, or anything else that is not a problem or an idea.',
-    fb_where_issue: 'Opens a report on GitHub', fb_where_disc: 'Opens GitHub Discussions', fb_where_vote: 'Public, with votes',
-    fb_sent_title: 'What goes with your message', fb_sent_text: 'Added for you, so nobody has to ask. You see all of it on GitHub before sending, and can remove anything.',
+    fb_where_issue: 'Public, opens a report on GitHub', fb_where_private: 'Private, only snicolast reads it',
+    fb_sent_title: 'What goes with your message', fb_sent_text: 'Added for you, so nobody has to ask. You see it in the form before sending, and a problem report can still be edited on GitHub.',
     fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Graphics', portable: 'portable',
     fb_installed: 'Installed', fb_portable: 'Portable',
     fb_rules_title: 'Before you write',
     fb_rule_roms: 'Never share ROMs, game files or links to them. Messages that do are deleted.',
-    fb_rule_search: 'Look at what others sent first: maybe it is already there, and a vote helps more than a copy.',
+    fb_rule_private: 'Problem reports are public on GitHub. Ideas, proposals and messages are private: only snicolast reads them.',
     fb_rule_one: 'One problem or idea per message, so each one can be followed and closed.',
-    fb_rule_account: 'Sending needs a free GitHub account. Without one, you can still read everything.',
+    fb_rule_account: 'Reporting a problem needs a free GitHub account. Ideas and messages are sent from here, with no account.',
     ann_title: 'Announcements', ann_new: 'New announcement', ann_new_many: '{n} new announcements', ann_label: 'Announcement',
     ann_important: 'Important', ann_from: 'from snicolast', ann_of: '{i} of {n}', ann_prev: 'Previous', ann_next: 'Next',
     cl_badge: 'Updated', cl_title: 'What is new in {name}', cl_from: 'From version {a} to version {b}', cl_one: '1 update', cl_many: '{n} updates',
@@ -149,7 +149,16 @@ const STR = {
     fb_go_note: 'GitHub opens in your browser with all of this filled in. Nothing is sent until you press Submit there.',
     fb_recomp_name: 'Game', fb_recomp_name_ph: 'Name of the game', fb_recomp_system: 'Original system', fb_recomp_system_ph: 'Arcade board or console, e.g. Sega Model 2',
     fb_recomp_why: 'Why this one?', fb_recomp_why_ph: 'What makes it special, and what you would like it to have on PC.',
-    fb_recomp_public: 'Proposals are public and others can vote for them. The most voted are looked at first, but no game is promised.',
+    fb_recomp_public: 'Every proposal is looked at, but no game is promised.',
+    fb_contact: 'Your contact (optional)', fb_contact_ph: 'Email or Discord name, if you would like an answer',
+    fb_private_note: 'Only snicolast reads this. It is not published anywhere.',
+    fb_send: 'Send', fb_sending: 'Sending…', fb_is_bug: 'Is something not working?', fb_to_bug: 'Report a problem instead',
+    fb_ok_title: 'Sent. Thank you!', fb_ok_text: 'snicolast reads every message. If you left a contact, the answer will come there.',
+    fb_queued_title: 'Saved, it will be sent later', fb_queued_text: 'The mailbox did not answer right now. Your message is kept, and the launcher sends it on its own when the mailbox is back.',
+    fb_limited: 'Too many messages in a short time. Try again in a while: your text is still here.',
+    fb_failed: 'It could not be sent: {err}',
+    fb_outbox_one: '1 message is waiting to be sent.', fb_outbox_many: '{n} messages are waiting to be sent.',
+    fb_unavailable: 'Private messages are not available right now.',
     fb_launcher_name: 'The launcher', fb_not_installed: 'not installed', fb_general: 'General',
   },
   es: {
@@ -261,21 +270,21 @@ const STR = {
     ach_toast_one: '{name}: logro desbloqueado, {ach}', ach_toast_many: '{name}: {n} logros desbloqueados',
     act_setup: 'instalación', act_build: 'compilación', act_update: 'actualización',
     nav_feedback: 'Opiniones', fb_sub: '¿Algo falla, tienes una idea o un juego que te encantaría ver? Se leen todos los mensajes.',
-    fb_see_all: 'Ver lo que otros enviaron',
+    fb_see_all: 'Ver fallos reportados',
     fb_bug_title: 'Informar de un fallo', fb_bug_text: 'Un juego o el launcher no funciona como debe: se cierra, se ve mal o falla una instalación.',
     fb_idea_title: 'Proponer una mejora', fb_idea_text: 'Un cambio que te gustaría en un juego o en el launcher: un ajuste, un control, algo nuevo.',
-    fb_recomp_title: 'Proponer un recomp', fb_recomp_text: '¿Qué juego de recreativa o consola te gustaría ver funcionando de forma nativa? Otros pueden votarlo.',
+    fb_recomp_title: 'Proponer un recomp', fb_recomp_text: '¿Qué juego de recreativa o consola te gustaría ver funcionando de forma nativa?',
     fb_recomp_warn: 'Solo el nombre del juego: nada de ROMs, archivos del juego ni enlaces a ellos.',
     fb_talk_title: 'Preguntar o comentar', fb_talk_text: 'Una pregunta, un agradecimiento o cualquier otra cosa que no sea un fallo ni una idea.',
-    fb_where_issue: 'Abre un informe en GitHub', fb_where_disc: 'Abre GitHub Discussions', fb_where_vote: 'Público, con votos',
-    fb_sent_title: 'Lo que va con tu mensaje', fb_sent_text: 'Se añade solo, para que nadie tenga que preguntarlo. Lo ves todo en GitHub antes de enviarlo y puedes quitar lo que quieras.',
+    fb_where_issue: 'Público, abre un informe en GitHub', fb_where_private: 'Privado, solo lo lee snicolast',
+    fb_sent_title: 'Lo que va con tu mensaje', fb_sent_text: 'Se añade solo, para que nadie tenga que preguntarlo. Lo ves en el formulario antes de enviarlo, y un informe de fallo aún se puede editar en GitHub.',
     fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Gráfica', portable: 'portátil',
     fb_installed: 'Instalado', fb_portable: 'Portátil',
     fb_rules_title: 'Antes de escribir',
     fb_rule_roms: 'Nunca compartas ROMs, archivos del juego ni enlaces a ellos. Los mensajes que lo hagan se borran.',
-    fb_rule_search: 'Mira primero lo que otros enviaron: quizá ya está, y un voto ayuda más que una copia.',
+    fb_rule_private: 'Los informes de fallos son públicos en GitHub. Las ideas, propuestas y mensajes son privados: solo los lee snicolast.',
     fb_rule_one: 'Un fallo o una idea por mensaje, para poder seguir y cerrar cada uno.',
-    fb_rule_account: 'Para enviar hace falta una cuenta gratuita de GitHub. Sin ella puedes leerlo todo igualmente.',
+    fb_rule_account: 'Para informar de un fallo hace falta una cuenta gratuita de GitHub. Las ideas y los mensajes se envían desde aquí, sin cuenta.',
     ann_title: 'Avisos', ann_new: 'Aviso nuevo', ann_new_many: '{n} avisos nuevos', ann_label: 'Aviso',
     ann_important: 'Importante', ann_from: 'de snicolast', ann_of: '{i} de {n}', ann_prev: 'Anterior', ann_next: 'Siguiente',
     cl_badge: 'Actualizado', cl_title: 'Novedades de {name}', cl_from: 'De la versión {a} a la versión {b}', cl_one: '1 actualización', cl_many: '{n} actualizaciones',
@@ -294,7 +303,16 @@ const STR = {
     fb_go_note: 'GitHub se abre en tu navegador con todo esto rellenado. No se envía nada hasta que pulses Submit allí.',
     fb_recomp_name: 'Juego', fb_recomp_name_ph: 'Nombre del juego', fb_recomp_system: 'Sistema original', fb_recomp_system_ph: 'Placa de recreativa o consola, p. ej. Sega Model 2',
     fb_recomp_why: '¿Por qué este?', fb_recomp_why_ph: 'Qué lo hace especial y qué te gustaría que tuviera en PC.',
-    fb_recomp_public: 'Las propuestas son públicas y otros pueden votarlas. Las más votadas se miran antes, pero no se promete ningún juego.',
+    fb_recomp_public: 'Se miran todas las propuestas, pero no se promete ningún juego.',
+    fb_contact: 'Tu contacto (opcional)', fb_contact_ph: 'Email o nombre de Discord, si quieres respuesta',
+    fb_private_note: 'Solo lo lee snicolast. No se publica en ningún sitio.',
+    fb_send: 'Enviar', fb_sending: 'Enviando…', fb_is_bug: '¿Algo no funciona?', fb_to_bug: 'Mejor informa de un fallo',
+    fb_ok_title: 'Enviado. ¡Gracias!', fb_ok_text: 'snicolast lee todos los mensajes. Si dejaste un contacto, la respuesta llegará ahí.',
+    fb_queued_title: 'Guardado, se enviará más tarde', fb_queued_text: 'El buzón no ha respondido ahora mismo. Tu mensaje se guarda y el launcher lo envía solo cuando el buzón vuelva.',
+    fb_limited: 'Demasiados mensajes en poco tiempo. Prueba dentro de un rato: tu texto sigue aquí.',
+    fb_failed: 'No se ha podido enviar: {err}',
+    fb_outbox_one: 'Hay 1 mensaje esperando para enviarse.', fb_outbox_many: 'Hay {n} mensajes esperando para enviarse.',
+    fb_unavailable: 'Los mensajes privados no están disponibles ahora mismo.',
     fb_launcher_name: 'El launcher', fb_not_installed: 'sin instalar', fb_general: 'General',
   },
 };
@@ -348,6 +366,7 @@ const ICONS = {
   eye: '<path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff: '<path d="M10.600 5.600A9.700 9.700 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a17 17 0 0 1-2.600 3.400M6.400 6.900C3.900 8.600 2.500 12 2.500 12S6 18.500 12 18.500c1.900 0 3.500-.6 4.900-1.500"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200M3 3l18 18"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  send: '<path d="M21 3L10.5 13.5"/><path d="M21 3l-6.500 18-4-7.500L3 9.500z"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 };
 const icon = (name) => {
@@ -2006,15 +2025,17 @@ function renderCredits() {
 }
 
 // ---------------------------------------------------------------- feedback
-// Nothing is sent from the launcher: each kind of message opens GitHub in the
-// browser with a form already filled in (the versions, and the log when an
-// install or build failed). The user reads it there and sends it.
+// Two ways out. A problem opens GitHub in the browser with an issue already
+// filled in (the versions, and the log when an install or build failed): the
+// user reads it there and sends it. Ideas, recomp proposals and messages are
+// private: the launcher sends them itself to snicolast's mailbox, and keeps
+// them to send later if the mailbox does not answer.
 const HUB = 'https://github.com/snicolast/NicoLauncher-Hub';
 const FB_KINDS = [
   { id: 'bug', icon: 'bug', where: 'fb_where_issue' },
-  { id: 'idea', icon: 'bulb', where: 'fb_where_disc' },
-  { id: 'recomp', icon: 'joystick', where: 'fb_where_vote', warn: 'fb_recomp_warn' },
-  { id: 'talk', icon: 'chat', where: 'fb_where_disc' },
+  { id: 'idea', icon: 'bulb', where: 'fb_where_private', private: true },
+  { id: 'recomp', icon: 'joystick', where: 'fb_where_private', private: true, warn: 'fb_recomp_warn' },
+  { id: 'talk', icon: 'chat', where: 'fb_where_private', private: true },
 ];
 let sysInfo = null;      // Windows and graphics card, asked once
 let lastFail = null;     // { project, action, when, log } of the last task that failed
@@ -2025,14 +2046,28 @@ function versionLine(p, say = t) {
   return [v.number != null ? say('version_short', { n: v.number }) : null, v.commit ? v.commit.slice(0, 7) : null].filter(Boolean).join(' · ');
 }
 
+// The open problems of the launcher and of every game, in one GitHub search
+function reportedUrl() {
+  const repos = [HUB, ...snap.projects.map((p) => p.url)].map((u) => 'repo:' + u.replace(/^https:\/\/github\.com\//, ''));
+  return 'https://github.com/search?type=issues&q=' + encodeURIComponent(`is:issue is:open ${repos.join(' ')}`);
+}
+
 function renderFeedback() {
-  $('fb-cards').replaceChildren(...FB_KINDS.map((k) =>
-    el('button', { class: 'fb-card ' + k.id, onclick: () => feedback(k.id) },
+  const inbox = snap.feedback_inbox !== false;
+  $('fb-cards').replaceChildren(...FB_KINDS.map((k) => {
+    const off = k.private && !inbox;
+    return el('button', { class: 'fb-card ' + k.id + (off ? ' off' : ''), disabled: off, onclick: () => feedback(k.id) },
       el('span', { class: 'fb-badge' }, icon(k.icon)),
       el('h3', {}, t(`fb_${k.id}_title`)),
       el('p', { class: 'dim' }, t(`fb_${k.id}_text`)),
       k.warn ? el('div', { class: 'note warn' }, icon('ban'), t(k.warn)) : null,
-      el('div', { class: 'fb-foot' }, el('span', {}, icon('github'), t(k.where)), el('span', { class: 'fb-go' }, icon('external'))))));
+      el('div', { class: 'fb-foot' + (k.private ? ' private' : '') },
+        el('span', {}, icon(k.private ? 'lock' : 'github'), t(off ? 'fb_unavailable' : k.where)),
+        el('span', { class: 'fb-go' }, icon(k.private ? 'chevr' : 'external'))));
+  }));
+  const waiting = snap.feedback_outbox || 0;
+  $('fb-outbox').hidden = !waiting;
+  $('fb-outbox').replaceChildren(icon('send'), el('span', {}, waiting === 1 ? t('fb_outbox_one') : t('fb_outbox_many', { n: waiting })));
   const sys = $('fb-system');
   sys.replaceChildren(
     el('dt', {}, t('fb_launcher')), el('dd', {}, launcherVersion(t)),
@@ -2045,11 +2080,13 @@ function field(label, control) {
   return el('label', { class: 'field' }, el('span', {}, label), control);
 }
 
-// The form of one kind of message, then GitHub with it filled in
-function feedback(kind, projectId, withLog) {
+// The form of one kind of message. A problem goes on to GitHub; the rest is
+// sent from here. `keep` carries what was typed when switching to a problem.
+function feedback(kind, projectId, withLog, keep) {
   const box = el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { closeAsk = null; box.remove(); };
   const bug = kind === 'bug';
+  const priv = !bug;
   const body = [];
   let where = projectId || (bug ? (snap.projects.find((p) => p.state !== 'not_installed') || {}).id : null) || 'launcher';
   const targets = [{ id: 'launcher', name: t('fb_launcher_name') }, ...snap.projects.map((p) => ({ id: p.id, name: shortName(p) }))];
@@ -2060,41 +2097,79 @@ function feedback(kind, projectId, withLog) {
   logBox.checked = withLog !== false;
   const failHere = () => bug && lastFail && lastFail.project === where;
   const drawAttach = () => {
-    const items = details(where).map(([k, v]) => el('div', { class: 'fb-attach-row' }, icon('check'), el('span', {}, k), el('span', { class: 'dim' }, v)));
+    const items = details(kind === 'recomp' ? null : where).map(([k, v]) => el('div', { class: 'fb-attach-row' }, icon('check'), el('span', {}, k), el('span', { class: 'dim' }, v)));
     if (failHere()) items.push(el('label', { class: 'fb-attach-row toggle' }, logBox, icon('file'),
       el('span', {}, t('fb_attach_log', { action: t('act_' + lastFail.action), when: lastFail.when }))));
     attach.replaceChildren(el('h3', {}, t('fb_attach')), ...items);
   };
-  const input = (ph) => el('input', { type: 'text', placeholder: t(ph), maxlength: 140 });
+  const input = (ph, max = 140) => el('input', { type: 'text', placeholder: t(ph), maxlength: max });
   const title = input(kind === 'recomp' ? 'fb_recomp_name_ph' : bug ? 'fb_title_ph' : 'fb_idea_ph');
   const system = input('fb_recomp_system_ph');
-  const text = el('textarea', { rows: bug ? 4 : 5, placeholder: t(kind === 'recomp' ? 'fb_recomp_why_ph' : bug ? 'fb_what_ph' : 'fb_idea_what_ph') });
+  const text = el('textarea', { rows: bug ? 4 : 5, maxlength: 4000, placeholder: t(kind === 'recomp' ? 'fb_recomp_why_ph' : bug ? 'fb_what_ph' : 'fb_idea_what_ph') });
+  const contact = input('fb_contact_ph', 120);
+  if (keep) { title.value = keep.title || ''; text.value = keep.text || ''; }
   if (kind === 'recomp') {
     body.push(el('p', { class: 'dim' }, t('fb_recomp_lead')),
       el('div', { class: 'fb-two' }, field(t('fb_recomp_name'), title), field(t('fb_recomp_system'), system)),
       field(t('fb_recomp_why'), text),
+      field(t('fb_contact'), contact),
       el('div', { class: 'fb-warn' }, icon('ban'), el('span', {}, t('fb_rule_roms'))),
-      el('div', { class: 'note' }, icon('chat'), t('fb_recomp_public')));
+      el('div', { class: 'note' }, icon('info'), t('fb_recomp_public')));
   } else {
     body.push(el('p', { class: 'dim' }, t(`fb_${kind}_lead`)),
       field(t('fb_where'), seg),
       field(t('fb_title_label'), title),
       field(t(bug ? 'fb_what' : 'fb_idea_what'), text));
-    if (bug) body.push(attach);
+    if (priv) body.push(field(t('fb_contact'), contact));
+    body.push(attach);
     drawSeg(); drawAttach();
   }
-  const go = el('button', { class: 'btn primary', disabled: true, onclick: () => {
+  // A problem written here would be lost in the private mailbox: offer the
+  // public report instead, with what was typed so far
+  if (priv && kind !== 'recomp') body.push(el('div', { class: 'fb-to-bug' }, icon('bug'), el('span', {}, t('fb_is_bug')),
+    el('button', { type: 'button', class: 'link', onclick: () => { close(); feedback('bug', where === 'launcher' ? null : where, undefined, { title: title.value, text: text.value }); } }, t('fb_to_bug'))));
+  const status = el('div', { class: 'fb-status', hidden: true });
+  const say = (msg) => { status.hidden = false; status.replaceChildren(icon('info'), el('span', {}, msg)); };
+  const card = el('div', { class: 'modal-box fb-box' });
+  // What the box turns into once the message has left (or is kept for later)
+  const done = (ok) => card.replaceChildren(el('div', { class: 'fb-done' + (ok ? ' ok' : ' later') },
+    el('span', { class: 'fb-done-badge' }, icon(ok ? 'check' : 'send')),
+    el('h2', {}, t(ok ? 'fb_ok_title' : 'fb_queued_title')),
+    el('p', { class: 'dim' }, t(ok ? 'fb_ok_text' : 'fb_queued_text')),
+    el('div', { class: 'modal-actions' }, el('button', { class: 'btn primary', onclick: close }, t('close')))));
+  const send = async () => {
+    go.disabled = true;
+    go.replaceChildren(el('span', { class: 'spinner' }), t('fb_sending'));
+    status.hidden = true;
+    try {
+      const r = await invoke('send_feedback', { message: {
+        kind, about: kind === 'recomp' ? null : where, title: title.value.trim(), system: system.value.trim() || null,
+        text: text.value.trim(), contact: contact.value.trim() || null,
+        details: details(kind === 'recomp' ? null : where, true),
+      } });
+      if (r.status === 'sent' || r.status === 'queued') { snap.feedback_outbox = r.outbox || 0; done(r.status === 'sent'); renderFeedback(); return; }
+      say(r.status === 'limited' ? t('fb_limited') : t('fb_failed', { err: r.error || '?' }));
+    } catch (e) {
+      say(t('fb_failed', { err: String(e) }));
+    }
+    go.disabled = false;
+    go.replaceChildren(icon('send'), t('fb_send'));
+  };
+  const go = el('button', { class: 'btn primary', disabled: !title.value.trim(), onclick: () => {
+    if (priv) return send();
     const log = failHere() && logBox.checked ? lastFail.log : null;
-    openLink(feedbackUrl(kind, where, { title: title.value.trim(), system: system.value.trim(), text: text.value.trim(), log }));
+    openLink(feedbackUrl(where, { title: title.value.trim(), text: text.value.trim(), log }));
     close();
-  } }, icon('external'), t('fb_go'));
+  } }, icon(priv ? 'send' : 'external'), t(priv ? 'fb_send' : 'fb_go'));
   // Nothing to send without a title (or the game's name)
   title.addEventListener('input', () => { go.disabled = !title.value.trim(); });
-  box.append(el('div', { class: 'modal-box fb-box' },
+  card.append(
     el('div', { class: 'fb-box-head' }, el('span', { class: 'fb-badge ' + kind }, icon(FB_KINDS.find((k) => k.id === kind).icon)), el('h2', {}, t(`fb_${kind}_title`))),
     ...body,
-    el('p', { class: 'fb-go-note dim small' }, t('fb_go_note')),
-    el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: close }, t('cancel')), go)));
+    status,
+    priv ? el('p', { class: 'fb-go-note dim small' }, icon('lock'), t('fb_private_note')) : el('p', { class: 'fb-go-note dim small' }, t('fb_go_note')),
+    el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: close }, t('cancel')), go));
+  box.append(card);
   closeAsk = close;
   document.body.append(box);
   title.focus();
@@ -2121,15 +2196,12 @@ function details(where, english) {
   return rows;
 }
 
-// Problems go to the issues of the repository they are about; ideas, recomp
-// proposals and the rest to the launcher's Discussions, where they get votes.
-// GitHub fills its form from the address: the user reads it there and sends it.
+// Problems go to the issues of the repository they are about. GitHub fills its
+// form from the address: the user reads it there and sends it.
 const URL_MAX = 7500;
-function feedbackUrl(kind, where, { title, system, text, log }) {
+function feedbackUrl(where, { title, text, log }) {
   const p = snap.projects.find((x) => x.id === where);
-  const base = kind === 'bug' ? `${p ? p.url : HUB}/issues/new`
-    : `${HUB}/discussions/new?category=${{ idea: 'ideas', recomp: 'recomp-proposals', talk: 'general' }[kind]}`;
-  const sep = base.includes('?') ? '&' : '?';
+  const base = `${p ? p.url : HUB}/issues/new`;
   const facts = details(where, true).map(([k, v]) => `- **${k}:** ${v}`).join('\n');
   // The user's name in their own paths stays out of a public page. A very long
   // line (a linker's command line, thousands of characters) keeps only its start:
@@ -2140,17 +2212,9 @@ function feedbackUrl(kind, where, { title, system, text, log }) {
     .map((l) => (l.length > LINE_MAX ? `${l.slice(0, LINE_MAX)} […]` : l)) : [];
   let lines = all;
   const make = () => {
-    let md;
-    if (kind === 'recomp') {
-      md = `**Game:** ${title}\n**Original system:** ${system || '?'}\n\n**Why this one?**\n\n${text}\n\n---\n_Sent from NicoLauncher v${snap.version}_`;
-    } else if (kind === 'bug') {
-      md = `**What happened?**\n\n${text}\n\n**Details**\n\n${facts}`;
-      if (lines.length) md += `\n\n<details><summary>Log of the last ${STR.en['act_' + lastFail.action]} (failed)</summary>\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n</details>`;
-    } else {
-      md = `${text}\n\n---\n**About:** ${p ? p.default_name : 'the launcher'}\n\n${facts}`;
-    }
-    const name = kind === 'recomp' && system ? `${title} (${system})` : title;
-    return `${base}${sep}title=${encodeURIComponent(name)}&body=${encodeURIComponent(md)}`;
+    let md = `**What happened?**\n\n${text}\n\n**Details**\n\n${facts}`;
+    if (lines.length) md += `\n\n<details><summary>Log of the last ${STR.en['act_' + lastFail.action]} (failed)</summary>\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n</details>`;
+    return `${base}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(md)}`;
   };
   // A long log does not fit in an address: as many of its last lines as fit,
   // where the error is (the first line to keep found by halving)
@@ -2557,7 +2621,7 @@ $('dock-copy').addEventListener('click', async () => {
   setTimeout(() => { b.textContent = t('copy_log'); }, 1200);
 });
 $('dock-report').addEventListener('click', () => feedback('bug', task.project, true));
-$('fb-open-list').addEventListener('click', () => openLink(HUB + '/discussions'));
+$('fb-open-list').addEventListener('click', () => openLink(reportedUrl()));
 $('lightbox').addEventListener('click', () => { $('lightbox').hidden = true; });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {

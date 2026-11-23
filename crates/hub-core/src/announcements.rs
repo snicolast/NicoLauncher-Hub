@@ -41,6 +41,11 @@ pub struct Announcement {
     pub body: Vec<String>,
     #[serde(default)]
     pub buttons: Vec<Button>,
+    /// A launcher version: only launchers older than it show the
+    /// announcement ("update the launcher to use..."). Launchers older than
+    /// this key ignore it and show the announcement, which is the point.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before_launcher: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -69,6 +74,7 @@ pub fn parse(text: &str) -> Result<Vec<Announcement>> {
         .into_iter()
         .filter_map(|v| serde_json::from_value::<Announcement>(v).ok())
         .filter(|a| !a.id.trim().is_empty() && !a.title.trim().is_empty())
+        .filter(|a| a.before_launcher.as_deref().is_none_or(|v| older(env!("CARGO_PKG_VERSION"), v)))
         .map(|mut a| {
             if a.level != "important" {
                 a.level = info();
@@ -89,6 +95,13 @@ pub fn parse(text: &str) -> Result<Vec<Announcement>> {
 /// Where the window loads a picture from. Only GitHub's raw files: the
 /// launcher's page refuses pictures from anywhere else, and a picture in this
 /// repository is reviewed like the rest of the announcement.
+/// Whether version `a` comes before `b` ("0.3.9" before "0.3.21"). A version
+/// that cannot be read is not older: the announcement is not shown.
+fn older(a: &str, b: &str) -> bool {
+    let nums = |v: &str| v.trim().trim_start_matches('v').split('.').map(|n| n.parse::<u32>().ok()).collect::<Option<Vec<u32>>>();
+    matches!((nums(a), nums(b)), (Some(a), Some(b)) if a < b)
+}
+
 fn image_url(image: &str) -> Option<String> {
     let image = image.trim();
     if let Some(rest) = image.strip_prefix(IMAGE_HOST) {
@@ -205,5 +218,17 @@ mod tests {
         let t = today();
         assert_eq!(t.len(), 10);
         assert_eq!(&t[4..5], "-");
+    }
+
+    #[test]
+    fn before_launcher_is_for_older_launchers_only() {
+        assert!(older("0.3.9", "0.3.21"));
+        assert!(older("0.3.20", "0.3.21"));
+        assert!(!older("0.3.21", "0.3.21"));
+        assert!(!older("1.0.0", "0.3.21"));
+        assert!(!older("0.3.20", "soon"));
+        let json = |v: &str| format!(r#"{{"announcements":[{{"id":"a","date":"2026-11-24","title":"Update","before_launcher":"{v}"}}]}}"#);
+        assert!(parse(&json("999.0.0")).unwrap().len() == 1);
+        assert!(parse(&json(env!("CARGO_PKG_VERSION"))).unwrap().is_empty());
     }
 }

@@ -1,0 +1,26 @@
+# nico-inbox settings. Copy to config.toml next to nico-inbox.exe.
+# docs/feedback.md has the whole setup.
+
+# Where launchers send to. Tailscale Funnel publishes this port.
+public = "127.0.0.1:8787"
+# The panel to read the messages: Tailscale serve (not funnel) publishes it,
+# so only your own machines reach it.
+panel = "127.0.0.1:8788"
+# Messages, blocked senders and inbox.log. Relative to this file.
+data = "data"
+# The launcher's sum before each message: 20 is under a second on a PC.
+pow_bits = 20
+
+[limits]
+per_hour = 5          # messages one sender may send in an hour
+per_day = 20          # ... and in a day
+global_per_day = 300  # from everyone together
+
+[ntfy]
+# Your topic's address. Anyone who knows it can read the notices: make the
+# name long and random, and keep it out of the repository.
+url = "https://ntfy.sh/CHANGE-ME-to-a-long-random-name"
+# The whole message in the notice (false: kind, game and title only).
+full_text = false
+# Opened when you tap the notice: the panel's address in your tailnet.
+click = "https://yoda.example.ts.net:8443/"

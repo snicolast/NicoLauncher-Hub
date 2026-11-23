@@ -30,7 +30,7 @@ megaphone stays quiet until an announcement with a new `id` arrives. An
         "- A line that starts with \"- \" is an item of a list"
       ],
       "buttons": [
-        { "label": "I can help", "url": "https://github.com/snicolast/NicoLauncher-Hub/discussions/..." }
+        { "label": "I can help", "url": "https://github.com/snicolast/NicoLauncher-Hub/issues/..." }
       ]
     }
   ]
@@ -49,6 +49,7 @@ megaphone stays quiet until an announcement with a new `id` arrives. An
 | `image` | no | A picture across the top of the window, in place of the megaphone (or of the game's picture and logo). See below. |
 | `body` | yes | Lines of plain text. No HTML or Markdown: links go in `buttons`. |
 | `buttons` | no | Up to two `{ label, url }`, opened in the web browser; the first is the main one. "Close" is always there. Only `https://` URLs are accepted. |
+| `before_launcher` | no | A launcher version, such as `0.3.21`. Only launchers older than it show the announcement: for "update the launcher to use…". Launchers older than 0.3.21 do not know the key and show it too, which is what it is for. |
 
 ## Pictures
 

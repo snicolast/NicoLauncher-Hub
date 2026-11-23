@@ -6,6 +6,7 @@ use hub_core::announcements::{self, Announcement};
 use hub_core::art::{self, Art};
 use hub_core::build;
 use hub_core::config::{self, Config, Sort};
+use hub_core::feedback;
 use hub_core::news::{self, Entry};
 use hub_core::portable::{self, Places};
 use hub_core::project::{self, Script, State};
@@ -16,7 +17,7 @@ use hub_core::source;
 use hub_core::system::{self, SystemInfo};
 use hub_core::update::{self, Outcome};
 use hub_core::video::{self, Video};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -80,6 +81,10 @@ struct Snapshot {
     projects: Vec<ProjectView>,
     /// Projects on the way, shown greyed out after the others.
     coming_soon: Vec<TeaserView>,
+    /// The author's mailbox is known: ideas and messages can be sent.
+    feedback_inbox: bool,
+    /// Messages kept until the mailbox answers again.
+    feedback_outbox: usize,
 }
 
 #[derive(Serialize)]
@@ -322,6 +327,8 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 screens: t.screen_urls(),
             })
             .collect(),
+        feedback_inbox: registry.inbox().is_some(),
+        feedback_outbox: feedback::waiting(&feedback::file_next_to(&hub.places.config)),
     }
 }
 
@@ -368,6 +375,56 @@ fn find_project(hub: &Hub, id: &str) -> Result<Project, String> {
     Ok(p)
 }
 
+/// An idea, recomp proposal or message, as the Feedback page's form has it.
+#[derive(Deserialize)]
+struct FeedbackForm {
+    kind: String,
+    about: Option<String>,
+    title: String,
+    system: Option<String>,
+    text: String,
+    contact: Option<String>,
+    details: Vec<(String, String)>,
+}
+
+#[derive(Serialize)]
+struct FeedbackReply {
+    /// sent, queued, limited or error.
+    status: &'static str,
+    error: Option<String>,
+    outbox: usize,
+}
+
+/// Sends a message to the author's mailbox, or keeps it for later when the
+/// mailbox does not answer. Network, so off the main thread.
+#[tauri::command(async)]
+fn send_feedback(hub: tauri::State<Hub>, message: FeedbackForm) -> FeedbackReply {
+    let inbox = hub.registry.lock().unwrap().inbox().map(str::to_string);
+    let lang = hub.config.lock().unwrap().language.clone();
+    let path = feedback::file_next_to(&hub.places.config);
+    let reply = |status, error| FeedbackReply { status, error, outbox: feedback::waiting(&path) };
+    let Some(inbox) = inbox else {
+        return reply("error", Some("The mailbox is not available right now.".into()));
+    };
+    let m = feedback::Message {
+        kind: message.kind,
+        about: message.about,
+        title: message.title,
+        system: message.system,
+        text: message.text,
+        contact: message.contact,
+        details: message.details,
+        lang,
+        written: 0,
+    };
+    match feedback::send(&inbox, &path, m) {
+        Ok(feedback::Outcome::Sent) => reply("sent", None),
+        Ok(feedback::Outcome::Queued) => reply("queued", None),
+        Ok(feedback::Outcome::Limited) => reply("limited", None),
+        Err(e) => reply("error", Some(e)),
+    }
+}
+
 #[tauri::command]
 fn snapshot(hub: tauri::State<Hub>) -> Snapshot {
     snapshot_of(&hub)
@@ -394,6 +451,14 @@ fn refresh(hub: tauri::State<Hub>) -> Snapshot {
     }
     if let Ok(list) = announcements::fetch() {
         *hub.announcements.lock().unwrap() = list;
+    }
+    // Messages for the author that waited for his mailbox: on their own
+    // thread, so a mailbox that does not answer never slows the refresh
+    let path = feedback::file_next_to(&hub.places.config);
+    if let Some(inbox) = hub.registry.lock().unwrap().inbox().map(str::to_string) {
+        if feedback::waiting(&path) > 0 {
+            std::thread::spawn(move || feedback::flush(&inbox, &path));
+        }
     }
     snapshot_of(&hub)
 }
@@ -1027,6 +1092,7 @@ fn main() {
             launch,
             open_folder,
             system_info,
+            send_feedback,
             desktop_shortcut,
             uninstall,
             cancel_task,
