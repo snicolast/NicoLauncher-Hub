@@ -124,7 +124,7 @@ const STR = {
     fb_talk_title: 'Ask or comment', fb_talk_text: 'A question, a thank-you, or anything else that is not a problem or an idea.',
     fb_where_issue: 'Public, opens a report on GitHub', fb_where_private: 'Private, only snicolast reads it',
     fb_sent_title: 'What goes with your message', fb_sent_text: 'Added for you, so nobody has to ask. You see it in the form before sending, and a problem report can still be edited on GitHub.',
-    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Graphics', portable: 'portable',
+    fb_launcher: 'Launcher', fb_system: 'Windows', fb_cpu: 'Processor', fb_gpu: 'Graphics', portable: 'portable',
     fb_installed: 'Installed', fb_portable: 'Portable',
     fb_rules_title: 'Before you write',
     fb_rule_roms: 'Never share ROMs, game files or links to them. Messages that do are deleted.',
@@ -278,7 +278,7 @@ const STR = {
     fb_talk_title: 'Preguntar o comentar', fb_talk_text: 'Una pregunta, un agradecimiento o cualquier otra cosa que no sea un fallo ni una idea.',
     fb_where_issue: 'Público, abre un informe en GitHub', fb_where_private: 'Privado, solo lo lee snicolast',
     fb_sent_title: 'Lo que va con tu mensaje', fb_sent_text: 'Se añade solo, para que nadie tenga que preguntarlo. Lo ves en el formulario antes de enviarlo, y un informe de fallo aún se puede editar en GitHub.',
-    fb_launcher: 'Launcher', fb_system: 'Windows', fb_gpu: 'Gráfica', portable: 'portátil',
+    fb_launcher: 'Launcher', fb_system: 'Windows', fb_cpu: 'Procesador', fb_gpu: 'Gráfica', portable: 'portátil',
     fb_installed: 'Instalado', fb_portable: 'Portátil',
     fb_rules_title: 'Antes de escribir',
     fb_rule_roms: 'Nunca compartas ROMs, archivos del juego ni enlaces a ellos. Los mensajes que lo hagan se borran.',
@@ -2072,6 +2072,7 @@ function renderFeedback() {
   sys.replaceChildren(
     el('dt', {}, t('fb_launcher')), el('dd', {}, launcherVersion(t)),
     el('dt', {}, t('fb_system')), el('dd', {}, sysInfo ? sysInfo.os : '...'),
+    el('dt', {}, t('fb_cpu')), el('dd', {}, sysInfo ? sysInfo.cpu || '?' : '...'),
     el('dt', {}, t('fb_gpu')), el('dd', {}, sysInfo ? sysInfo.gpu : '...'));
   for (const p of snap.projects) sys.append(el('dt', {}, shortName(p)), el('dd', { class: p.state === 'not_installed' ? 'dim' : '' }, versionLine(p)));
 }
@@ -2192,7 +2193,7 @@ function details(where, english) {
   if (p) {
     rows.push([english ? p.default_name : shortName(p), versionLine(p, say)]);
   }
-  if (sysInfo) rows.push([say('fb_system'), sysInfo.os], [say('fb_gpu'), sysInfo.gpu]);
+  if (sysInfo) rows.push([say('fb_system'), sysInfo.os], [say('fb_cpu'), sysInfo.cpu || '?'], [say('fb_gpu'), sysInfo.gpu]);
   return rows;
 }
 

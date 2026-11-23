@@ -1,6 +1,6 @@
-//! What a problem report says about the PC: the Windows version and the
-//! graphics card. Read only when the Feedback page asks, shown to the user,
-//! and sent nowhere by the launcher: the user sends the report on GitHub.
+//! What a message from the Feedback page says about the PC: the Windows
+//! version, the processor and the graphics card. Read only when the Feedback
+//! page asks, and shown to the user in the form before anything is sent.
 
 use serde::Serialize;
 
@@ -10,6 +10,8 @@ pub struct SystemInfo {
     pub os: String,
     /// "NVIDIA GeForce RTX 4070 · driver 576.52"; several cards one after another
     pub gpu: String,
+    /// "AMD Ryzen 7 7800X3D 8-Core Processor · 16 threads"
+    pub cpu: String,
 }
 
 /// The Windows version from the registry, the graphics cards from DirectX:
@@ -25,7 +27,27 @@ pub fn info() -> SystemInfo {
             describe_os(&get("ProductName"), &release, &get("CurrentBuildNumber"))
         })
         .unwrap_or_else(|_| UNKNOWN.to_string());
-    SystemInfo { os, gpu: describe_gpus(&adapters()) }
+    // The processor's name as Windows shows it, from the same place
+    let cpu_name = windows_registry::LOCAL_MACHINE
+        .open(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0")
+        .and_then(|key| key.get_string("ProcessorNameString"))
+        .unwrap_or_default();
+    SystemInfo { os, gpu: describe_gpus(&adapters()), cpu: describe_cpu(&cpu_name, threads()) }
+}
+
+fn threads() -> Option<usize> {
+    std::thread::available_parallelism().ok().map(|n| n.get())
+}
+
+/// "AMD Ryzen 7 7800X3D 8-Core Processor · 16 threads". Some processors pad
+/// their name with spaces, inside it too.
+pub fn describe_cpu(name: &str, threads: Option<usize>) -> String {
+    let name = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    let name = if name.is_empty() { UNKNOWN.to_string() } else { name };
+    match threads {
+        Some(n) => format!("{name} · {n} threads"),
+        None => name,
+    }
 }
 
 /// Every graphics card with its driver version, as Windows numbers it
@@ -66,7 +88,11 @@ fn driver_number(v: i64) -> String {
 
 #[cfg(not(windows))]
 pub fn info() -> SystemInfo {
-    SystemInfo { os: std::env::consts::OS.to_string(), gpu: UNKNOWN.to_string() }
+    let cpu_name = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|t| t.lines().find(|l| l.starts_with("model name")).and_then(|l| l.split_once(':')).map(|(_, v)| v.to_string()))
+        .unwrap_or_default();
+    SystemInfo { os: std::env::consts::OS.to_string(), gpu: UNKNOWN.to_string(), cpu: describe_cpu(&cpu_name, threads()) }
 }
 
 const UNKNOWN: &str = "unknown";
@@ -159,5 +185,12 @@ mod tests {
         assert_eq!(driver_version("NVIDIA GeForce GTX 1060", "31.0.15.3623"), "536.23");
         assert_eq!(driver_version("NVIDIA GeForce RTX 3080", "32.0.15.6094"), "560.94");
         assert_eq!(driver_version("AMD Radeon", "31.0.24033.1003"), "31.0.24033.1003");
+    }
+
+    #[test]
+    fn describes_the_processor() {
+        assert_eq!(describe_cpu("AMD Ryzen 7 7800X3D 8-Core Processor           ", Some(16)), "AMD Ryzen 7 7800X3D 8-Core Processor · 16 threads");
+        assert_eq!(describe_cpu("Intel(R) Core(TM) i7-4770  CPU @ 3.40GHz", Some(8)), "Intel(R) Core(TM) i7-4770 CPU @ 3.40GHz · 8 threads");
+        assert_eq!(describe_cpu("", None), "unknown");
     }
 }
