@@ -548,7 +548,8 @@ mod tests {
         let kit = Kit::builtin();
         let tool = kit.tool(name).unwrap();
         fs::create_dir_all(tool.dir(root)).unwrap();
-        fs::write(tool.dir(root).join(".nicolauncher-kit"), &tool.sha256).unwrap();
+        fs::write(tool.dir(root).join("x"), "").unwrap();
+        fs::write(tool.dir(root).join(".nicolauncher-kit"), format!("{}\nx\n", tool.sha256)).unwrap();
     }
 
     #[test]
