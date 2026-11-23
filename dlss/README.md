@@ -13,7 +13,9 @@ game's `hub.toml` downloads it next to the executable with its SHA256.
 - `NOTICE.txt` and `LICENSE-NVIDIA-DLSS-SDK-<version>.txt`: NVIDIA's notice
   and license.
 
-Old files stay: older versions of a game still point to them.
+Only the bridges a game's `hub.toml` points to on its main branch are kept. A
+bridge goes once no game uses it any more: a player who updates gets the new one,
+and one who does not keeps the DLL already next to the game.
 
 ## A new one
 
