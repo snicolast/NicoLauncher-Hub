@@ -2,6 +2,23 @@
   "schema": 1,
   "announcements": [
     {
+      "id": "2026-11-feedback-update-launcher",
+      "date": "2026-11-24",
+      "expires": "2027-06-01",
+      "level": "important",
+      "label": "Update needed",
+      "before_launcher": "0.3.21",
+      "title": "Update the launcher to keep sending feedback",
+      "body": [
+        "The Feedback page has changed. Ideas, recomp proposals and messages are now sent from the launcher itself, and only snicolast reads them. GitHub Discussions is closing.",
+        "This version still sends them to GitHub Discussions, where they will no longer be read. Update the launcher when it offers it, or download the latest version.",
+        "Problem reports work as before."
+      ],
+      "buttons": [
+        { "label": "Download the latest launcher", "url": "https://github.com/snicolast/NicoLauncher-Hub/releases/latest" }
+      ]
+    },
+    {
       "id": "2026-11-swt-linux-help-ports",
       "date": "2026-11-21",
       "expires": "2027-03-01",
