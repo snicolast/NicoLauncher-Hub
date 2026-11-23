@@ -20,6 +20,7 @@
 
 [20] 2026-11-23
 - Launcher 0.3.20: if files of the build tools go missing (an antivirus can remove them), the launcher notices before building and downloads them again, instead of the game failing to build
+- The latest video on Home now shows a sharp, high-resolution preview
 - After this update, the first game build or update downloads the build tools once more
 
 [19] 2026-11-22
