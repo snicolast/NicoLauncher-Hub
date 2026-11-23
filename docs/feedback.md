@@ -73,11 +73,17 @@ router: Tailscale Funnel carries the requests in.
    `config.toml`. Set `[ntfy] url` to `https://ntfy.sh/<a long random name>`
    and subscribe to that topic in the ntfy app on your phone. Keep the name
    private: anyone who knows it reads the notices.
-3. **Start with Windows.** As administrator:
+3. **Start with Windows**, as SYSTEM, restarted if it stops. In PowerShell
+   as administrator (not `schtasks /Create`: its tasks are stopped after 72
+   hours):
 
-   ```bat
-   schtasks /Create /TN "nico-inbox" /SC ONSTART /RU SYSTEM /RL LIMITED /TR "\"C:\nico-inbox\nico-inbox.exe\" --config \"C:\nico-inbox\config.toml\"" /F
-   schtasks /Run /TN "nico-inbox"
+   ```powershell
+   $a = New-ScheduledTaskAction -Execute 'C:\nico-inbox\nico-inbox.exe' -Argument '--config "C:\nico-inbox\config.toml"' -WorkingDirectory 'C:\nico-inbox'
+   $t = New-ScheduledTaskTrigger -AtStartup
+   $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable
+   $p = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount
+   Register-ScheduledTask -TaskName 'nico-inbox' -Action $a -Trigger $t -Settings $s -Principal $p -Force
+   Start-ScheduledTask -TaskName 'nico-inbox'
    ```
 
 4. **Public part (messages only).** Tailscale must have HTTPS certificates on
