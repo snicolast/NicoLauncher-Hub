@@ -18,6 +18,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[20] 2026-11-23
+- Launcher 0.3.20: if files of the build tools go missing (an antivirus can remove them), the launcher notices before building and downloads them again, instead of the game failing to build
+- After this update, the first game build or update downloads the build tools once more
+
 [19] 2026-11-22
 - Launcher 0.3.19: Credits also list the people who added features to a game, not only ports
 - Nico SR2 credits BrianGilbert, who added OGS-TS telemetry for motion rigs and haptics
