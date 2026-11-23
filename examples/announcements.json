@@ -20,7 +20,7 @@
       "buttons": [
         {
           "label": "I can help",
-          "url": "https://github.com/snicolast/NicoLauncher-Hub/discussions"
+          "url": "https://github.com/snicolast/NicoLauncher-Hub/issues"
         },
         {
           "label": "Read the details",
@@ -44,7 +44,7 @@
       "buttons": [
         {
           "label": "I can test it",
-          "url": "https://github.com/snicolast/SegaRally2Native/discussions"
+          "url": "https://github.com/snicolast/SegaRally2Native/issues"
         }
       ]
     }
