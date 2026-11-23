@@ -452,6 +452,18 @@ function openLink(url) {
 // in the user's browser. Closing the player stops the video. A video whose
 // owner does not let it play elsewhere says so, with the same way out.
 const YT_EMBED = 'https://www.youtube-nocookie.com';
+
+// The video's picture, the largest YouTube has: a size it lacks comes back as
+// a 120x90 grey stand-in (or an error), and then the next one is tried
+function videoPicture(video) {
+  const sizes = [...(video.thumbnails || [])];
+  const img = el('img', { alt: '', draggable: 'false' });
+  const next = () => { if (sizes.length) img.src = sizes.shift(); else img.remove(); };
+  img.addEventListener('load', () => { if (img.naturalWidth <= 120) next(); });
+  img.addEventListener('error', next);
+  next();
+  return img;
+}
 let videoClose = null;
 function watchVideo(video) {
   const id = video.id || (/[?&]v=([\w-]{11})/.exec(video.url) || [])[1];
@@ -469,9 +481,7 @@ function watchVideo(video) {
   const blocked = () => {
     if (screen.classList.contains('blocked')) return;
     screen.classList.add('blocked');
-    const img = el('img', { src: video.thumbnail, alt: '', draggable: 'false' });
-    img.addEventListener('error', () => img.remove());
-    screen.replaceChildren(img, el('div', { class: 'vp-blocked' },
+    screen.replaceChildren(videoPicture(video), el('div', { class: 'vp-blocked' },
       el('p', {}, t('video_blocked')),
       el('button', { class: 'btn primary', onclick: onYouTube }, icon('external'), t('home_video_watch'))));
   };
@@ -1338,10 +1348,8 @@ function renderHome() {
   if (video && $('home-video').dataset.url !== video.url) {
     $('home-video').dataset.url = video.url;
     $('home-video').title = t('home_video_play');
-    const img = el('img', { src: video.thumbnail, alt: '', draggable: 'false' });
-    img.addEventListener('error', () => img.remove());
     $('home-video').replaceChildren(
-      el('span', { class: 'video-art' }, img, el('span', { class: 'video-play' }, icon('play'))),
+      el('span', { class: 'video-art' }, videoPicture(video), el('span', { class: 'video-play' }, icon('play'))),
       el('span', { class: 'video-text' }, el('strong', {}, video.title),
         el('span', { class: 'dim small' }, [video.date && dayLabel(video.date), 'YouTube'].filter(Boolean).join(' · '))));
   }

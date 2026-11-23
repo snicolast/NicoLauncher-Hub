@@ -15,8 +15,16 @@ pub struct Video {
     /// The day it was published, as YYYY-MM-DD.
     pub date: String,
     pub url: String,
-    pub thumbnail: String,
+    /// Its picture in several sizes, largest first: a video uploaded in low
+    /// definition has no 1280x720 one, and YouTube then answers with a 120x90
+    /// grey stand-in, so the page falls back to the next one.
+    pub thumbnails: Vec<String>,
 }
+
+/// 1280x720, 1280x720 again (made for most videos that lack the first one),
+/// then 320x180, which every video has. The 4:3 sizes in between are left out:
+/// a wide video shows in them with black bars above and below.
+const THUMBNAILS: [&str; 3] = ["maxresdefault", "hq720", "mqdefault"];
 
 fn between<'a>(text: &'a str, open: &str, close: &str) -> Option<&'a str> {
     let start = text.find(open)? + open.len();
@@ -50,7 +58,7 @@ pub fn parse(feed: &str) -> Option<Video> {
             title: unescape(title.trim()),
             date: date.to_string(),
             url: format!("https://www.youtube.com/watch?v={id}"),
-            thumbnail: format!("https://i.ytimg.com/vi/{id}/mqdefault.jpg"),
+            thumbnails: THUMBNAILS.iter().map(|size| format!("https://i.ytimg.com/vi/{id}/{size}.jpg")).collect(),
         };
         if !entry.contains("youtube.com/shorts/") {
             return Some(video);
@@ -88,7 +96,14 @@ mod tests {
         assert_eq!(v.date, "2026-11-10");
         assert_eq!(v.id, "bbbbbbbb_-b");
         assert_eq!(v.url, "https://www.youtube.com/watch?v=bbbbbbbb_-b");
-        assert_eq!(v.thumbnail, "https://i.ytimg.com/vi/bbbbbbbb_-b/mqdefault.jpg");
+        assert_eq!(
+            v.thumbnails,
+            [
+                "https://i.ytimg.com/vi/bbbbbbbb_-b/maxresdefault.jpg",
+                "https://i.ytimg.com/vi/bbbbbbbb_-b/hq720.jpg",
+                "https://i.ytimg.com/vi/bbbbbbbb_-b/mqdefault.jpg",
+            ]
+        );
     }
 
     #[test]
