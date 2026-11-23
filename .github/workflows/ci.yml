@@ -26,6 +26,10 @@ jobs:
       - name: App tests
         timeout-minutes: 15
         run: cargo test -p nicolauncher --locked
+      # The author's mailbox for the Feedback page (docs/feedback.md)
+      - name: Mailbox tests
+        timeout-minutes: 10
+        run: cargo test -p nico-inbox --locked
       - name: Build NicoLauncher.exe
         run: npx --yes @tauri-apps/cli@2 build --no-bundle -- --locked
       # A convenience for trying a build, not a check: the account's artifact

@@ -9,6 +9,8 @@ repository.workspace = true
 
 [dependencies]
 flate2 = "1"
+# This install's random id for the author's mailbox (feedback.rs)
+getrandom = "0.2"
 # The user's own covers and backgrounds (art.rs): read, made smaller, saved as JPEG
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "ico"] }
 serde = { version = "1", features = ["derive"] }
@@ -21,7 +23,7 @@ toml = "0.8"
 # built into the launcher (Windows only fills its list as its own programs need
 # a certificate, so a root a website relies on can be missing on some PCs).
 # proxy-from-env: honour HTTPS_PROXY.
-ureq = { version = "2.12", features = ["proxy-from-env"] }
+ureq = { version = "2.12", features = ["json", "proxy-from-env"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 rustls-native-certs = "0.7"
 webpki-roots = "0.26"
