@@ -1,0 +1,8 @@
+dlss_bridge-abi4-986e57b2cd43.dll
+Game:            https://github.com/snicolast/StarWarsTrilogyNative/commit/986e57b2cd4346cafd2b44e64afdc8ca08f8990e
+Built from:      tools/dlss_bridge, src/video/dlss.cpp, src/video/dlss_bridge.cpp
+Bridge ABI:      4 (DLSS_BRIDGE_ABI in src/video/dlss_bridge.h)
+NVIDIA DLSS SDK: v310.9.16 (nvsdk_ngx_s.lib, license: ../LICENSE-NVIDIA-DLSS-SDK-v310.9.16.txt)
+SHA256:          41f9d3105aa02a12232a6db756c97637e976334e53c97010f8d77b14fcfc7d8d
+Size:            308224 bytes
+Built by:        https://github.com/snicolast/NicoLauncher-Hub/actions/runs/45267131996
