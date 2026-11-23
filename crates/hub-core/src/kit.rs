@@ -51,7 +51,21 @@ pub struct Kit {
 }
 
 /// Written last into a tool's folder: one without it was cut off half way.
+/// Its first line is the SHA256 of the download, then one line per file
+/// unpacked, so a file removed afterwards (an antivirus does) is found
+/// before a build fails on it.
 const MARKER: &str = ".nicolauncher-kit";
+
+/// How a tool of the kit is on this PC.
+#[derive(Debug, PartialEq)]
+pub enum State {
+    Installed,
+    /// Not there, cut off half way, another version, or from a launcher
+    /// whose marker had no list of files.
+    Missing,
+    /// Installed, but these files (relative to its folder) are gone.
+    Incomplete(Vec<String>),
+}
 
 impl Kit {
     /// The kit this launcher was built with.
@@ -135,8 +149,29 @@ impl Tool {
         root.join(format!("{}-{}", self.name, self.version))
     }
 
+    /// The marker only: cheap, for what has just been through `install`.
     pub fn is_installed(&self, root: &Path) -> bool {
-        fs::read_to_string(self.dir(root).join(MARKER)).is_ok_and(|m| m.trim().eq_ignore_ascii_case(&self.sha256))
+        self.marker(root).is_some()
+    }
+
+    /// The marker and every file it lists.
+    pub fn state(&self, root: &Path) -> State {
+        let Some(files) = self.marker(root) else { return State::Missing };
+        let dir = self.dir(root);
+        let gone: Vec<String> = files.into_iter().filter(|f| !dir.join(f).is_file()).collect();
+        if gone.is_empty() { State::Installed } else { State::Incomplete(gone) }
+    }
+
+    /// The files the marker lists, when it is this version's and has a list.
+    fn marker(&self, root: &Path) -> Option<Vec<String>> {
+        let text = fs::read_to_string(self.dir(root).join(MARKER)).ok()?;
+        let mut lines = text.lines();
+        if !lines.next()?.trim().eq_ignore_ascii_case(&self.sha256) {
+            return None;
+        }
+        let files: Vec<String> = lines.map(str::trim).filter(|l| !l.is_empty()).map(String::from).collect();
+        // A marker of an older launcher: nothing to check it against
+        if files.is_empty() { None } else { Some(files) }
     }
 
     pub fn program(&self, root: &Path, what: &str) -> Option<PathBuf> {
@@ -173,7 +208,10 @@ fn write_file(to: &Path, from: &mut dyn io::Read) -> Result<()> {
     io::copy(from, &mut file).map(|_| ()).map_err(|e| format!("Could not write {}: {e}", to.display()))
 }
 
-fn unpack(tool: &Tool, archive: &Path, out: &Path, cancel: &Cancel) -> Result<()> {
+/// Returns the files it wrote, relative to `out`, with `/` between folders.
+fn unpack(tool: &Tool, archive: &Path, out: &Path, cancel: &Cancel) -> Result<Vec<String>> {
+    let mut files = Vec::new();
+    let mut wrote = |rel: &Path| files.push(rel.components().map(|c| c.as_os_str().to_string_lossy()).collect::<Vec<_>>().join("/"));
     let cancelled = || if cancel.was_asked() { Err("Cancelled.".to_string()) } else { Ok(()) };
     let file = File::open(archive).map_err(err("Could not read the download"))?;
     match kind(&tool.url) {
@@ -187,7 +225,8 @@ fn unpack(tool: &Tool, archive: &Path, out: &Path, cancel: &Cancel) -> Result<()
                 if entry.is_dir() {
                     fs::create_dir_all(out.join(rel)).map_err(err("Could not create a folder"))?;
                 } else {
-                    write_file(&out.join(rel), &mut entry)?;
+                    write_file(&out.join(&rel), &mut entry)?;
+                    wrote(&rel);
                 }
             }
         }
@@ -202,7 +241,8 @@ fn unpack(tool: &Tool, archive: &Path, out: &Path, cancel: &Cancel) -> Result<()
                 if kind.is_dir() {
                     fs::create_dir_all(out.join(rel)).map_err(err("Could not create a folder"))?;
                 } else if kind.is_file() {
-                    write_file(&out.join(rel), &mut entry)?;
+                    write_file(&out.join(&rel), &mut entry)?;
+                    wrote(&rel);
                 } else {
                     // Links could point anywhere: no tool of the kit has them
                     return Err(format!("The {} archive has a link ({}), which is not unpacked.", tool.name, name.display()));
@@ -211,7 +251,7 @@ fn unpack(tool: &Tool, archive: &Path, out: &Path, cancel: &Cancel) -> Result<()
         }
         None => return Err(format!("{} is neither a .zip nor a .tar.gz.", tool.url)),
     }
-    Ok(())
+    Ok(files)
 }
 
 fn install_one(tool: &Tool, root: &Path, cancel: &Cancel, log: &mut dyn FnMut(&str)) -> Result<()> {
@@ -235,7 +275,10 @@ fn install_one(tool: &Tool, root: &Path, cancel: &Cancel, log: &mut dyn FnMut(&s
     }
     log(&format!("Unpacking {} {}", tool.name, tool.version));
     let done = unpack(tool, &archive, &tmp, cancel)
-        .and_then(|()| fs::write(tmp.join(MARKER), &tool.sha256).map_err(err("Could not write a file")))
+        .and_then(|files| {
+            let marker = std::iter::once(tool.sha256.as_str()).chain(files.iter().map(String::as_str)).collect::<Vec<_>>().join("\n");
+            fs::write(tmp.join(MARKER), marker + "\n").map_err(err("Could not write a file"))
+        })
         .and_then(|()| fs::rename(&tmp, &dir).map_err(|e| format!("Could not move {} into place: {e}", tool.name)));
     if let Err(e) = done {
         let _ = fs::remove_dir_all(&tmp);
@@ -254,19 +297,40 @@ fn install_one(tool: &Tool, root: &Path, cancel: &Cancel, log: &mut dyn FnMut(&s
     Ok(())
 }
 
-/// Downloads and unpacks the tools that are not there yet. What is already
-/// installed is not touched, so a second call costs nothing.
+/// "a, b and 3 more": the first files of a list, for the log.
+fn some_of(files: &[String]) -> String {
+    let shown = files.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
+    if files.len() > 3 { format!("{shown} and {} more", files.len() - 3) } else { shown }
+}
+
+/// Downloads and unpacks the tools that are not there yet, or that miss
+/// files. What is whole is not touched, so a second call costs nothing but
+/// a look at each file.
 pub fn install(tools: &[&Tool], root: &Path, cancel: &Cancel, log: &mut dyn FnMut(&str)) -> Result<()> {
-    let missing: Vec<&&Tool> = tools.iter().filter(|t| !t.is_installed(root)).collect();
-    if missing.is_empty() {
+    let todo: Vec<(&Tool, State)> = tools.iter().map(|t| (*t, t.state(root))).filter(|(_, s)| *s != State::Installed).collect();
+    if todo.is_empty() {
         return Ok(());
     }
     log(&format!("Getting the build tools into {} (once)", root.display()));
-    for tool in missing {
+    for (tool, state) in todo {
         if cancel.was_asked() {
             return Err("Cancelled.".into());
         }
+        if let State::Incomplete(gone) = &state {
+            log(&format!(
+                "{} {} is missing {} file(s) since it was installed ({}): getting it again. An antivirus may have removed them.",
+                tool.name, tool.version, gone.len(), some_of(gone)
+            ));
+        }
         install_one(tool, root, cancel, log)?;
+        // Taken away again as soon as it is written: getting it a third time
+        // would not help
+        if let State::Incomplete(gone) = tool.state(root) {
+            return Err(format!(
+                "{} file(s) of {} disappeared right after it was unpacked ({}). An antivirus is probably removing them: add {} as an exception and try again.",
+                gone.len(), tool.name, some_of(&gone), root.display()
+            ));
+        }
     }
     Ok(())
 }
@@ -384,7 +448,8 @@ mod tests {
         let dir = temp("zip");
         let t = tool("cc", "https://x/cc.zip");
         fs::write(dir.join("a.zip"), zip_of(&[("cc-1.0/bin/cc", "compiler"), ("cc-1.0/docs/a.html", "x"), ("cc-1.0/lib/x/y.a", "lib"), ("cc-1.0/README", "r")])).unwrap();
-        unpack(&t, &dir.join("a.zip"), &dir.join("out"), &Cancel::new()).unwrap();
+        let files = unpack(&t, &dir.join("a.zip"), &dir.join("out"), &Cancel::new()).unwrap();
+        assert_eq!(files, ["bin/cc", "lib/x/y.a", "README"], "what was written, not what was skipped");
         assert_eq!(fs::read_to_string(dir.join("out/bin/cc")).unwrap(), "compiler");
         assert!(dir.join("out/lib/x/y.a").is_file() && dir.join("out/README").is_file());
         assert!(!dir.join("out/docs").exists() && !dir.join("out/cc-1.0").exists());
@@ -447,6 +512,47 @@ mod tests {
         seen.clear();
         install(&[&t], &root, &Cancel::new(), &mut |l| seen.push(l.to_string())).unwrap();
         assert!(seen.is_empty());
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn gets_again_a_tool_that_lost_files() {
+        let root = temp("repair");
+        let body = zip_of(&[("cc-1.0/bin/cc", "compiler"), ("cc-1.0/include/v1/__assert", "a"), ("cc-1.0/include/v1/__log", "l")]);
+        let mut t = tool("cc", "https://x/cc.zip");
+        t.sha256 = crate::build::sha256_of_bytes(&body);
+        fs::create_dir_all(root.join("downloads")).unwrap();
+        fs::write(root.join("downloads/cc.zip"), &body).unwrap();
+        install(&[&t], &root, &Cancel::new(), &mut |_| {}).unwrap();
+        assert_eq!(t.state(&root), State::Installed);
+
+        // Something on the PC takes a file away after the install
+        fs::remove_file(root.join("cc-1.0/include/v1/__log")).unwrap();
+        assert!(t.is_installed(&root), "the marker alone does not see it");
+        assert_eq!(t.state(&root), State::Incomplete(vec!["include/v1/__log".into()]));
+        fs::write(root.join("downloads/cc.zip"), &body).unwrap();
+        let mut seen = Vec::new();
+        install(&[&t], &root, &Cancel::new(), &mut |l| seen.push(l.to_string())).unwrap();
+        assert!(seen.iter().any(|l| l.contains("missing 1 file(s)") && l.contains("include/v1/__log")), "{seen:?}");
+        assert_eq!(fs::read_to_string(root.join("cc-1.0/include/v1/__log")).unwrap(), "l");
+        assert_eq!(t.state(&root), State::Installed);
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn a_marker_with_no_list_of_files_is_installed_again() {
+        let root = temp("old-marker");
+        let t = tool("cc", "https://x/cc.zip");
+        fs::create_dir_all(t.dir(&root)).unwrap();
+        // As an older launcher wrote it: only the SHA256
+        fs::write(t.dir(&root).join(MARKER), &t.sha256).unwrap();
+        assert_eq!(t.state(&root), State::Missing);
+        fs::write(t.dir(&root).join(MARKER), format!("{}\nbin/cc\n", "1".repeat(64))).unwrap();
+        assert_eq!(t.state(&root), State::Missing, "another download");
+        fs::create_dir_all(t.dir(&root).join("bin")).unwrap();
+        fs::write(t.dir(&root).join("bin/cc"), "x").unwrap();
+        fs::write(t.dir(&root).join(MARKER), format!("{}\nbin/cc\n", t.sha256)).unwrap();
+        assert_eq!(t.state(&root), State::Installed);
         fs::remove_dir_all(&root).unwrap();
     }
 
