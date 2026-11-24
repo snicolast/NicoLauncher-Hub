@@ -80,6 +80,27 @@ const STR = {
     support_side: 'Free, open source, always. Support keeps new ports coming.',
     copy_log: 'Copy log', cancel: 'Cancel', close: 'Close', copied: 'Copied',
     task_running: 'running', task_ok: 'finished', task_failed: 'failed',
+    task_failed_dx: 'failed · what to do is below',
+    dx_retry: 'Try again',
+    dx_kit_damaged_t: 'Part of the build tools is missing',
+    dx_kit_damaged: 'Your antivirus most likely removed a file from the launcher\'s build tools. The launcher can download them again and carry on.',
+    dx_kit_damaged_go: 'Repair tools and try again',
+    dx_kit_tip: 'So it does not happen again: add {path} as an exception in your antivirus.',
+    dx_kit_blocked_t: 'Your antivirus keeps removing the build tools',
+    dx_kit_blocked: 'Their files disappear as soon as they are unpacked, so downloading them again does not help. Add {path} as an exception in your antivirus, then try again.',
+    dx_wrong_input_t: 'That file does not work for {name}',
+    dx_wrong_input: 'It needs {file}, complete. What the check found:',
+    dx_wrong_input_go: 'Choose another file',
+    dx_stale_build_t: 'Old compiled files got in the way',
+    dx_stale_build: 'Some files left from the previous version do not fit the new code. Building from scratch fixes it: it takes a few minutes longer. Your saved games and settings are not touched.',
+    dx_stale_build_go: 'Build from scratch',
+    dx_disk_full_t: 'The disk is full',
+    dx_disk_full: 'There is no room left on {drive}. Free some space (a game needs a few GB while it builds), then try again.',
+    dx_locked_t: 'Windows blocked a file',
+    dx_locked: 'Something is using a file the launcher needs. Close {name} and any window open in its folder, then try again. An antivirus checking the folder can do it too: waiting a minute often helps.',
+    dx_program_files: 'Its folder is inside Program Files, where Windows protects files: an install folder somewhere else (Settings) avoids it.',
+    dx_network_t: 'Could not connect to download',
+    dx_network: 'The launcher could not reach GitHub. Check your internet connection: a firewall, a VPN or an antivirus that inspects web traffic can also block it.',
     task_setup: 'Installing {name}', task_build: 'Building {name}', task_update: 'Updating {name}',
     un_title: 'Uninstall {name}?',
     un_delete: 'This folder is deleted with everything in it, including your saved games and settings of the game:',
@@ -235,6 +256,27 @@ const STR = {
     support_side: 'Gratis, código abierto, siempre. El apoyo trae nuevos ports.',
     copy_log: 'Copiar log', cancel: 'Cancelar', close: 'Cerrar', copied: 'Copiado',
     task_running: 'en curso', task_ok: 'terminado', task_failed: 'con errores',
+    task_failed_dx: 'con errores · abajo tienes qué hacer',
+    dx_retry: 'Reintentar',
+    dx_kit_damaged_t: 'Faltan archivos de las herramientas de compilación',
+    dx_kit_damaged: 'Lo más probable es que tu antivirus haya borrado un archivo de las herramientas del launcher. El launcher puede volver a descargarlas y seguir.',
+    dx_kit_damaged_go: 'Reparar herramientas y reintentar',
+    dx_kit_tip: 'Para que no vuelva a pasar: añade {path} como excepción en tu antivirus.',
+    dx_kit_blocked_t: 'Tu antivirus sigue borrando las herramientas de compilación',
+    dx_kit_blocked: 'Sus archivos desaparecen nada más descomprimirlos, así que descargarlas otra vez no sirve. Añade {path} como excepción en tu antivirus y vuelve a intentarlo.',
+    dx_wrong_input_t: 'Ese archivo no sirve para {name}',
+    dx_wrong_input: 'Hace falta {file}, completo. Esto es lo que encontró la comprobación:',
+    dx_wrong_input_go: 'Elegir otro archivo',
+    dx_stale_build_t: 'Archivos compilados viejos se han cruzado',
+    dx_stale_build: 'Quedan archivos de la versión anterior que no encajan con el código nuevo. Compilar desde cero lo arregla: tarda unos minutos más. Tus partidas y ajustes no se tocan.',
+    dx_stale_build_go: 'Compilar desde cero',
+    dx_disk_full_t: 'El disco está lleno',
+    dx_disk_full: 'No queda espacio en {drive}. Libera algo de sitio (un juego necesita unos GB mientras se compila) y vuelve a intentarlo.',
+    dx_locked_t: 'Windows ha bloqueado un archivo',
+    dx_locked: 'Algo está usando un archivo que el launcher necesita. Cierra {name} y cualquier ventana abierta en su carpeta, y vuelve a intentarlo. Un antivirus revisando la carpeta también puede hacerlo: suele bastar con esperar un minuto.',
+    dx_program_files: 'Su carpeta está dentro de Archivos de programa, donde Windows protege los archivos: una carpeta de instalación en otro sitio (Ajustes) lo evita.',
+    dx_network_t: 'No se ha podido conectar para descargar',
+    dx_network: 'El launcher no ha podido llegar a GitHub. Comprueba tu conexión a internet: un cortafuegos, una VPN o un antivirus que revise el tráfico web también pueden bloquearlo.',
     task_setup: 'Instalando {name}', task_build: 'Compilando {name}', task_update: 'Actualizando {name}',
     un_title: '¿Desinstalar {name}?',
     un_delete: 'Se borra esta carpeta con todo lo que tiene dentro, también tus partidas guardadas y los ajustes del juego:',
@@ -585,7 +627,7 @@ function newTask(p, action) {
   timer = setInterval(renderDock, 1000);
 }
 
-async function startTask(p, action) {
+async function startTask(p, action, fix) {
   if (action === 'setup' && !snap.install_root && !p.dir) {
     if (!(await pickInstallRoot())) return;
   }
@@ -598,7 +640,7 @@ async function startTask(p, action) {
   // The version before an update: what is newer afterwards is shown
   if (action === 'update') task.fromVersion = Math.max(0, ...p.news.map((e) => e.number));
   task.wasPending = !!p.rebuild_pending;
-  const started = await call('start_task', { id: p.id, action });
+  const started = await call('start_task', { id: p.id, action, fix: fix || null });
   if (started === undefined) { task = null; clearInterval(timer); }
   await update('snapshot');
 }
@@ -1058,8 +1100,8 @@ async function abandon(p) {
   } catch (e) { await update('snapshot'); }
 }
 
-async function chooseInput(p, thenBuild, fresh) {
-  if (thenBuild && !(await explainInput(p, fresh))) { if (fresh) await abandon(p); return; }
+async function chooseInput(p, thenBuild, fresh, again) {
+  if (thenBuild && !again && !(await explainInput(p, fresh))) { if (fresh) await abandon(p); return; }
   const ext = (/\.([a-z0-9]+)\b/i.exec(p.input_label || '') || [])[1];
   const filters = ext ? [{ name: p.input_label, extensions: [ext.toLowerCase()] }, { name: '*', extensions: ['*'] }] : undefined;
   const path = await T.dialog.open({ directory: false, multiple: false, title: t('choose_title', { file: p.input_label }), filters });
@@ -2248,7 +2290,8 @@ function renderDock() {
   const cls = task.done ? (task.ok ? 'ok' : 'fail') : '';
   $('dock-spin').className = 'spinner ' + cls;
   // In plain words what is going on; the technical lines are in the log
-  $('dock-step').textContent = task.done ? t(task.ok ? 'task_ok' : 'task_failed')
+  const dx = task.done && !task.ok ? task.dx : null;
+  $('dock-step').textContent = task.done ? t(task.ok ? 'task_ok' : dx ? 'task_failed_dx' : 'task_failed')
     : (task.phase ? t(task.phase) : task.label) + (task.amount ? ` · ${task.amount}` : '');
   $('dock-time').textContent = clock((task.ended || Date.now()) - task.started);
   const bar = $('dock-fill').parentElement;
@@ -2258,6 +2301,55 @@ function renderDock() {
   $('dock-cancel').hidden = task.done;
   $('dock-close').hidden = !task.done;
   $('dock-report').hidden = !(task.done && !task.ok);
+  renderDiagnosis(dx);
+}
+
+// A failed task whose cause the launcher knows (diagnose.rs): what happened
+// in plain words, and the button that fixes it, above the log
+function renderDiagnosis(dx) {
+  const box = $('dock-dx');
+  box.hidden = !dx;
+  if (!dx) { box.replaceChildren(); return; }
+  const p = snap && snap.projects.find((x) => x.id === task.project);
+  const name = p ? p.name : task.name;
+  const kit = { path: (snap && snap.kit_dir) || '' };
+  const failed = task.action;
+  let ico = 'info', text = [], tip = null, go = t('dx_retry'), fix = () => startTask(p, failed);
+  switch (dx.kind) {
+    case 'kit_damaged':
+      ico = 'shield'; text = [t('dx_kit_damaged')]; tip = t('dx_kit_tip', kit); go = t('dx_kit_damaged_go');
+      fix = () => startTask(p, failed, { kind: 'repair_kit', tools: dx.tools });
+      break;
+    case 'kit_blocked':
+      ico = 'shield'; text = [t('dx_kit_blocked', kit)];
+      break;
+    case 'wrong_input':
+      ico = 'file'; text = [t('dx_wrong_input', { file: p ? p.input_label : '' })];
+      if (dx.detail.length) text.push(el('code', { class: 'dx-detail' }, dx.detail.join('\n')));
+      go = t('dx_wrong_input_go');
+      fix = () => chooseInput(p, true, false, true);
+      break;
+    case 'stale_build':
+      ico = 'hammer'; text = [t('dx_stale_build')]; go = t('dx_stale_build_go');
+      fix = () => startTask(p, 'build', { kind: 'clean_build' });
+      break;
+    case 'disk_full':
+      ico = 'ban'; text = [t('dx_disk_full', { drive: (/^[a-z]:/i.exec((p && p.dir) || '') || [name])[0] })];
+      break;
+    case 'locked':
+      ico = 'lock'; text = [t('dx_locked', { name })];
+      if (p && /\\program files/i.test(p.dir || '')) tip = t('dx_program_files');
+      break;
+    case 'network':
+      ico = 'refresh'; text = [t('dx_network')];
+      break;
+  }
+  const title = t(`dx_${dx.kind}_t`, { name });
+  const button = el('button', { class: 'btn primary', onclick: () => { if (p && !working()) fix(); } }, go);
+  box.replaceChildren(
+    el('span', { class: 'dx-ico' }, icon(ico)),
+    el('div', { class: 'dx-text' }, el('h3', {}, title), ...text.map((x) => (typeof x === 'string' ? el('p', {}, x) : x)), tip ? el('p', { class: 'dx-tip' }, tip) : null),
+    el('div', { class: 'dx-actions' }, button));
 }
 
 function appendLog(text) {
@@ -2696,7 +2788,8 @@ T.event.listen('task', async ({ payload }) => {
     if (payload.message) appendLog(payload.message);
     // For a problem report: which task, when, and what it wrote
     if (!payload.ok) lastFail = { project: payload.project, action: task.action, when: new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }), log: $('dock-log').textContent };
-    if (!payload.ok) logOpen = true;
+    task.dx = payload.ok ? null : payload.diagnosis || null;
+    if (!payload.ok) logOpen = !task.dx;
     const finished = task;
     await update('snapshot');
     const l = $('dock-log'); l.scrollTop = l.scrollHeight;

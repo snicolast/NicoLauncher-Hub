@@ -319,6 +319,15 @@ dd .source:hover .ico { color: var(--text); }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 .dock pre { height: 240px; margin: 0; padding: 10px 16px 14px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; color: #b9c2da; }
 .dock.collapsed pre { display: none; }
+/* What went wrong and its fix, when the launcher knows the problem (diagnose.rs) */
+.dx-band { display: flex; gap: 14px; align-items: flex-start; padding: 14px 18px; margin: 0 16px 12px; border-radius: 12px; background: linear-gradient(90deg, rgba(255, 184, 77, .13), rgba(255, 184, 77, .04)); border: 1px solid rgba(255, 184, 77, .35); animation: rise .2s var(--ease); }
+.dx-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 184, 77, .18); color: var(--warn); }
+.dx-text { flex: 1; min-width: 0; }
+.dx-text h3 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.dx-text p { font-size: 13px; color: var(--dim); line-height: 1.45; }
+.dx-text .dx-tip { margin-top: 6px; font-size: 12.5px; color: #c9b48f; }
+.dx-text .dx-detail { display: block; margin-top: 6px; white-space: pre-wrap; max-height: 84px; overflow: auto; color: #c9cfe0; }
+.dx-actions { flex: none; display: flex; gap: 8px; align-items: center; align-self: center; }
 
 /* ------------------------------------------------------ toasts / lightbox */
 .toasts { position: fixed; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 20; max-width: 420px; }

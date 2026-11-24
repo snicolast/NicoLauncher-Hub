@@ -11,6 +11,7 @@ pub mod announcements;
 pub mod art;
 pub mod build;
 pub mod config;
+pub mod diagnose;
 pub mod feedback;
 pub mod kit;
 pub mod manifest;

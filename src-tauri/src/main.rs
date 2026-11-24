@@ -6,6 +6,7 @@ use hub_core::announcements::{self, Announcement};
 use hub_core::art::{self, Art};
 use hub_core::build;
 use hub_core::config::{self, Config, Sort};
+use hub_core::diagnose::{self, Diagnosis, Fix};
 use hub_core::feedback;
 use hub_core::news::{self, Entry};
 use hub_core::portable::{self, Places};
@@ -57,6 +58,8 @@ struct Snapshot {
     version: &'static str,
     /// The launcher's folder, when it runs portable.
     portable: Option<PathBuf>,
+    /// Where the build kit is: what an antivirus should leave alone.
+    kit_dir: PathBuf,
     install_root: Option<PathBuf>,
     /// The install folder of the settings, when it is not on the disk.
     missing_root: Option<PathBuf>,
@@ -197,7 +200,8 @@ struct ProjectView {
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum TaskEvent {
     Line { project: String, text: String },
-    Done { project: String, ok: bool, message: String },
+    /// `diagnosis`: what went wrong, when it is a problem the launcher knows.
+    Done { project: String, ok: bool, message: String, diagnosis: Option<Diagnosis> },
 }
 
 fn snapshot_of(hub: &Hub) -> Snapshot {
@@ -300,6 +304,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
     Snapshot {
         version: env!("CARGO_PKG_VERSION"),
         portable: hub.places.portable.clone(),
+        kit_dir: hub.places.kit.clone(),
         install_root: config.install_root(),
         missing_root,
         language: config.language.clone(),
@@ -868,9 +873,9 @@ fn cancel_task(hub: tauri::State<Hub>) {
 /// `setup`: download the source if it is not here, then run the project's
 /// install script (requirements + build). `build`: its build script.
 /// `update`: the latest source, then a rebuild. One task at a time; its output arrives as
-/// `task` events.
+/// `task` events. `fix`: the button of a failed task's diagnosis, done first.
 #[tauri::command]
-fn start_task(app: AppHandle, hub: tauri::State<Hub>, id: String, action: String) -> Result<(), String> {
+fn start_task(app: AppHandle, hub: tauri::State<Hub>, id: String, action: String, fix: Option<Fix>) -> Result<(), String> {
     let p = find_project(&hub, &id)?;
     if !matches!(action.as_str(), "setup" | "build" | "update") {
         return Err(format!("Unknown action: {action}"));
@@ -896,17 +901,28 @@ fn start_task(app: AppHandle, hub: tauri::State<Hub>, id: String, action: String
         *task = Some(Running { project: id.clone(), cancel: cancel.clone() });
     }
     std::thread::spawn(move || {
+        // The end of the log, for the diagnosis if it fails
+        let mut lines: std::collections::VecDeque<String> = std::collections::VecDeque::new();
         let mut log = |text: &str| {
+            lines.extend(text.lines().map(String::from));
+            while lines.len() > 1000 {
+                lines.pop_front();
+            }
             let _ = app.emit("task", TaskEvent::Line { project: id.clone(), text: text.to_string() });
         };
-        let result = run_task(&p, &dir, input.as_deref(), &kit_root, &action, &cancel, &mut log);
+        let result = match &fix {
+            Some(f) => f.apply(&kit_root, &dir, &mut log),
+            None => Ok(()),
+        }
+        .and_then(|()| run_task(&p, &dir, input.as_deref(), &kit_root, &action, &cancel, &mut log));
         let (ok, message) = match result {
             _ if cancel.was_asked() => (false, "Cancelled.".to_string()),
             Ok(()) => (true, String::new()),
             Err(e) => (false, e),
         };
+        let diagnosis = if ok || cancel.was_asked() { None } else { diagnose::diagnose(lines.make_contiguous(), &message) };
         *app.state::<Hub>().task.lock().unwrap() = None;
-        let _ = app.emit("task", TaskEvent::Done { project: id.clone(), ok, message });
+        let _ = app.emit("task", TaskEvent::Done { project: id.clone(), ok, message, diagnosis });
     });
     Ok(())
 }
