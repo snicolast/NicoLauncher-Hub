@@ -17,7 +17,8 @@ const STR = {
     choose_folder: 'Choose folder',
     bad_folder: '{path} has [ ] or ; in its name, and the build tools cannot work in a folder like that. Choose a folder without them (Settings, Install folder).',
     st_not_installed: 'Not installed', st_needs_input: 'Needs your own file',
-    st_needs_build: 'Ready to build', st_ready: 'Ready', st_busy: 'Working...',
+    st_needs_build: 'Ready to build', st_ready: 'Ready', st_busy: 'Working...', st_playing: 'Playing now',
+    do_playing: 'Playing', playing_hint: '{name} is open. Close it to play again, update or change it.',
     update_available: 'Update available', update_unfinished: 'Update not finished',
     unfinished_note: 'The last update did not finish, so {name} is still the previous version. Press Update to finish it.',
     do_install: 'Install', do_choose: 'Choose {file}', choose_title: 'Choose your own copy of {file}',
@@ -80,6 +81,27 @@ const STR = {
     support_side: 'Free, open source, always. Support keeps new ports coming.',
     copy_log: 'Copy log', cancel: 'Cancel', close: 'Close', copied: 'Copied',
     task_running: 'running', task_ok: 'finished', task_failed: 'failed',
+    task_failed_dx: 'failed · what to do is below',
+    dx_retry: 'Try again',
+    dx_kit_damaged_t: 'Part of the build tools is missing',
+    dx_kit_damaged: 'Your antivirus most likely removed a file from the launcher\'s build tools. The launcher can download them again and carry on.',
+    dx_kit_damaged_go: 'Repair tools and try again',
+    dx_kit_tip: 'So it does not happen again: add {path} as an exception in your antivirus.',
+    dx_kit_blocked_t: 'Your antivirus keeps removing the build tools',
+    dx_kit_blocked: 'Their files disappear as soon as they are unpacked, so downloading them again does not help. Add {path} as an exception in your antivirus, then try again.',
+    dx_wrong_input_t: 'That file does not work for {name}',
+    dx_wrong_input: 'It needs {file}, complete. What the check found:',
+    dx_wrong_input_go: 'Choose another file',
+    dx_stale_build_t: 'Old compiled files got in the way',
+    dx_stale_build: 'Some files left from the previous version do not fit the new code. Building from scratch fixes it: it takes a few minutes longer. Your saved games and settings are not touched.',
+    dx_stale_build_go: 'Build from scratch',
+    dx_disk_full_t: 'The disk is full',
+    dx_disk_full: 'There is no room left on {drive}. Free some space (a game needs a few GB while it builds), then try again.',
+    dx_locked_t: 'Windows blocked a file',
+    dx_locked: 'Something is using a file the launcher needs. Close {name} and any window open in its folder, then try again. An antivirus checking the folder can do it too: waiting a minute often helps.',
+    dx_program_files: 'Its folder is inside Program Files, where Windows protects files: an install folder somewhere else (Settings) avoids it.',
+    dx_network_t: 'Could not connect to download',
+    dx_network: 'The launcher could not reach GitHub. Check your internet connection: a firewall, a VPN or an antivirus that inspects web traffic can also block it.',
     task_setup: 'Installing {name}', task_build: 'Building {name}', task_update: 'Updating {name}',
     un_title: 'Uninstall {name}?',
     un_delete: 'This folder is deleted with everything in it, including your saved games and settings of the game:',
@@ -172,7 +194,8 @@ const STR = {
     choose_folder: 'Elegir carpeta',
     bad_folder: '{path} tiene [ ] o ; en el nombre, y las herramientas de compilación no funcionan en una carpeta así. Elige una carpeta sin esos caracteres (Ajustes, Carpeta de instalación).',
     st_not_installed: 'No instalado', st_needs_input: 'Falta tu archivo',
-    st_needs_build: 'Listo para compilar', st_ready: 'Listo', st_busy: 'Trabajando...',
+    st_needs_build: 'Listo para compilar', st_ready: 'Listo', st_busy: 'Trabajando...', st_playing: 'Jugando ahora',
+    do_playing: 'Jugando', playing_hint: '{name} está abierto. Ciérralo para volver a jugar, actualizarlo o cambiarlo.',
     update_available: 'Hay novedades', update_unfinished: 'Actualización a medias',
     unfinished_note: 'La última actualización no terminó, así que {name} sigue siendo la versión anterior. Pulsa Actualizar para terminarla.',
     do_install: 'Instalar', do_choose: 'Elegir {file}', choose_title: 'Elige tu propia copia de {file}',
@@ -235,6 +258,27 @@ const STR = {
     support_side: 'Gratis, código abierto, siempre. El apoyo trae nuevos ports.',
     copy_log: 'Copiar log', cancel: 'Cancelar', close: 'Cerrar', copied: 'Copiado',
     task_running: 'en curso', task_ok: 'terminado', task_failed: 'con errores',
+    task_failed_dx: 'con errores · abajo tienes qué hacer',
+    dx_retry: 'Reintentar',
+    dx_kit_damaged_t: 'Faltan archivos de las herramientas de compilación',
+    dx_kit_damaged: 'Lo más probable es que tu antivirus haya borrado un archivo de las herramientas del launcher. El launcher puede volver a descargarlas y seguir.',
+    dx_kit_damaged_go: 'Reparar herramientas y reintentar',
+    dx_kit_tip: 'Para que no vuelva a pasar: añade {path} como excepción en tu antivirus.',
+    dx_kit_blocked_t: 'Tu antivirus sigue borrando las herramientas de compilación',
+    dx_kit_blocked: 'Sus archivos desaparecen nada más descomprimirlos, así que descargarlas otra vez no sirve. Añade {path} como excepción en tu antivirus y vuelve a intentarlo.',
+    dx_wrong_input_t: 'Ese archivo no sirve para {name}',
+    dx_wrong_input: 'Hace falta {file}, completo. Esto es lo que encontró la comprobación:',
+    dx_wrong_input_go: 'Elegir otro archivo',
+    dx_stale_build_t: 'Archivos compilados viejos se han cruzado',
+    dx_stale_build: 'Quedan archivos de la versión anterior que no encajan con el código nuevo. Compilar desde cero lo arregla: tarda unos minutos más. Tus partidas y ajustes no se tocan.',
+    dx_stale_build_go: 'Compilar desde cero',
+    dx_disk_full_t: 'El disco está lleno',
+    dx_disk_full: 'No queda espacio en {drive}. Libera algo de sitio (un juego necesita unos GB mientras se compila) y vuelve a intentarlo.',
+    dx_locked_t: 'Windows ha bloqueado un archivo',
+    dx_locked: 'Algo está usando un archivo que el launcher necesita. Cierra {name} y cualquier ventana abierta en su carpeta, y vuelve a intentarlo. Un antivirus revisando la carpeta también puede hacerlo: suele bastar con esperar un minuto.',
+    dx_program_files: 'Su carpeta está dentro de Archivos de programa, donde Windows protege los archivos: una carpeta de instalación en otro sitio (Ajustes) lo evita.',
+    dx_network_t: 'No se ha podido conectar para descargar',
+    dx_network: 'El launcher no ha podido llegar a GitHub. Comprueba tu conexión a internet: un cortafuegos, una VPN o un antivirus que revise el tráfico web también pueden bloquearlo.',
     task_setup: 'Instalando {name}', task_build: 'Compilando {name}', task_update: 'Actualizando {name}',
     un_title: '¿Desinstalar {name}?',
     un_delete: 'Se borra esta carpeta con todo lo que tiene dentro, también tus partidas guardadas y los ajustes del juego:',
@@ -563,7 +607,7 @@ async function call(cmd, args) {
 
 async function update(cmd, args) {
   const s = await call(cmd, args);
-  if (s) { snap = s; render(); }
+  if (s) { snap = s; render(); watchRunning(); }
   return s;
 }
 
@@ -585,7 +629,7 @@ function newTask(p, action) {
   timer = setInterval(renderDock, 1000);
 }
 
-async function startTask(p, action) {
+async function startTask(p, action, fix) {
   if (action === 'setup' && !snap.install_root && !p.dir) {
     if (!(await pickInstallRoot())) return;
   }
@@ -598,7 +642,7 @@ async function startTask(p, action) {
   // The version before an update: what is newer afterwards is shown
   if (action === 'update') task.fromVersion = Math.max(0, ...p.news.map((e) => e.number));
   task.wasPending = !!p.rebuild_pending;
-  const started = await call('start_task', { id: p.id, action });
+  const started = await call('start_task', { id: p.id, action, fix: fix || null });
   if (started === undefined) { task = null; clearInterval(timer); }
   await update('snapshot');
 }
@@ -1058,8 +1102,8 @@ async function abandon(p) {
   } catch (e) { await update('snapshot'); }
 }
 
-async function chooseInput(p, thenBuild, fresh) {
-  if (thenBuild && !(await explainInput(p, fresh))) { if (fresh) await abandon(p); return; }
+async function chooseInput(p, thenBuild, fresh, again) {
+  if (thenBuild && !again && !(await explainInput(p, fresh))) { if (fresh) await abandon(p); return; }
   const ext = (/\.([a-z0-9]+)\b/i.exec(p.input_label || '') || [])[1];
   const filters = ext ? [{ name: p.input_label, extensions: [ext.toLowerCase()] }, { name: '*', extensions: ['*'] }] : undefined;
   const path = await T.dialog.open({ directory: false, multiple: false, title: t('choose_title', { file: p.input_label }), filters });
@@ -1085,7 +1129,16 @@ function primaryButton(p, large) {
     case 'not_installed': return make('download', t('do_install'), () => startTask(p, 'setup'));
     case 'needs_input': return make('file', t('do_choose', { file: p.input_label }), () => chooseInput(p, true));
     case 'needs_build': return make('hammer', t('do_build'), () => startTask(p, 'setup'));
-    default: return make('play', t('do_play'), async () => { if ((await call('launch', { id: p.id })) !== undefined) update('snapshot'); }, 'play');
+    default:
+      // Already open: a second copy would only fight the first for the
+      // settings and saves
+      if (p.running) {
+        const b = make('play', t('do_playing'), () => {}, 'play playing');
+        b.disabled = true;
+        b.title = t('playing_hint', { name: p.name });
+        return b;
+      }
+      return make('play', t('do_play'), async () => { if ((await call('launch', { id: p.id })) !== undefined) update('snapshot'); }, 'play');
   }
 }
 
@@ -1097,6 +1150,7 @@ const updateChip = (p) => (p.new_entries.length ? el('span', { class: 'chip new'
 
 function stateLine(p) {
   const working = snap.busy === p.id;
+  if (!working && p.running) return [el('span', { class: 'dot playing' }), t('st_playing')];
   return [el('span', { class: 'dot ' + (working ? 'busy' : p.state) }), working ? t('st_busy') : t('st_' + p.state)];
 }
 
@@ -1359,7 +1413,7 @@ function renderHome() {
     line('', 'count_missing', count('not_installed')),
     ...fresh.map((p) => el('div', { class: 'fresh' },
       el('span', {}, el('strong', {}, p.name.replace(/ Native$/, '')), updateChip(p)),
-      el('button', { class: 'btn small attn', disabled: !!snap.busy, onclick: () => askUpdate(p) }, icon('up'), t('do_update')))),
+      el('button', { class: 'btn small attn', disabled: !!snap.busy || p.running, title: p.running ? t('playing_hint', { name: p.name }) : null, onclick: () => askUpdate(p) }, icon('up'), t('do_update')))),
     el('button', { class: 'btn ghost small', onclick: () => show('library') }, t('home_open_library')),
   ].filter(Boolean));
 
@@ -1385,7 +1439,7 @@ function renderHome() {
         iconClear(p) ? el('span', { class: 'side-art side-icon clear' }, iconPicture(p))
           : el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, iconPicture(p)),
         el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
-        el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) })),
+        el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : p.running ? 'playing' : hasUpdate(p) ? 'fresh' : p.state) })),
       more);
   }), ...teasers().map((s) => el('div', { class: 'side-row soon' },
     el('button', { class: 'side-game soon' + (view === 'project' && current === s.id ? ' on' : ''), title: `${s.name} · ${soonText(s)}`, onclick: () => openProject(s.id) },
@@ -1642,7 +1696,11 @@ function renderProject() {
 
   const btn = (ic, label, fn, cls = '') => el('button', { class: 'btn ' + cls, disabled: busy, onclick: fn }, ic ? icon(ic) : null, label);
   const actions = [primaryButton(p, true)];
-  if (p.can_update) actions.push(btn('up', t('do_update'), () => askUpdate(p), 'lg' + (hasUpdate(p) ? ' attn' : ' idle')));
+  if (p.can_update) {
+    const up = btn('up', t('do_update'), () => askUpdate(p), 'lg' + (hasUpdate(p) ? ' attn' : ' idle'));
+    if (p.running) { up.disabled = true; up.title = t('playing_hint', { name: p.name }); }
+    actions.push(up);
+  }
   // Everything else one does with a game is in the menu behind the gear
   manageButton.title = t('manage');
   manageButton.setAttribute('aria-label', t('manage'));
@@ -2248,7 +2306,8 @@ function renderDock() {
   const cls = task.done ? (task.ok ? 'ok' : 'fail') : '';
   $('dock-spin').className = 'spinner ' + cls;
   // In plain words what is going on; the technical lines are in the log
-  $('dock-step').textContent = task.done ? t(task.ok ? 'task_ok' : 'task_failed')
+  const dx = task.done && !task.ok ? task.dx : null;
+  $('dock-step').textContent = task.done ? t(task.ok ? 'task_ok' : dx ? 'task_failed_dx' : 'task_failed')
     : (task.phase ? t(task.phase) : task.label) + (task.amount ? ` · ${task.amount}` : '');
   $('dock-time').textContent = clock((task.ended || Date.now()) - task.started);
   const bar = $('dock-fill').parentElement;
@@ -2258,6 +2317,55 @@ function renderDock() {
   $('dock-cancel').hidden = task.done;
   $('dock-close').hidden = !task.done;
   $('dock-report').hidden = !(task.done && !task.ok);
+  renderDiagnosis(dx);
+}
+
+// A failed task whose cause the launcher knows (diagnose.rs): what happened
+// in plain words, and the button that fixes it, above the log
+function renderDiagnosis(dx) {
+  const box = $('dock-dx');
+  box.hidden = !dx;
+  if (!dx) { box.replaceChildren(); return; }
+  const p = snap && snap.projects.find((x) => x.id === task.project);
+  const name = p ? p.name : task.name;
+  const kit = { path: (snap && snap.kit_dir) || '' };
+  const failed = task.action;
+  let ico = 'info', text = [], tip = null, go = t('dx_retry'), fix = () => startTask(p, failed);
+  switch (dx.kind) {
+    case 'kit_damaged':
+      ico = 'shield'; text = [t('dx_kit_damaged')]; tip = t('dx_kit_tip', kit); go = t('dx_kit_damaged_go');
+      fix = () => startTask(p, failed, { kind: 'repair_kit', tools: dx.tools });
+      break;
+    case 'kit_blocked':
+      ico = 'shield'; text = [t('dx_kit_blocked', kit)];
+      break;
+    case 'wrong_input':
+      ico = 'file'; text = [t('dx_wrong_input', { file: p ? p.input_label : '' })];
+      if (dx.detail.length) text.push(el('code', { class: 'dx-detail' }, dx.detail.join('\n')));
+      go = t('dx_wrong_input_go');
+      fix = () => chooseInput(p, true, false, true);
+      break;
+    case 'stale_build':
+      ico = 'hammer'; text = [t('dx_stale_build')]; go = t('dx_stale_build_go');
+      fix = () => startTask(p, 'build', { kind: 'clean_build' });
+      break;
+    case 'disk_full':
+      ico = 'ban'; text = [t('dx_disk_full', { drive: (/^[a-z]:/i.exec((p && p.dir) || '') || [name])[0] })];
+      break;
+    case 'locked':
+      ico = 'lock'; text = [t('dx_locked', { name })];
+      if (p && /\\program files/i.test(p.dir || '')) tip = t('dx_program_files');
+      break;
+    case 'network':
+      ico = 'refresh'; text = [t('dx_network')];
+      break;
+  }
+  const title = t(`dx_${dx.kind}_t`, { name });
+  const button = el('button', { class: 'btn primary', onclick: () => { if (p && !working()) fix(); } }, go);
+  box.replaceChildren(
+    el('span', { class: 'dx-ico' }, icon(ico)),
+    el('div', { class: 'dx-text' }, el('h3', {}, title), ...text.map((x) => (typeof x === 'string' ? el('p', {}, x) : x)), tip ? el('p', { class: 'dx-tip' }, tip) : null),
+    el('div', { class: 'dx-actions' }, button));
 }
 
 function appendLog(text) {
@@ -2662,6 +2770,24 @@ async function refresh() {
 }
 
 const refreshDue = () => snap && !working() && Date.now() - lastRefresh >= AUTO_REFRESH_MS;
+
+// A game that is open shows as Playing. Started from the launcher or not
+// (a shortcut, Explorer), it is seen whenever the launcher looks at the disk;
+// while one is open the launcher asks every few seconds, cheaply, so Play
+// comes back as soon as it closes.
+let runningTimer = null;
+async function watchRunning() {
+  clearTimeout(runningTimer);
+  if (!snap || !snap.projects.some((p) => p.running)) return;
+  runningTimer = setTimeout(async () => {
+    try {
+      const now = await invoke('running');
+      const was = snap.projects.filter((p) => p.running).map((p) => p.id);
+      if (now.length !== was.length || now.some((id) => !was.includes(id))) await update('snapshot');
+    } catch (e) { /* asked again next time */ }
+    watchRunning();
+  }, 4000);
+}
 setInterval(() => { if (refreshDue()) refresh(); }, 60 * 1000);
 
 // The window stays open behind a game it started, and WebView2 keeps drawing
@@ -2696,7 +2822,8 @@ T.event.listen('task', async ({ payload }) => {
     if (payload.message) appendLog(payload.message);
     // For a problem report: which task, when, and what it wrote
     if (!payload.ok) lastFail = { project: payload.project, action: task.action, when: new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }), log: $('dock-log').textContent };
-    if (!payload.ok) logOpen = true;
+    task.dx = payload.ok ? null : payload.diagnosis || null;
+    if (!payload.ok) logOpen = !task.dx;
     const finished = task;
     await update('snapshot');
     const l = $('dock-log'); l.scrollTop = l.scrollHeight;

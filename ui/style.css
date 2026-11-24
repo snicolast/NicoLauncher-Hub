@@ -144,6 +144,11 @@ main { flex: 1; min-height: 0; position: relative; }
 @keyframes beat { 50% { opacity: .45; box-shadow: 0 0 3px var(--warn); transform: scale(.8); } }
 .dot.busy { background: var(--accent); animation: pulse 1.2s infinite; }
 @keyframes pulse { 50% { opacity: .35; } }
+/* A game that is open right now */
+.dot.playing { background: var(--good); box-shadow: 0 0 0 0 rgba(61, 220, 151, .6); animation: playing 1.8s ease-out infinite; }
+@keyframes playing { 0% { box-shadow: 0 0 0 0 rgba(61, 220, 151, .55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(61, 220, 151, 0); } }
+.btn.play.playing:disabled { opacity: 1; cursor: default; background: rgba(61, 220, 151, .12); color: var(--good); border-color: rgba(61, 220, 151, .45); box-shadow: inset 0 0 18px rgba(61, 220, 151, .12); }
+.btn.play.playing .ico { animation: pulse 1.6s ease-in-out infinite; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, .1); border: 1px solid var(--line); color: #dfe5f5; backdrop-filter: blur(8px); }
 .chip.new { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
@@ -319,6 +324,15 @@ dd .source:hover .ico { color: var(--text); }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 .dock pre { height: 240px; margin: 0; padding: 10px 16px 14px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; color: #b9c2da; }
 .dock.collapsed pre { display: none; }
+/* What went wrong and its fix, when the launcher knows the problem (diagnose.rs) */
+.dx-band { display: flex; gap: 14px; align-items: flex-start; padding: 14px 18px; margin: 0 16px 12px; border-radius: 12px; background: linear-gradient(90deg, rgba(255, 184, 77, .13), rgba(255, 184, 77, .04)); border: 1px solid rgba(255, 184, 77, .35); animation: rise .2s var(--ease); }
+.dx-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 184, 77, .18); color: var(--warn); }
+.dx-text { flex: 1; min-width: 0; }
+.dx-text h3 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.dx-text p { font-size: 13px; color: var(--dim); line-height: 1.45; }
+.dx-text .dx-tip { margin-top: 6px; font-size: 12.5px; color: #c9b48f; }
+.dx-text .dx-detail { display: block; margin-top: 6px; white-space: pre-wrap; max-height: 84px; overflow: auto; color: #c9cfe0; }
+.dx-actions { flex: none; display: flex; gap: 8px; align-items: center; align-self: center; }
 
 /* ------------------------------------------------------ toasts / lightbox */
 .toasts { position: fixed; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 20; max-width: 420px; }
