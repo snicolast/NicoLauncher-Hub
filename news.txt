@@ -18,6 +18,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[22] 2026-11-25
+- Launcher 0.3.22: a small Buy me a coffee link now sits under the launcher's Update button, and in the window shown before a launcher update
+- The launcher and every recomp stay free and open source. A coffee is an optional thank-you that helps cover the tools and the hours behind them, and it unlocks nothing
+
 [21] 2026-11-24
 - Launcher 0.3.21: Feedback is new. Ideas, recomp proposals and messages are sent straight from the launcher, only snicolast reads them, and no GitHub account is needed
 - GitHub Discussions is closing: from now on, send ideas and messages from the launcher's Feedback page
