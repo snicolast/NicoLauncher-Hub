@@ -78,7 +78,6 @@ const STR = {
     support_title: 'Buy me a coffee',
     support_text: 'The launcher and every project are free. A coffee is an optional thank-you that helps cover the tools and the hours behind them, and it unlocks nothing.',
     support_side: 'Free, open source, always. Support keeps new ports coming.',
-    support_update_lead: 'Free, open source, always.', support_update: 'Support keeps new ports coming: a coffee helps cover the tools and the hours that go into them.',
     copy_log: 'Copy log', cancel: 'Cancel', close: 'Close', copied: 'Copied',
     task_running: 'running', task_ok: 'finished', task_failed: 'failed',
     task_setup: 'Installing {name}', task_build: 'Building {name}', task_update: 'Updating {name}',
@@ -234,7 +233,6 @@ const STR = {
     support_title: 'Invítame a un café',
     support_text: 'El launcher y todos los proyectos son gratis. El café es una forma opcional de dar las gracias que ayuda a cubrir las herramientas y las horas que llevan, y no desbloquea nada.',
     support_side: 'Gratis, código abierto, siempre. El apoyo trae nuevos ports.',
-    support_update_lead: 'Gratis, código abierto, siempre.', support_update: 'El apoyo trae nuevos ports: un café ayuda a cubrir las herramientas y las horas que llevan.',
     copy_log: 'Copiar log', cancel: 'Cancelar', close: 'Cerrar', copied: 'Copiado',
     task_running: 'en curso', task_ok: 'terminado', task_failed: 'con errores',
     task_setup: 'Instalando {name}', task_build: 'Compilando {name}', task_update: 'Actualizando {name}',
@@ -2410,7 +2408,7 @@ function openAnnouncements(startId) {
 // an older launcher). The same window for a game and for the launcher.
 let clClose = null;
 const CL_MAX = 12;
-function changelog({ head, title, from, to, entries, actions, all, ready, close, extra }) {
+function changelog({ head, title, from, to, entries, actions, all, ready, close }) {
   if (clClose) clClose();
   const box = el('div', { class: 'modal ann cl', role: 'dialog', 'aria-modal': 'true' });
   // A long list scrolls with the wheel, the bar, or the keyboard; a fade at
@@ -2444,7 +2442,6 @@ function changelog({ head, title, from, to, entries, actions, all, ready, close,
     head,
     main,
     el('div', { class: 'cl-fade', 'aria-hidden': 'true' }),
-    extra || null,
     el('div', { class: 'ann-foot' },
       el('button', { class: 'btn ghost small', onclick: () => { clClose(); all(); } }, t('cl_all')),
       el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => clClose() }, close || t('close')), ...(actions || []))));
@@ -2494,18 +2491,7 @@ function askLauncherUpdate() {
     entries: up.changes.map((e) => ({ ...e, label: v(e.version) })),
     actions: [el('button', { class: 'btn primary', disabled: !!snap.busy, onclick: () => { clClose(); installLauncher(true); } }, icon('up'), el('span', {}, t('cl_go')))],
     all: () => show('home'),
-    extra: coffeeNote(),
   });
-}
-
-// While the new version is on screen, one quiet line: everything is free,
-// and a coffee is welcome. It unlocks nothing.
-function coffeeNote() {
-  const url = $('side-coffee').dataset.url;
-  return el('div', { class: 'cl-coffee' },
-    icon('coffee'),
-    el('p', {}, el('b', {}, t('support_update_lead')), ' ', t('support_update')),
-    el('button', { class: 'btn brand bmc small', title: t('support_text'), onclick: () => openLink(url) }, t('support_title')));
 }
 
 async function installLauncher(read) {

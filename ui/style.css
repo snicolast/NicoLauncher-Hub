@@ -358,12 +358,6 @@ html.idle *, html.idle *::before, html.idle *::after { animation-play-state: pau
 .side-coffee .ico { width: 16px; height: 16px; }
 .side-coffee small { display: block; margin-top: 1px; font-size: 11.5px; font-weight: 400; line-height: 1.3; color: var(--dim); }
 @media (max-height: 680px) { .side-coffee small { display: none; } }
-/* The same, as one line in the window of the launcher's own update */
-.cl-coffee { flex: none; display: flex; align-items: center; gap: 12px; margin: 10px 30px 0; padding: 10px 12px 10px 14px; border-radius: 12px; border: 1px solid rgba(255, 221, 0, .18); background: rgba(255, 221, 0, .06); font-size: 13px; line-height: 1.4; color: var(--dim); }
-.cl-coffee > .ico { color: #f2d24b; }
-.cl-coffee p { flex: 1; min-width: 0; }
-.cl-coffee p b { color: var(--text); font-weight: 600; }
-.cl-coffee .btn { flex: none; white-space: nowrap; }
 
 /* ------------------------------------------------------------------ modal */
 .modal { position: fixed; inset: 0; z-index: 40; background: rgba(4, 6, 12, .72); display: grid; place-items: center; backdrop-filter: blur(6px); animation: rise .2s var(--ease); }
