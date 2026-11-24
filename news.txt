@@ -18,6 +18,11 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[23] 2026-11-25
+- Launcher 0.3.23: when an install, update or build fails for a known reason, the launcher now says what happened in plain words, with a button that fixes it
+- It knows build tools removed by an antivirus, the wrong ROM file, old compiled files left by an update, a full disk, a file Windows is holding and no internet connection. Anything else still shows the log and Report this problem
+- While a game is open, its Play button shows Playing and Update waits until you close it, so a second copy cannot be started by mistake
+
 [22] 2026-11-25
 - Launcher 0.3.22: a small Buy me a coffee link now sits under the launcher's Update button, and in the window shown before a launcher update
 - The launcher and every recomp stay free and open source. A coffee is an optional thank-you that helps cover the tools and the hours behind them, and it unlocks nothing
