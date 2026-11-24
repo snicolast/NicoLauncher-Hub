@@ -194,6 +194,8 @@ struct ProjectView {
     /// When it was last played (Unix seconds): started from the launcher, or
     /// its achievements written by the game, whichever is later.
     last_played: Option<u64>,
+    /// This copy of the game is open right now.
+    running: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -275,6 +277,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
                 can_rebuild: state == State::Ready && p.scripts.build.is_some(),
                 is_clone: dir.as_ref().is_some_and(|d| d.join(".git").exists()),
                 hidden: config.hidden(&p.id),
+                running: state == State::Ready && dir.as_deref().is_some_and(|d| project::is_running(p, d)),
                 last_played: match (&dir, installed) {
                     (Some(d), true) => config.last_played(&p.id).max(achievements::written(d)),
                     _ => config.last_played(&p.id),
@@ -803,6 +806,19 @@ fn launch(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// The games that are open right now: asked every few seconds while one
+/// is, so Play comes back when it closes. Cheaper than a snapshot.
+#[tauri::command]
+fn running(hub: tauri::State<Hub>) -> Vec<String> {
+    let projects = hub.registry.lock().unwrap().projects.clone();
+    let config = hub.config.lock().unwrap().clone();
+    projects
+        .iter()
+        .filter(|p| config.project_dir(&p.id).is_some_and(|d| project::is_running(p, &d)))
+        .map(|p| p.id.clone())
+        .collect()
+}
+
 /// A shortcut to the built game on the desktop.
 #[tauri::command]
 fn desktop_shortcut(hub: tauri::State<Hub>, id: String) -> Result<(), String> {
@@ -1111,6 +1127,7 @@ fn main() {
             send_feedback,
             desktop_shortcut,
             uninstall,
+            running,
             cancel_task,
             start_task
         ])

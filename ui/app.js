@@ -17,7 +17,8 @@ const STR = {
     choose_folder: 'Choose folder',
     bad_folder: '{path} has [ ] or ; in its name, and the build tools cannot work in a folder like that. Choose a folder without them (Settings, Install folder).',
     st_not_installed: 'Not installed', st_needs_input: 'Needs your own file',
-    st_needs_build: 'Ready to build', st_ready: 'Ready', st_busy: 'Working...',
+    st_needs_build: 'Ready to build', st_ready: 'Ready', st_busy: 'Working...', st_playing: 'Playing now',
+    do_playing: 'Playing', playing_hint: '{name} is open. Close it to play again, update or change it.',
     update_available: 'Update available', update_unfinished: 'Update not finished',
     unfinished_note: 'The last update did not finish, so {name} is still the previous version. Press Update to finish it.',
     do_install: 'Install', do_choose: 'Choose {file}', choose_title: 'Choose your own copy of {file}',
@@ -193,7 +194,8 @@ const STR = {
     choose_folder: 'Elegir carpeta',
     bad_folder: '{path} tiene [ ] o ; en el nombre, y las herramientas de compilación no funcionan en una carpeta así. Elige una carpeta sin esos caracteres (Ajustes, Carpeta de instalación).',
     st_not_installed: 'No instalado', st_needs_input: 'Falta tu archivo',
-    st_needs_build: 'Listo para compilar', st_ready: 'Listo', st_busy: 'Trabajando...',
+    st_needs_build: 'Listo para compilar', st_ready: 'Listo', st_busy: 'Trabajando...', st_playing: 'Jugando ahora',
+    do_playing: 'Jugando', playing_hint: '{name} está abierto. Ciérralo para volver a jugar, actualizarlo o cambiarlo.',
     update_available: 'Hay novedades', update_unfinished: 'Actualización a medias',
     unfinished_note: 'La última actualización no terminó, así que {name} sigue siendo la versión anterior. Pulsa Actualizar para terminarla.',
     do_install: 'Instalar', do_choose: 'Elegir {file}', choose_title: 'Elige tu propia copia de {file}',
@@ -605,7 +607,7 @@ async function call(cmd, args) {
 
 async function update(cmd, args) {
   const s = await call(cmd, args);
-  if (s) { snap = s; render(); }
+  if (s) { snap = s; render(); watchRunning(); }
   return s;
 }
 
@@ -1127,7 +1129,16 @@ function primaryButton(p, large) {
     case 'not_installed': return make('download', t('do_install'), () => startTask(p, 'setup'));
     case 'needs_input': return make('file', t('do_choose', { file: p.input_label }), () => chooseInput(p, true));
     case 'needs_build': return make('hammer', t('do_build'), () => startTask(p, 'setup'));
-    default: return make('play', t('do_play'), async () => { if ((await call('launch', { id: p.id })) !== undefined) update('snapshot'); }, 'play');
+    default:
+      // Already open: a second copy would only fight the first for the
+      // settings and saves
+      if (p.running) {
+        const b = make('play', t('do_playing'), () => {}, 'play playing');
+        b.disabled = true;
+        b.title = t('playing_hint', { name: p.name });
+        return b;
+      }
+      return make('play', t('do_play'), async () => { if ((await call('launch', { id: p.id })) !== undefined) update('snapshot'); }, 'play');
   }
 }
 
@@ -1139,6 +1150,7 @@ const updateChip = (p) => (p.new_entries.length ? el('span', { class: 'chip new'
 
 function stateLine(p) {
   const working = snap.busy === p.id;
+  if (!working && p.running) return [el('span', { class: 'dot playing' }), t('st_playing')];
   return [el('span', { class: 'dot ' + (working ? 'busy' : p.state) }), working ? t('st_busy') : t('st_' + p.state)];
 }
 
@@ -1401,7 +1413,7 @@ function renderHome() {
     line('', 'count_missing', count('not_installed')),
     ...fresh.map((p) => el('div', { class: 'fresh' },
       el('span', {}, el('strong', {}, p.name.replace(/ Native$/, '')), updateChip(p)),
-      el('button', { class: 'btn small attn', disabled: !!snap.busy, onclick: () => askUpdate(p) }, icon('up'), t('do_update')))),
+      el('button', { class: 'btn small attn', disabled: !!snap.busy || p.running, title: p.running ? t('playing_hint', { name: p.name }) : null, onclick: () => askUpdate(p) }, icon('up'), t('do_update')))),
     el('button', { class: 'btn ghost small', onclick: () => show('library') }, t('home_open_library')),
   ].filter(Boolean));
 
@@ -1427,7 +1439,7 @@ function renderHome() {
         iconClear(p) ? el('span', { class: 'side-art side-icon clear' }, iconPicture(p))
           : el('span', { class: 'side-art side-icon', style: `background-image:${gradient(p)}` }, iconPicture(p)),
         el('span', { class: 'side-name' }, p.name.replace(/ Native$/, '')),
-        el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : hasUpdate(p) ? 'fresh' : p.state) })),
+        el('span', { class: 'dot ' + (snap.busy === p.id ? 'busy' : p.running ? 'playing' : hasUpdate(p) ? 'fresh' : p.state) })),
       more);
   }), ...teasers().map((s) => el('div', { class: 'side-row soon' },
     el('button', { class: 'side-game soon' + (view === 'project' && current === s.id ? ' on' : ''), title: `${s.name} · ${soonText(s)}`, onclick: () => openProject(s.id) },
@@ -1684,7 +1696,11 @@ function renderProject() {
 
   const btn = (ic, label, fn, cls = '') => el('button', { class: 'btn ' + cls, disabled: busy, onclick: fn }, ic ? icon(ic) : null, label);
   const actions = [primaryButton(p, true)];
-  if (p.can_update) actions.push(btn('up', t('do_update'), () => askUpdate(p), 'lg' + (hasUpdate(p) ? ' attn' : ' idle')));
+  if (p.can_update) {
+    const up = btn('up', t('do_update'), () => askUpdate(p), 'lg' + (hasUpdate(p) ? ' attn' : ' idle'));
+    if (p.running) { up.disabled = true; up.title = t('playing_hint', { name: p.name }); }
+    actions.push(up);
+  }
   // Everything else one does with a game is in the menu behind the gear
   manageButton.title = t('manage');
   manageButton.setAttribute('aria-label', t('manage'));
@@ -2754,6 +2770,24 @@ async function refresh() {
 }
 
 const refreshDue = () => snap && !working() && Date.now() - lastRefresh >= AUTO_REFRESH_MS;
+
+// A game that is open shows as Playing. Started from the launcher or not
+// (a shortcut, Explorer), it is seen whenever the launcher looks at the disk;
+// while one is open the launcher asks every few seconds, cheaply, so Play
+// comes back as soon as it closes.
+let runningTimer = null;
+async function watchRunning() {
+  clearTimeout(runningTimer);
+  if (!snap || !snap.projects.some((p) => p.running)) return;
+  runningTimer = setTimeout(async () => {
+    try {
+      const now = await invoke('running');
+      const was = snap.projects.filter((p) => p.running).map((p) => p.id);
+      if (now.length !== was.length || now.some((id) => !was.includes(id))) await update('snapshot');
+    } catch (e) { /* asked again next time */ }
+    watchRunning();
+  }, 4000);
+}
 setInterval(() => { if (refreshDue()) refresh(); }, 60 * 1000);
 
 // The window stays open behind a game it started, and WebView2 keeps drawing
