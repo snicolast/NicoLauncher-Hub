@@ -76,7 +76,9 @@ const STR = {
     credits_rule_builds: 'It does not download or share built games. Each project is built on your PC from its source code.',
     credits_rule_affiliation: 'These are unofficial fan projects, not affiliated with the owners of the original games.',
     support_title: 'Buy me a coffee',
-    support_text: 'The launcher and every project are free. A coffee is an optional thank-you for the time behind them, and it unlocks nothing.',
+    support_text: 'The launcher and every project are free. A coffee is an optional thank-you that helps cover the tools and the hours behind them, and it unlocks nothing.',
+    support_side: 'Free, open source, always. Support keeps new ports coming.',
+    support_update_lead: 'Free, open source, always.', support_update: 'Support keeps new ports coming: a coffee helps cover the tools and the hours that go into them.',
     copy_log: 'Copy log', cancel: 'Cancel', close: 'Close', copied: 'Copied',
     task_running: 'running', task_ok: 'finished', task_failed: 'failed',
     task_setup: 'Installing {name}', task_build: 'Building {name}', task_update: 'Updating {name}',
@@ -230,7 +232,9 @@ const STR = {
     credits_rule_builds: 'No descarga ni comparte juegos compilados. Cada proyecto se compila en tu PC desde su código fuente.',
     credits_rule_affiliation: 'Son proyectos de fans no oficiales, sin relación con los dueños de los juegos originales.',
     support_title: 'Invítame a un café',
-    support_text: 'El launcher y todos los proyectos son gratis. El café es una forma opcional de dar las gracias por el tiempo que llevan, y no desbloquea nada.',
+    support_text: 'El launcher y todos los proyectos son gratis. El café es una forma opcional de dar las gracias que ayuda a cubrir las herramientas y las horas que llevan, y no desbloquea nada.',
+    support_side: 'Gratis, código abierto, siempre. El apoyo trae nuevos ports.',
+    support_update_lead: 'Gratis, código abierto, siempre.', support_update: 'El apoyo trae nuevos ports: un café ayuda a cubrir las herramientas y las horas que llevan.',
     copy_log: 'Copiar log', cancel: 'Cancelar', close: 'Cerrar', copied: 'Copiado',
     task_running: 'en curso', task_ok: 'terminado', task_failed: 'con errores',
     task_setup: 'Instalando {name}', task_build: 'Compilando {name}', task_update: 'Actualizando {name}',
@@ -2406,7 +2410,7 @@ function openAnnouncements(startId) {
 // an older launcher). The same window for a game and for the launcher.
 let clClose = null;
 const CL_MAX = 12;
-function changelog({ head, title, from, to, entries, actions, all, ready, close }) {
+function changelog({ head, title, from, to, entries, actions, all, ready, close, extra }) {
   if (clClose) clClose();
   const box = el('div', { class: 'modal ann cl', role: 'dialog', 'aria-modal': 'true' });
   // A long list scrolls with the wheel, the bar, or the keyboard; a fade at
@@ -2440,6 +2444,7 @@ function changelog({ head, title, from, to, entries, actions, all, ready, close 
     head,
     main,
     el('div', { class: 'cl-fade', 'aria-hidden': 'true' }),
+    extra || null,
     el('div', { class: 'ann-foot' },
       el('button', { class: 'btn ghost small', onclick: () => { clClose(); all(); } }, t('cl_all')),
       el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => clClose() }, close || t('close')), ...(actions || []))));
@@ -2489,7 +2494,18 @@ function askLauncherUpdate() {
     entries: up.changes.map((e) => ({ ...e, label: v(e.version) })),
     actions: [el('button', { class: 'btn primary', disabled: !!snap.busy, onclick: () => { clClose(); installLauncher(true); } }, icon('up'), el('span', {}, t('cl_go')))],
     all: () => show('home'),
+    extra: coffeeNote(),
   });
+}
+
+// While the new version is on screen, one quiet line: everything is free,
+// and a coffee is welcome. It unlocks nothing.
+function coffeeNote() {
+  const url = $('side-coffee').dataset.url;
+  return el('div', { class: 'cl-coffee' },
+    icon('coffee'),
+    el('p', {}, el('b', {}, t('support_update_lead')), ' ', t('support_update')),
+    el('button', { class: 'btn brand bmc small', title: t('support_text'), onclick: () => openLink(url) }, t('support_title')));
 }
 
 async function installLauncher(read) {
@@ -2540,6 +2556,7 @@ function render() {
   for (const v of ['home', 'library', 'project', 'settings', 'credits', 'feedback']) $('view-' + v).hidden = v !== view;
   $('version').textContent = 'v' + snap.version + (snap.portable ? ' · ' + t('portable') : '');
   $('version').title = snap.portable || '';
+  $('side-coffee').title = t('support_text');
   $('self-update').hidden = !selfUpdate;
   if (selfUpdate) {
     $('self-update').textContent = selfUpdate.installing ? t('self_updating') : t('self_update', { v: selfUpdate.version });
