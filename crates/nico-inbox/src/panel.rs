@@ -1,5 +1,5 @@
-//! The panel: a page to read the messages, mark them, archive, block and
-//! delete. Served only on the panel's port, which only your own machines
+//! The panel: a page to read the messages, answer them, mark them, archive,
+//! block and delete. Served only on the panel's port, which only your own machines
 //! reach (Tailscale serve, not funnel). Every change needs the token the page
 //! was made with, so another website cannot press its buttons for you.
 
@@ -14,6 +14,7 @@ pub fn esc(s: &str) -> String {
 pub enum View {
     New,
     All,
+    Replied,
     Flagged,
     Archived,
     Blocked,
@@ -23,6 +24,7 @@ impl View {
     pub fn parse(q: &str) -> View {
         match q {
             "all" => View::All,
+            "replied" => View::Replied,
             "flagged" => View::Flagged,
             "archived" => View::Archived,
             "blocked" => View::Blocked,
@@ -33,6 +35,7 @@ impl View {
         match self {
             View::New => "new",
             View::All => "all",
+            View::Replied => "replied",
             View::Flagged => "flagged",
             View::Archived => "archived",
             View::Blocked => "blocked",
@@ -42,6 +45,7 @@ impl View {
         match self {
             View::New => !m.read && !m.archived,
             View::All => !m.archived,
+            View::Replied => m.reply.is_some(),
             View::Flagged => !m.flags.is_empty() && !m.archived,
             View::Archived => m.archived,
             View::Blocked => false,
@@ -57,6 +61,49 @@ fn button(token: &str, view: View, id: &str, act: &str, label: &str, class: &str
         v = view.key(),
         id = esc(id)
     )
+}
+
+fn hidden(token: &str, view: View, id: &str) -> String {
+    format!(
+        "<input type=hidden name=token value={token}><input type=hidden name=view value={v}><input type=hidden name=id value=\"{id}\">",
+        v = view.key(),
+        id = esc(id)
+    )
+}
+
+/// The answer under a message: a box to write it, or the answer sent, with
+/// whether the sender's launcher has collected it.
+fn answer(m: &Stored, token: &str, view: View) -> String {
+    let form = |text: &str, label: &str| {
+        format!(
+            "<form method=post action=/act class=reply>{h}<label>Answer (only the launcher that sent this sees it, the next time it starts or refreshes)</label>\
+             <textarea name=text maxlength={max} placeholder=\"Write an answer…\">{text}</textarea>\
+             <div class=row><span class=dim>Plain text. You can change or remove it later.</span><button name=do value=reply class=primary>{label}</button></div></form>",
+            h = hidden(token, view, &m.id),
+            max = crate::store::REPLY_MAX,
+            text = esc(text)
+        )
+    };
+    match &m.reply {
+        None => form("", "Send answer"),
+        Some(r) => {
+            let got = match r.delivered {
+                Some(d) => format!("<span class=ok>✓ Collected by the launcher <time data-t={d}></time></span>"),
+                None => "<span class=dim>Waiting for the launcher to collect it</span>".to_string(),
+            };
+            let remove = format!(
+                "<form method=post action=/act onsubmit=\"return confirm('Remove this answer?')\">{h}<button name=do value=unreply class=bad>Remove answer</button></form>",
+                h = hidden(token, view, &m.id)
+            );
+            format!(
+                "<div class=answered><div class=who>Your answer <span class=dim>· <time data-t={at}></time> ·</span> {got}</div>\
+                 <p>{text}</p><details><summary>Change</summary>{change}</details><div class=row>{remove}</div></div>",
+                at = r.at,
+                text = esc(&r.text),
+                change = form(&r.text, "Save answer"),
+            )
+        }
+    }
 }
 
 fn card(m: &Stored, token: &str, view: View, blocked: &Blocked) -> String {
@@ -85,7 +132,7 @@ fn card(m: &Stored, token: &str, view: View, blocked: &Blocked) -> String {
            <header><span class=kind>{kname}</span>{about}{flags}<time data-t={received}></time></header>\
            <h2>{title}</h2>\
            <p class=text>{text}</p>{contact}\
-           <dl>{details}</dl>\
+           <dl>{details}</dl>{answer}\
            <footer><span class=dim>Sender {sender} · {address}{lang}{late}{blocked_note}</span><span class=actions>{actions}</span></footer>\
          </article>",
         id = esc(&m.id),
@@ -98,6 +145,7 @@ fn card(m: &Stored, token: &str, view: View, blocked: &Blocked) -> String {
         address = esc(&m.address),
         lang = msg.lang.as_deref().map(|l| format!(" · {}", esc(l))).unwrap_or_default(),
         blocked_note = if is_blocked { " · <b class=bad>blocked</b>" } else { "" },
+        answer = if is_blocked { String::new() } else { answer(m, token, view) },
     )
 }
 
@@ -110,6 +158,7 @@ pub fn page(all: &[Stored], blocked: &Blocked, view: View, token: &str) -> Strin
     let tabs = [
         tab(View::New, "New", Some(count(View::New))),
         tab(View::All, "Inbox", Some(count(View::All))),
+        tab(View::Replied, "Answered", Some(count(View::Replied))),
         tab(View::Flagged, "Flagged", Some(count(View::Flagged))),
         tab(View::Archived, "Archived", Some(count(View::Archived))),
         tab(View::Blocked, "Blocked", Some(blocked.keys.len())),
@@ -161,5 +210,16 @@ footer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px so
 button{font:inherit;font-size:13px;color:var(--text);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer}
 button:hover{border-color:var(--dim)}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 button.warn{color:var(--warn)}button.bad{color:var(--bad)}.bad{color:var(--bad)}.dim{color:var(--dim)}
+.reply{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+.reply label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
+.reply textarea{width:100%;min-height:84px;resize:vertical;font:inherit;font-size:14px;color:var(--text);background:#0f1422;border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.reply textarea:focus{outline:none;border-color:var(--accent)}
+.reply .row{display:flex;align-items:center;gap:10px;margin-top:8px}.reply .row .dim{font-size:12.5px}.reply .row button{margin-left:auto}
+.answered{background:rgba(61,220,151,.08);border:1px solid rgba(61,220,151,.35);border-radius:10px;padding:10px 12px;margin-top:10px}
+.answered .who{font-size:12.5px;color:#3ddc97;font-weight:600}.answered .who .dim{font-weight:400}
+.answered p{margin:6px 0 4px;white-space:pre-wrap;overflow-wrap:anywhere}.answered .reply{border:0;padding-top:4px}
+.answered details summary{cursor:pointer;font-size:13px;color:var(--accent);margin-top:4px}
+.answered>.row{display:flex;justify-content:flex-end;margin-top:6px}
+.ok{color:#3ddc97}
 .empty{color:var(--dim);text-align:center;padding:40px 0}.blockrow{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px}
 "#;

@@ -173,16 +173,23 @@ const STR = {
     fb_recomp_name: 'Game', fb_recomp_name_ph: 'Name of the game', fb_recomp_system: 'Original system', fb_recomp_system_ph: 'Arcade board or console, e.g. Sega Model 2',
     fb_recomp_why: 'Why this one?', fb_recomp_why_ph: 'What makes it special, and what you would like it to have on PC.',
     fb_recomp_public: 'Every proposal is looked at, but no game is promised.',
-    fb_contact: 'Your contact (optional)', fb_contact_ph: 'Email or Discord name, if you would like an answer',
+    fb_contact: 'Your contact (optional)', fb_contact_ph: 'Email or Discord name, if you would rather be answered there',
     fb_private_note: 'Only snicolast reads this. It is not published anywhere.',
     fb_send: 'Send', fb_sending: 'Sending…', fb_is_bug: 'Is something not working?', fb_to_bug: 'Report a problem instead',
-    fb_ok_title: 'Sent. Thank you!', fb_ok_text: 'snicolast reads every message. If you left a contact, the answer will come there.',
+    fb_ok_title: 'Sent. Thank you!', fb_ok_text: 'snicolast reads every message. An answer, if there is one, shows up here in Feedback, under Your messages.',
     fb_queued_title: 'Saved, it will be sent later', fb_queued_text: 'The mailbox did not answer right now. Your message is kept, and the launcher sends it on its own when the mailbox is back.',
     fb_limited: 'Too many messages in a short time. Try again in a while: your text is still here.',
     fb_failed: 'It could not be sent: {err}',
     fb_outbox_one: '1 message is waiting to be sent.', fb_outbox_many: '{n} messages are waiting to be sent.',
     fb_unavailable: 'Private messages are not available right now.',
     fb_launcher_name: 'The launcher', fb_not_installed: 'not installed', fb_general: 'General',
+    fbr_title: 'Your messages', fbr_text: 'What you sent from here. When snicolast answers, the answer appears here, and only you can see it.',
+    fbr_replied: 'snicolast replied', fbr_sent: 'Sent', fbr_waiting: 'Waiting to send', fbr_new: 'New',
+    fbr_head: 'snicolast replied', fbr_about: 'About your message',
+    fbr_private: 'Only you see this answer. It is not published anywhere.',
+    fbr_toast: 'snicolast replied to "{title}"', fbr_toast_many: 'snicolast replied to {n} of your messages', fbr_read: 'Read',
+    fbr_ann_label: 'Reply from snicolast', fbr_more: 'Show {n} more', fbr_empty: 'Nothing sent yet.',
+    fbr_days: '{n} days ago',
   },
   es: {
     nav_library: 'Biblioteca', nav_settings: 'Ajustes', nav_credits: 'Créditos',
@@ -350,16 +357,23 @@ const STR = {
     fb_recomp_name: 'Juego', fb_recomp_name_ph: 'Nombre del juego', fb_recomp_system: 'Sistema original', fb_recomp_system_ph: 'Placa de recreativa o consola, p. ej. Sega Model 2',
     fb_recomp_why: '¿Por qué este?', fb_recomp_why_ph: 'Qué lo hace especial y qué te gustaría que tuviera en PC.',
     fb_recomp_public: 'Se miran todas las propuestas, pero no se promete ningún juego.',
-    fb_contact: 'Tu contacto (opcional)', fb_contact_ph: 'Email o nombre de Discord, si quieres respuesta',
+    fb_contact: 'Tu contacto (opcional)', fb_contact_ph: 'Email o nombre de Discord, si prefieres que te respondan ahí',
     fb_private_note: 'Solo lo lee snicolast. No se publica en ningún sitio.',
     fb_send: 'Enviar', fb_sending: 'Enviando…', fb_is_bug: '¿Algo no funciona?', fb_to_bug: 'Mejor informa de un fallo',
-    fb_ok_title: 'Enviado. ¡Gracias!', fb_ok_text: 'snicolast lee todos los mensajes. Si dejaste un contacto, la respuesta llegará ahí.',
+    fb_ok_title: 'Enviado. ¡Gracias!', fb_ok_text: 'snicolast lee todos los mensajes. Si hay respuesta, sale aquí mismo, en Opiniones, en Tus mensajes.',
     fb_queued_title: 'Guardado, se enviará más tarde', fb_queued_text: 'El buzón no ha respondido ahora mismo. Tu mensaje se guarda y el launcher lo envía solo cuando el buzón vuelva.',
     fb_limited: 'Demasiados mensajes en poco tiempo. Prueba dentro de un rato: tu texto sigue aquí.',
     fb_failed: 'No se ha podido enviar: {err}',
     fb_outbox_one: 'Hay 1 mensaje esperando para enviarse.', fb_outbox_many: 'Hay {n} mensajes esperando para enviarse.',
     fb_unavailable: 'Los mensajes privados no están disponibles ahora mismo.',
     fb_launcher_name: 'El launcher', fb_not_installed: 'sin instalar', fb_general: 'General',
+    fbr_title: 'Tus mensajes', fbr_text: 'Lo que has enviado desde aquí. Cuando snicolast responda, la respuesta sale aquí y solo la ves tú.',
+    fbr_replied: 'snicolast ha respondido', fbr_sent: 'Enviado', fbr_waiting: 'Esperando para enviarse', fbr_new: 'Nuevo',
+    fbr_head: 'snicolast te ha respondido', fbr_about: 'Sobre tu mensaje',
+    fbr_private: 'Esta respuesta solo la ves tú. No se publica en ningún sitio.',
+    fbr_toast: 'snicolast ha respondido a «{title}»', fbr_toast_many: 'snicolast ha respondido a {n} de tus mensajes', fbr_read: 'Leer',
+    fbr_ann_label: 'Respuesta de snicolast', fbr_more: 'Ver {n} más', fbr_empty: 'Aún no has enviado nada.',
+    fbr_days: 'hace {n} días',
   },
 };
 
@@ -2135,6 +2149,7 @@ function renderFeedback() {
     el('dt', {}, t('fb_cpu')), el('dd', {}, sysInfo ? sysInfo.cpu || '?' : '...'),
     el('dt', {}, t('fb_gpu')), el('dd', {}, sysInfo ? sysInfo.gpu : '...'));
   for (const p of snap.projects) sys.append(el('dt', {}, shortName(p)), el('dd', { class: p.state === 'not_installed' ? 'dim' : '' }, versionLine(p)));
+  renderSent();
 }
 
 function field(label, control) {
@@ -2208,7 +2223,7 @@ function feedback(kind, projectId, withLog, keep) {
         text: text.value.trim(), contact: contact.value.trim() || null,
         details: details(kind === 'recomp' ? null : where, true),
       } });
-      if (r.status === 'sent' || r.status === 'queued') { snap.feedback_outbox = r.outbox || 0; done(r.status === 'sent'); renderFeedback(); return; }
+      if (r.status === 'sent' || r.status === 'queued') { snap.feedback_outbox = r.outbox || 0; done(r.status === 'sent'); await update('snapshot'); return; }
       say(r.status === 'limited' ? t('fb_limited') : t('fb_failed', { err: r.error || '?' }));
     } catch (e) {
       say(t('fb_failed', { err: String(e) }));
@@ -2237,6 +2252,112 @@ function feedback(kind, projectId, withLog, keep) {
 }
 
 const shortName = (p) => p.name.replace(/ Native$/, '');
+
+// ---------------------------------------------------------------- replies
+// What was sent from the Feedback page, and snicolast's answers. The mailbox
+// keeps the answer next to the message; the launcher asks for the answers to
+// its own messages with its random sender id (never published), so only it
+// gets them. A new answer lights the Feedback item of the sidebar.
+const sentAll = () => (snap && snap.feedback_sent) || [];
+const repliesUnseen = () => sentAll().filter((m) => m.reply && !m.reply_seen);
+let sentMore = false;
+
+function sentAgo(when) {
+  const d = Math.round((Date.now() / 1000 - when) / 86400);
+  return d <= 0 ? t('today') : d === 1 ? t('yesterday') : t('fbr_days', { n: d });
+}
+
+function aboutName(m) {
+  if (m.kind === 'recomp') return t('fb_recomp_title');
+  if (!m.about || m.about === 'launcher') return t('fb_launcher_name');
+  const p = snap.projects.find((x) => x.id === m.about);
+  return p ? shortName(p) : m.about;
+}
+
+function renderSent() {
+  const all = sentAll();
+  const unseen = repliesUnseen().length;
+  const dot = $('nav-fb-dot');
+  dot.hidden = !unseen;
+  dot.textContent = unseen || '';
+  $('fb-sent').hidden = !all.length;
+  if (!all.length) return;
+  // Answers not read first, then the newest
+  const list = [...all].sort((a, b) => ((b.reply && !b.reply_seen) - (a.reply && !a.reply_seen)) || ((b.reply?.at || b.written) - (a.reply?.at || a.written)));
+  const shown = sentMore ? list : list.slice(0, 4);
+  const rows = shown.map((m) => {
+    const fresh = m.reply && !m.reply_seen;
+    const state = m.reply ? el('span', { class: 'fbr-chip replied' + (fresh ? ' fresh' : '') }, icon('chat'), t('fbr_replied'))
+      : m.status === 'queued' ? el('span', { class: 'fbr-chip later' }, icon('send'), t('fbr_waiting'))
+      : el('span', { class: 'fbr-chip' }, icon('check'), t('fbr_sent'));
+    return el('button', { class: 'fbr-row' + (fresh ? ' fresh' : '') + (m.reply ? '' : ' plain'), disabled: !m.reply, onclick: () => openReply(m.id) },
+      el('span', { class: 'fb-badge ' + m.kind }, icon(FB_KINDS.find((k) => k.id === m.kind).icon)),
+      el('span', { class: 'fbr-what' }, el('b', {}, m.title), el('span', { class: 'dim small' }, aboutName(m) + ' · ' + sentAgo(m.written))),
+      state,
+      m.reply ? el('span', { class: 'fbr-go' }, icon('chevr')) : el('span', { class: 'fbr-go' }));
+  });
+  if (!sentMore && list.length > 4) rows.push(el('button', { class: 'link fbr-more', onclick: () => { sentMore = true; renderSent(); } }, t('fbr_more', { n: list.length - 4 })));
+  $('fb-sent-list').replaceChildren(...rows);
+}
+
+// One answer: what the user sent, quoted, and snicolast's reply under it
+let replyClose = null;
+function openReply(id) {
+  const m = sentAll().find((x) => x.id === id);
+  if (!m || !m.reply || replyClose) return;
+  const box = el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' });
+  replyClose = async () => {
+    replyClose = null;
+    box.remove();
+    if (!m.reply_seen) await update('mark_replies_seen', { ids: [m.id] });
+  };
+  box.addEventListener('click', (e) => { if (e.target === box) replyClose(); });
+  const answer = el('div', { class: 'fbr-answer' },
+    el('div', { class: 'fbr-by' }, el('img', { src: 'img/snicolast.png', alt: 'snicolast', draggable: 'false' }), el('span', { class: 'dim small' }, sentAgo(m.reply.at))),
+    el('div', { class: 'fbr-bubble' }, ...m.reply.text.split('\n').filter(Boolean).map((l) => el('p', {}, l))));
+  box.append(el('div', { class: 'modal-box fb-box fbr-box' },
+    el('div', { class: 'fb-box-head' }, el('span', { class: 'fb-badge talk' }, icon('chat')), el('h2', {}, t('fbr_head'))),
+    el('div', { class: 'fbr-quote' },
+      el('div', { class: 'fbr-quote-head dim small' }, el('span', { class: 'fb-badge ' + m.kind }, icon(FB_KINDS.find((k) => k.id === m.kind).icon)),
+        t('fbr_about') + ' · ' + aboutName(m) + ' · ' + sentAgo(m.written)),
+      el('b', {}, m.title),
+      m.text ? el('p', { class: 'dim' }, m.text) : null),
+    answer,
+    el('p', { class: 'fb-go-note dim small' }, icon('lock'), t('fbr_private')),
+    el('div', { class: 'modal-actions' },
+      el('button', { class: 'btn primary', onclick: () => replyClose() }, t('close')))));
+  document.body.append(box);
+  box.querySelector('.btn.primary').focus();
+}
+
+// A notice for answers that arrived and were not opened: once per answer
+// each time the launcher starts, and again for one that comes while it is
+// open. It stays until it is read or closed: an answer is worth more than a
+// toast that goes by itself.
+const repliesNoticed = new Set();
+function noticeReplies() {
+  if (!snap) return;
+  const fresh = repliesUnseen().filter((m) => !repliesNoticed.has(m.id + ':' + m.reply.at));
+  if (!fresh.length) return;
+  for (const m of fresh) repliesNoticed.add(m.id + ':' + m.reply.at);
+  document.querySelectorAll('.fbr-toast').forEach((n) => n.remove());
+  const all = repliesUnseen();
+  const go = () => { node.remove(); all.length === 1 ? openReply(all[0].id) : show('feedback'); };
+  const node = el('div', { class: 'fbr-toast', role: 'status' },
+    el('span', { class: 'fb-badge talk' }, icon('chat')),
+    el('div', { class: 'fbr-toast-text' }, el('b', {}, t('fbr_head')),
+      el('span', { class: 'dim small' }, all.length === 1 ? '«' + all[0].title + '»' : t('fbr_toast_many', { n: all.length }))),
+    el('button', { class: 'btn primary small', onclick: go }, t('fbr_read')),
+    el('button', { class: 'fbr-toast-x', 'aria-label': t('close'), onclick: () => node.remove() }, icon('close')));
+  $('toasts').append(node);
+}
+
+// The answers live in the author's mailbox: asked for after each refresh, on
+// their own, so a mailbox that does not answer slows nothing else
+async function collectReplies() {
+  if (!snap || snap.feedback_inbox === false) return;
+  try { snap = await invoke('collect_replies'); render(); } catch (e) { /* asked again next time */ }
+}
 
 // The launcher's version, and whether it is the installed or the portable copy
 function launcherVersion(say) {
@@ -2669,6 +2790,7 @@ function render() {
   renderCredits();
   renderFeedback();
   renderDock();
+  noticeReplies();
 }
 
 // Changing page: what the new page holds arrives one piece after another
@@ -2767,6 +2889,7 @@ async function refresh() {
     await update('refresh');
     lastRefresh = Date.now();
   } finally { refreshing = false; }
+  collectReplies();
   if (selfUpdate && selfUpdate.installing) return;
   try { selfUpdate = await invoke('check_launcher_update'); render(); } catch (e) { /* offline, or no release yet */ }
 }

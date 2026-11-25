@@ -335,7 +335,7 @@ dd .source:hover .ico { color: var(--text); }
 .dx-actions { flex: none; display: flex; gap: 8px; align-items: center; align-self: center; }
 
 /* ------------------------------------------------------ toasts / lightbox */
-.toasts { position: fixed; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 20; max-width: 420px; }
+.toasts { position: fixed; right: 20px; top: 52px; display: flex; flex-direction: column; gap: 10px; z-index: 20; max-width: 420px; }
 .toast { padding: 12px 16px; border-radius: 12px; background: #2a1620; border: 1px solid rgba(255, 107, 107, .5); box-shadow: 0 14px 40px rgba(0, 0, 0, .5); user-select: text; animation: rise .25s var(--ease); cursor: pointer; }
 .lightbox { position: fixed; inset: 0; z-index: 30; background: rgba(4, 6, 12, .88); display: grid; place-items: center; cursor: zoom-out; backdrop-filter: blur(6px); }
 .lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, .7); }
@@ -951,3 +951,51 @@ main { isolation: isolate; }
 .fb-done-badge { --tone: 61, 220, 151; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: rgb(var(--tone)); background: rgba(var(--tone), .14); border: 1px solid rgba(var(--tone), .4); box-shadow: 0 0 0 8px rgba(var(--tone), .06); }
 .fb-done.later .fb-done-badge { --tone: 255, 184, 77; }
 .fb-done-badge .ico { width: 30px; height: 30px; }
+
+/* Your messages, and snicolast's answers */
+.nav-dot { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: rgb(61, 220, 151); box-shadow: 0 0 0 3px rgba(61, 220, 151, .18); font-size: 11px; font-weight: 700; line-height: 18px; color: #06281a; text-align: center; }
+.nav-dot:not(:empty) { min-width: 18px; height: 18px; padding: 0 5px; }
+.nav-dot[hidden] { display: none; }
+.fb-sent { margin-top: 18px; max-width: 1040px; padding: 18px 20px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.fb-sent > h2 { margin-bottom: 6px; }
+.fbr-list { display: grid; gap: 6px; margin-top: 12px; }
+.fbr-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 18px; align-items: center; gap: 14px; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, .02); color: var(--text); cursor: pointer; transition: border-color .15s, background .15s, transform .15s var(--ease); }
+.fbr-row:not(.plain):hover { border-color: rgba(61, 220, 151, .45); background: rgba(61, 220, 151, .05); transform: translateX(2px); }
+.fbr-row.plain { cursor: default; }
+.fbr-row.fresh { border-color: rgba(61, 220, 151, .5); background: linear-gradient(90deg, rgba(61, 220, 151, .10), rgba(61, 220, 151, .02) 60%); }
+.fbr-row .fb-badge { width: 34px; height: 34px; border-radius: 10px; }
+.fbr-row .fb-badge .ico { width: 17px; height: 17px; }
+.fbr-what { display: grid; gap: 1px; min-width: 0; }
+.fbr-what b { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fbr-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); white-space: nowrap; }
+.fbr-chip .ico { width: 14px; height: 14px; }
+.fbr-chip.replied { color: rgb(61, 220, 151); font-weight: 600; }
+.fbr-chip.fresh { padding: 3px 10px 3px 8px; border-radius: 999px; background: rgba(61, 220, 151, .14); border: 1px solid rgba(61, 220, 151, .4); }
+.fbr-chip.later { color: var(--warn, #ffb84d); }
+.fbr-go { color: rgb(61, 220, 151); }
+.fbr-more { justify-self: start; margin: 4px 0 2px 4px; }
+.modal-box.fbr-box { width: min(600px, calc(100vw - 48px)); }
+.fbr-quote { margin-top: 12px; padding: 12px 14px; border-radius: 12px; border-left: 3px solid var(--line-2); background: rgba(255, 255, 255, .03); display: grid; gap: 4px; }
+.fbr-quote-head { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.fbr-quote-head .fb-badge { width: 22px; height: 22px; border-radius: 7px; }
+.fbr-quote-head .fb-badge .ico { width: 12px; height: 12px; }
+.fbr-quote b { font-weight: 600; }
+.fbr-quote p { margin: 0; font-size: 13.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.fbr-answer { margin-top: 16px; display: grid; gap: 8px; }
+.fbr-by { display: flex; align-items: center; gap: 10px; }
+.fbr-by img { height: 15px; width: auto; }
+.fbr-bubble { padding: 14px 16px; border-radius: 4px 14px 14px 14px; background: linear-gradient(180deg, rgba(61, 220, 151, .13), rgba(61, 220, 151, .07)); border: 1px solid rgba(61, 220, 151, .35); line-height: 1.55; font-size: 14.5px; }
+.fbr-bubble p { margin: 0 0 8px; }
+.fbr-bubble p:last-child { margin: 0; }
+.fbr-more { font: inherit; font-size: 13px; padding: 4px 6px; border: 0; background: none; color: var(--accent-2); cursor: pointer; }
+.fbr-more:hover { color: var(--text); }
+
+.fbr-toast { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 14px; background: #12261f; border: 1px solid rgba(61, 220, 151, .5); box-shadow: 0 18px 48px rgba(0, 0, 0, .55); animation: rise .3s var(--ease); }
+.fbr-toast .fb-badge { width: 36px; height: 36px; border-radius: 10px; }
+.fbr-toast .fb-badge .ico { width: 18px; height: 18px; }
+.fbr-toast-text { display: grid; gap: 1px; min-width: 0; }
+.fbr-toast-text b { font-weight: 600; font-size: 14px; }
+.fbr-toast-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.fbr-toast-x { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 7px; background: none; color: var(--dim); cursor: pointer; }
+.fbr-toast-x:hover { background: rgba(255, 255, 255, .08); color: var(--text); }
+.fbr-toast-x .ico { width: 14px; height: 14px; }

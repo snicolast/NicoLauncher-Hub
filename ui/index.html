@@ -31,7 +31,7 @@
       <button class="nav" data-view="library"><span class="ico" data-icon="grid"></span><span data-i18n="nav_library"></span></button>
       <button class="nav" data-view="settings"><span class="ico" data-icon="sliders"></span><span data-i18n="nav_settings"></span></button>
       <button class="nav" data-view="credits"><span class="ico" data-icon="heart"></span><span data-i18n="nav_credits"></span></button>
-      <button class="nav" data-view="feedback"><span class="ico" data-icon="chat"></span><span data-i18n="nav_feedback"></span></button>
+      <button class="nav" data-view="feedback"><span class="ico" data-icon="chat"></span><span data-i18n="nav_feedback"></span><span class="nav-dot" id="nav-fb-dot" hidden></span></button>
     </nav>
     <div class="side-games">
       <h2 data-i18n="side_games"></h2>
@@ -225,6 +225,11 @@
         </header>
         <div class="fb-grid" id="fb-cards"></div>
         <div class="fb-outbox" id="fb-outbox" hidden></div>
+        <section class="panel fb-sent" id="fb-sent" hidden>
+          <h2 data-i18n="fbr_title"></h2>
+          <p class="dim small" data-i18n="fbr_text"></p>
+          <div class="fbr-list" id="fb-sent-list"></div>
+        </section>
         <div class="fb-bottom">
           <section class="panel">
             <h2 data-i18n="fb_sent_title"></h2>

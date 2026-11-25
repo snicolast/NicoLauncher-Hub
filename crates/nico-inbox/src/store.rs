@@ -36,6 +36,10 @@ pub struct Incoming {
     /// launcher kept it while the mailbox did not answer.
     #[serde(default)]
     pub written: Option<u64>,
+    /// The launcher's own id for this message (random): its answer goes back
+    /// with it, so the launcher knows which of its messages it belongs to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_id: Option<String>,
 }
 
 pub const KINDS: [&str; 3] = ["idea", "recomp", "talk"];
@@ -53,7 +57,7 @@ impl Incoming {
         if !short(&self.title) || !short(&self.sender) || !short(&self.challenge) {
             return Err("too long");
         }
-        if [&self.about, &self.system, &self.contact, &self.lang].iter().any(|o| o.as_deref().is_some_and(|s| !short(s))) {
+        if [&self.about, &self.system, &self.contact, &self.lang, &self.local_id].iter().any(|o| o.as_deref().is_some_and(|s| !short(s))) {
             return Err("too long");
         }
         if self.text.chars().count() > 5000 {
@@ -82,7 +86,23 @@ pub struct Stored {
     pub read: bool,
     #[serde(default)]
     pub archived: bool,
+    /// The author's answer, which the sender's launcher collects.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply: Option<Reply>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Reply {
+    pub text: String,
+    /// When it was written or last changed, Unix seconds.
+    pub at: u64,
+    /// When the sender's launcher first collected it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivered: Option<u64>,
+}
+
+/// Longest answer the panel keeps.
+pub const REPLY_MAX: usize = 5000;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Blocked {
@@ -176,6 +196,7 @@ mod tests {
         Incoming {
             sender: "a".into(), challenge: "c".into(), nonce: 0, kind: "idea".into(), about: None,
             title: title.into(), system: None, text: text.into(), contact: None, details: vec![], lang: None, written: None,
+            local_id: None,
         }
     }
 
@@ -203,7 +224,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("nico-inbox-test-{}", std::process::id()));
         let store = Store::open(&dir).unwrap();
         for (i, id) in ["100-a", "300-b", "200-c"].iter().enumerate() {
-            let m = Stored { id: id.to_string(), received: [100, 300, 200][i], address: "x".into(), message: msg("t", "x"), flags: vec![], read: false, archived: false };
+            let m = Stored { id: id.to_string(), received: [100, 300, 200][i], address: "x".into(), message: msg("t", "x"), flags: vec![], read: false, archived: false, reply: None };
             store.save(&m).unwrap();
         }
         let ids: Vec<String> = store.all().into_iter().map(|m| m.id).collect();
