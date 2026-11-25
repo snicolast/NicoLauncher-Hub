@@ -185,11 +185,11 @@ const STR = {
     fb_launcher_name: 'The launcher', fb_not_installed: 'not installed', fb_general: 'General',
     fbr_title: 'Your messages', fbr_text: 'What you sent from here. When snicolast answers, the answer appears here, and only you can see it.',
     fbr_replied: 'snicolast replied', fbr_sent: 'Sent', fbr_waiting: 'Waiting to send', fbr_new: 'New',
-    fbr_head: 'snicolast replied', fbr_about: 'About your message', fbr_you: 'You', fbr_reply: 'Reply',
+    fbr_head: 'snicolast replied', fbr_about: 'About your message',
     fbr_private: 'Only you see this answer. It is not published anywhere.',
     fbr_toast: 'snicolast replied to "{title}"', fbr_toast_many: 'snicolast replied to {n} of your messages', fbr_read: 'Read',
     fbr_ann_label: 'Reply from snicolast', fbr_more: 'Show {n} more', fbr_empty: 'Nothing sent yet.',
-    fbr_re: 'Re: {title}', fbr_days: '{n} days ago',
+    fbr_days: '{n} days ago',
   },
   es: {
     nav_library: 'Biblioteca', nav_settings: 'Ajustes', nav_credits: 'Créditos',
@@ -369,11 +369,11 @@ const STR = {
     fb_launcher_name: 'El launcher', fb_not_installed: 'sin instalar', fb_general: 'General',
     fbr_title: 'Tus mensajes', fbr_text: 'Lo que has enviado desde aquí. Cuando snicolast responda, la respuesta sale aquí y solo la ves tú.',
     fbr_replied: 'snicolast ha respondido', fbr_sent: 'Enviado', fbr_waiting: 'Esperando para enviarse', fbr_new: 'Nuevo',
-    fbr_head: 'snicolast te ha respondido', fbr_about: 'Sobre tu mensaje', fbr_you: 'Tú', fbr_reply: 'Responder',
+    fbr_head: 'snicolast te ha respondido', fbr_about: 'Sobre tu mensaje',
     fbr_private: 'Esta respuesta solo la ves tú. No se publica en ningún sitio.',
     fbr_toast: 'snicolast ha respondido a «{title}»', fbr_toast_many: 'snicolast ha respondido a {n} de tus mensajes', fbr_read: 'Leer',
     fbr_ann_label: 'Respuesta de snicolast', fbr_more: 'Ver {n} más', fbr_empty: 'Aún no has enviado nada.',
-    fbr_re: 'Re: {title}', fbr_days: 'hace {n} días',
+    fbr_days: 'hace {n} días',
   },
 };
 
@@ -2222,7 +2222,6 @@ function feedback(kind, projectId, withLog, keep) {
         kind, about: kind === 'recomp' ? null : where, title: title.value.trim(), system: system.value.trim() || null,
         text: text.value.trim(), contact: contact.value.trim() || null,
         details: details(kind === 'recomp' ? null : where, true),
-        reply_to: (keep && keep.reply_to) || null,
       } });
       if (r.status === 'sent' || r.status === 'queued') { snap.feedback_outbox = r.outbox || 0; done(r.status === 'sent'); await update('snapshot'); return; }
       say(r.status === 'limited' ? t('fb_limited') : t('fb_failed', { err: r.error || '?' }));
@@ -2326,7 +2325,6 @@ function openReply(id) {
     answer,
     el('p', { class: 'fb-go-note dim small' }, icon('lock'), t('fbr_private')),
     el('div', { class: 'modal-actions' },
-      el('button', { class: 'btn ghost', onclick: () => { replyClose(); feedback('talk', m.about, undefined, { title: t('fbr_re', { title: m.title }), text: '', reply_to: m.inbox_id }); } }, icon('send'), t('fbr_reply')),
       el('button', { class: 'btn primary', onclick: () => replyClose() }, t('close')))));
   document.body.append(box);
   box.querySelector('.btn.primary').focus();

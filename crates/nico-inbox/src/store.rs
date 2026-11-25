@@ -40,9 +40,6 @@ pub struct Incoming {
     /// with it, so the launcher knows which of its messages it belongs to.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_id: Option<String>,
-    /// When the user answers a reply: the id of the message it follows.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub reply_to: Option<String>,
 }
 
 pub const KINDS: [&str; 3] = ["idea", "recomp", "talk"];
@@ -60,7 +57,7 @@ impl Incoming {
         if !short(&self.title) || !short(&self.sender) || !short(&self.challenge) {
             return Err("too long");
         }
-        if [&self.about, &self.system, &self.contact, &self.lang, &self.local_id, &self.reply_to].iter().any(|o| o.as_deref().is_some_and(|s| !short(s))) {
+        if [&self.about, &self.system, &self.contact, &self.lang, &self.local_id].iter().any(|o| o.as_deref().is_some_and(|s| !short(s))) {
             return Err("too long");
         }
         if self.text.chars().count() > 5000 {
@@ -199,7 +196,7 @@ mod tests {
         Incoming {
             sender: "a".into(), challenge: "c".into(), nonce: 0, kind: "idea".into(), about: None,
             title: title.into(), system: None, text: text.into(), contact: None, details: vec![], lang: None, written: None,
-            local_id: None, reply_to: None,
+            local_id: None,
         }
     }
 

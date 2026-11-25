@@ -120,11 +120,6 @@ fn card(m: &Stored, token: &str, view: View, blocked: &Blocked, all: &[Stored]) 
     let late = msg.written.filter(|w| m.received.saturating_sub(*w) > 600)
         .map(|w| format!(" · written <time data-t={w}></time>")).unwrap_or_default();
     let is_blocked = blocked.keys.iter().any(|k| *k == msg.sender || *k == m.address);
-    // An answer of the user to one of yours: which message it follows
-    let thread = msg.reply_to.as_deref().map(|to| match all.iter().find(|x| x.id == to) {
-        Some(x) => format!("<div class=thread>Follows <a href=\"/?view=replied#{id}\">{title}</a>, which you answered</div>", id = esc(&x.id), title = esc(&x.message.title)),
-        None => "<div class=thread>Follows a message that is no longer here</div>".to_string(),
-    }).unwrap_or_default();
     let mut actions = String::new();
     actions += &if m.read { button(token, view, &m.id, "unread", "Mark unread", "") } else { button(token, view, &m.id, "read", "Mark read", "primary") };
     actions += &if m.archived { button(token, view, &m.id, "unarchive", "Back to inbox", "") } else { button(token, view, &m.id, "archive", "Archive", "") };
@@ -135,7 +130,7 @@ fn card(m: &Stored, token: &str, view: View, blocked: &Blocked, all: &[Stored]) 
     format!(
         "<article id=\"{id}\" class=\"msg {kind}{unread}\">\
            <header><span class=kind>{kname}</span>{about}{flags}<time data-t={received}></time></header>\
-           <h2>{title}</h2>{thread}\
+           <h2>{title}</h2>\
            <p class=text>{text}</p>{contact}\
            <dl>{details}</dl>{answer}\
            <footer><span class=dim>Sender {sender} · {address}{lang}{late}{blocked_note}</span><span class=actions>{actions}</span></footer>\
@@ -225,6 +220,6 @@ button.warn{color:var(--warn)}button.bad{color:var(--bad)}.bad{color:var(--bad)}
 .answered p{margin:6px 0 4px;white-space:pre-wrap;overflow-wrap:anywhere}.answered .reply{border:0;padding-top:4px}
 .answered details summary{cursor:pointer;font-size:13px;color:var(--accent);margin-top:4px}
 .answered>.row{display:flex;justify-content:flex-end;margin-top:6px}
-.ok{color:#3ddc97}.thread{font-size:12.5px;color:var(--dim);margin:0 0 6px}.thread a{color:var(--accent)}
+.ok{color:#3ddc97}
 .empty{color:var(--dim);text-align:center;padding:40px 0}.blockrow{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px}
 "#;

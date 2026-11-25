@@ -44,12 +44,11 @@ not `https://`), the three private cards are greyed out. Launchers older than
   "contact": "optional: email or Discord name",
   "details": [["Launcher", "v0.3.21 · Installed"], ["Nico SR2", "Version 39 · abc1234"], ["Windows", "…"], ["Graphics", "…"]],
   "lang": "en", "written": 1795462067,
-  "local_id": "16 hex characters, random, made for this message",
-  "reply_to": "the mailbox's id of the message whose answer this one replies to, or null"
+  "local_id": "16 hex characters, random, made for this message"
 }
 ```
 
-`local_id` and `reply_to` come from launchers 0.3.24 and later.
+`local_id` comes from launchers 0.3.24 and later.
 
 Answers: `200 {"status":"sent"}`; `429 {"status":"limited"}` (too many from
 this sender or from everyone today: the launcher says so and keeps the form);
@@ -96,9 +95,8 @@ panel says so ("Collected by the launcher").
 In the launcher, a new answer brings a green notice with Read, a count on
 Feedback in the sidebar, and the answer under **Your messages** on the
 Feedback page, where every message sent from there is listed (the copies live
-in `feedback.json`, at most 50). Reply opens Ask or comment with the title
-filled in, and the mailbox shows that message under the one it follows.
-Changing an answer in the panel shows it to the user again as new; removing
+in `feedback.json`, at most 50). An answer is a one-off: the launcher offers no
+way to reply to it (a new message can always be sent). Changing an answer in the panel shows it to the user again as new; removing
 it before it is collected means it never arrives.
 
 A mailbox older than this (no `/v1/replies`) just never has answers: the

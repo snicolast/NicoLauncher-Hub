@@ -405,9 +405,6 @@ struct FeedbackForm {
     text: String,
     contact: Option<String>,
     details: Vec<(String, String)>,
-    /// The mailbox's id of the message whose answer this one replies to.
-    #[serde(default)]
-    reply_to: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -440,7 +437,6 @@ fn send_feedback(hub: tauri::State<Hub>, message: FeedbackForm) -> FeedbackReply
         lang,
         written: 0,
         local_id: None,
-        reply_to: message.reply_to,
     };
     match feedback::send(&inbox, &path, m) {
         Ok(feedback::Outcome::Sent) => reply("sent", None),

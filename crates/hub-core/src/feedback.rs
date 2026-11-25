@@ -58,10 +58,6 @@ pub struct Message {
     /// author's answer back with it. Made when it is sent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_id: Option<String>,
-    /// The mailbox's id of the message this one answers, when the user
-    /// replies to an answer.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub reply_to: Option<String>,
 }
 
 /// A copy of a message sent from here, and the author's answer to it.
@@ -468,7 +464,7 @@ mod tests {
         Message {
             kind: "idea".into(), about: Some("launcher".into()), title: title.into(), system: None, text: "Text".into(),
             contact: None, details: vec![("Launcher".into(), "v0".into())], lang: Some("en".into()), written: 0,
-            local_id: None, reply_to: None,
+            local_id: None,
         }
     }
 
