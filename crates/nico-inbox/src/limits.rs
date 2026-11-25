@@ -10,6 +10,8 @@ pub const CHALLENGE_TTL: u64 = 15 * 60;
 /// Challenges one address may ask for in an hour, and kept for everyone at once.
 const CHALLENGES_PER_HOUR: usize = 40;
 const CHALLENGES_MAX: usize = 20_000;
+/// Times one address may ask for its answers in an hour.
+const LOOKUPS_PER_HOUR: usize = 60;
 
 #[derive(Default)]
 pub struct Limiter {
@@ -40,6 +42,17 @@ impl Limiter {
         }
         self.challenges.insert(token.clone(), (now, address.to_string()));
         Some(token)
+    }
+
+    /// Whether `address` may ask for its answers once more: a launcher asks
+    /// when it starts and on Refresh, far less than this.
+    pub fn lookup(&mut self, address: &str, now: u64) -> bool {
+        let asked = self.asked.entry(format!("replies {address}")).or_default();
+        if recent(asked, now, HOUR) >= LOOKUPS_PER_HOUR {
+            return false;
+        }
+        asked.push(now);
+        true
     }
 
     /// Takes a challenge back: each one is good for one message.

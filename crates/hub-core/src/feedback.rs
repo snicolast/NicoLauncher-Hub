@@ -8,6 +8,10 @@
 //! sending thousands of messages slow. When the mailbox does not answer, the
 //! message waits in `feedback.json`, next to the settings, and goes on a later
 //! start or Refresh.
+//!
+//! The same file keeps a copy of what was sent (title and text, not the
+//! details), and the author's answers: the launcher asks the mailbox for them
+//! with its random sender id, which only it and the mailbox know.
 
 use crate::{agent, Result};
 use serde::{Deserialize, Serialize};
@@ -21,6 +25,11 @@ const KEEP_SECS: u64 = 30 * 24 * 3600;
 const KEEP_MAX: usize = 20;
 /// A harder sum than this is not worked out: it would hang the launcher.
 const BITS_MAX: u32 = 26;
+/// Copies of sent messages kept. Past it the oldest go, except those with an
+/// answer not read yet.
+const SENT_MAX: usize = 50;
+/// Longest answer taken from the mailbox.
+const REPLY_MAX: usize = 5000;
 
 /// What the user wrote, and what goes with it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -45,6 +54,46 @@ pub struct Message {
     /// When it was written, Unix seconds.
     #[serde(default)]
     pub written: u64,
+    /// This launcher's id for the message, random: the mailbox hands the
+    /// author's answer back with it. Made when it is sent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_id: Option<String>,
+    /// The mailbox's id of the message this one answers, when the user
+    /// replies to an answer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply_to: Option<String>,
+}
+
+/// A copy of a message sent from here, and the author's answer to it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Sent {
+    /// The message's `local_id`.
+    pub id: String,
+    /// The mailbox's id, once an answer came with it: a reply to the answer
+    /// names it.
+    #[serde(default)]
+    pub inbox_id: Option<String>,
+    pub kind: String,
+    #[serde(default)]
+    pub about: Option<String>,
+    pub title: String,
+    #[serde(default)]
+    pub text: String,
+    pub written: u64,
+    /// sent, or queued while it waits for the mailbox.
+    pub status: String,
+    #[serde(default)]
+    pub reply: Option<Answer>,
+    /// The user opened the answer.
+    #[serde(default)]
+    pub reply_seen: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Answer {
+    pub text: String,
+    /// When the author wrote it, Unix seconds.
+    pub at: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -64,6 +113,8 @@ struct File {
     sender: String,
     #[serde(default)]
     outbox: Vec<Message>,
+    #[serde(default)]
+    sent: Vec<Sent>,
 }
 
 enum Failure {
@@ -95,6 +146,47 @@ fn write(path: &Path, file: &File) {
         let tmp = path.with_extension("tmp");
         if std::fs::write(&tmp, bytes).is_ok() {
             let _ = std::fs::rename(tmp, path);
+        }
+    }
+}
+
+fn random_hex(bytes: usize) -> String {
+    let mut buf = vec![0u8; bytes];
+    let _ = getrandom::getrandom(&mut buf);
+    buf.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// Keeps a copy of `m`, or updates the one there.
+fn keep_copy(file: &mut File, m: &Message, status: &str) {
+    let Some(id) = m.local_id.clone() else { return };
+    if let Some(c) = file.sent.iter_mut().find(|c| c.id == id) {
+        c.status = status.to_string();
+        return;
+    }
+    file.sent.push(Sent {
+        id,
+        inbox_id: None,
+        kind: m.kind.clone(),
+        about: m.about.clone(),
+        title: m.title.clone(),
+        text: m.text.clone(),
+        written: m.written,
+        status: status.to_string(),
+        reply: None,
+        reply_seen: false,
+    });
+    trim_sent(&mut file.sent);
+}
+
+/// Oldest first out, but never an answer the user has not read.
+fn trim_sent(list: &mut Vec<Sent>) {
+    list.sort_by_key(|c| c.written);
+    while list.len() > SENT_MAX {
+        match list.iter().position(|c| c.reply.is_none() || c.reply_seen) {
+            Some(i) => {
+                list.remove(i);
+            }
+            None => break,
         }
     }
 }
@@ -142,7 +234,7 @@ struct Challenge {
 }
 
 #[derive(Deserialize)]
-struct Answer {
+struct Status {
     #[serde(default)]
     status: String,
     #[serde(default)]
@@ -153,7 +245,7 @@ fn failure(url: &str, e: ureq::Error) -> Failure {
     match e {
         ureq::Error::Status(429, _) => Failure::Limited,
         ureq::Error::Status(403, r) => {
-            let a: Option<Answer> = r.into_json().ok();
+            let a: Option<Status> = r.into_json().ok();
             match a {
                 Some(a) if a.status == "retry" => Failure::Unreachable("challenge".into()),
                 Some(a) => Failure::Refused(a.error.unwrap_or_else(|| "refused".into())),
@@ -161,7 +253,7 @@ fn failure(url: &str, e: ureq::Error) -> Failure {
             }
         }
         ureq::Error::Status(code @ 400..=499, r) => {
-            let why = r.into_json::<Answer>().ok().and_then(|a| a.error).unwrap_or_else(|| format!("answered {code}"));
+            let why = r.into_json::<Status>().ok().and_then(|a| a.error).unwrap_or_else(|| format!("answered {code}"));
             Failure::Refused(why)
         }
         ureq::Error::Status(code, _) => Failure::Unreachable(format!("{url} answered {code}")),
@@ -207,14 +299,23 @@ pub fn send(inbox: &str, path: &Path, mut m: Message) -> Result<Outcome> {
     if m.written == 0 {
         m.written = now();
     }
+    if m.local_id.is_none() {
+        m.local_id = Some(random_hex(8));
+    }
     let mut file = read(path);
     let sender = sender(path, &mut file);
     match send_one(inbox, &sender, &m) {
-        Ok(()) => Ok(Outcome::Sent),
+        Ok(()) => {
+            let mut file = read(path);
+            keep_copy(&mut file, &m, "sent");
+            write(path, &file);
+            Ok(Outcome::Sent)
+        }
         Err(Failure::Limited) => Ok(Outcome::Limited),
         Err(Failure::Refused(why)) => Err(why),
         Err(Failure::Unreachable(_)) => {
             let mut file = read(path);
+            keep_copy(&mut file, &m, "queued");
             file.outbox.push(m);
             let extra = file.outbox.len().saturating_sub(KEEP_MAX);
             file.outbox.drain(..extra);
@@ -241,7 +342,8 @@ pub fn flush(inbox: &str, path: &Path) -> usize {
         match send_one(inbox, &sender, m) {
             // A refused one would be refused again: it goes too
             Ok(()) | Err(Failure::Refused(_)) => {
-                file.outbox.remove(0);
+                let m = file.outbox.remove(0);
+                keep_copy(&mut file, &m, "sent");
                 sent += 1;
             }
             Err(Failure::Limited) | Err(Failure::Unreachable(_)) => break,
@@ -251,6 +353,102 @@ pub fn flush(inbox: &str, path: &Path) -> usize {
         write(path, &file);
     }
     sent
+}
+
+/// The copies of what was sent, newest first.
+pub fn sent(path: &Path) -> Vec<Sent> {
+    let mut list = read(path).sent;
+    list.reverse();
+    list
+}
+
+#[derive(Deserialize)]
+struct Replies {
+    #[serde(default)]
+    replies: Vec<Replied>,
+}
+
+#[derive(Deserialize)]
+struct Replied {
+    id: String,
+    #[serde(default)]
+    local_id: Option<String>,
+    #[serde(default)]
+    kind: String,
+    #[serde(default)]
+    about: Option<String>,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    text: String,
+    #[serde(default)]
+    written: u64,
+    reply: Answer,
+}
+
+/// Asks the mailbox for the author's answers to this install's messages and
+/// keeps them. Returns how many are new or changed (and so not read yet).
+/// An install that never sent anything has no id yet and asks nothing.
+pub fn collect(inbox: &str, path: &Path) -> Result<usize> {
+    let sender = read(path).sender;
+    if sender.len() != 32 {
+        return Ok(0);
+    }
+    let url = format!("{}/v1/replies", inbox.trim_end_matches('/'));
+    let got: Replies = agent(15)
+        .post(&url)
+        .send_json(serde_json::json!({ "sender": sender }))
+        .map_err(|e| crate::http_error(&url, e))?
+        .into_json()
+        .map_err(|e| e.to_string())?;
+    let _busy = BUSY.lock().unwrap_or_else(|e| e.into_inner());
+    let mut file = read(path);
+    let mut fresh = 0;
+    for r in got.replies {
+        let mut answer = r.reply;
+        answer.text = answer.text.chars().take(REPLY_MAX).collect();
+        // Its own copy; or, for a message sent before copies were kept, one
+        // made from what the mailbox has
+        let at = file.sent.iter().position(|c| Some(&c.id) == r.local_id.as_ref() || c.inbox_id.as_deref() == Some(r.id.as_str()));
+        let copy = match at {
+            Some(i) => &mut file.sent[i],
+            None => {
+                file.sent.push(Sent {
+                    id: r.local_id.clone().filter(|l| !l.is_empty()).unwrap_or_else(|| format!("inbox-{}", r.id)),
+                    inbox_id: None,
+                    kind: r.kind,
+                    about: r.about,
+                    title: r.title,
+                    text: r.text,
+                    written: r.written,
+                    status: "sent".into(),
+                    reply: None,
+                    reply_seen: false,
+                });
+                file.sent.last_mut().unwrap()
+            }
+        };
+        copy.inbox_id = Some(r.id);
+        copy.status = "sent".into();
+        if copy.reply.as_ref() != Some(&answer) {
+            copy.reply = Some(answer);
+            copy.reply_seen = false;
+            fresh += 1;
+        }
+    }
+    trim_sent(&mut file.sent);
+    write(path, &file);
+    Ok(fresh)
+}
+
+/// The user opened these answers.
+pub fn mark_seen(path: &Path, ids: &[String]) {
+    let _busy = BUSY.lock().unwrap_or_else(|e| e.into_inner());
+    let mut file = read(path);
+    for c in file.sent.iter_mut().filter(|c| ids.contains(&c.id)) {
+        c.reply_seen = true;
+    }
+    write(path, &file);
 }
 
 #[cfg(test)]
@@ -270,6 +468,7 @@ mod tests {
         Message {
             kind: "idea".into(), about: Some("launcher".into()), title: title.into(), system: None, text: "Text".into(),
             contact: None, details: vec![("Launcher".into(), "v0".into())], lang: Some("en".into()), written: 0,
+            local_id: None, reply_to: None,
         }
     }
 
@@ -369,5 +568,71 @@ mod tests {
         let (url, server) = mailbox(vec![(200, CHALLENGE), (403, r#"{"status":"retry"}"#), (200, CHALLENGE), (200, SENT)]);
         assert_eq!(send(&url, &path, message("x")).unwrap(), Outcome::Sent);
         assert_eq!(server.join().unwrap().len(), 4);
+    }
+
+    #[test]
+    fn keeps_a_copy_and_collects_the_answers() {
+        let path = temp("answers");
+        // Nothing sent yet: no id, nothing asked
+        assert_eq!(collect("http://127.0.0.1:9", &path).unwrap(), 0);
+        let (url, server) = mailbox(vec![(200, CHALLENGE), (200, SENT)]);
+        send(&url, &path, message("Camera")).unwrap();
+        let seen = server.join().unwrap();
+        let body: serde_json::Value = serde_json::from_str(&seen[1][seen[1].find('{').unwrap()..]).unwrap();
+        let local = body["local_id"].as_str().unwrap().to_string();
+        let copies = sent(&path);
+        assert_eq!((copies.len(), copies[0].id.as_str(), copies[0].status.as_str()), (1, local.as_str(), "sent"));
+        assert!(copies[0].reply.is_none());
+        // One answer to it, and one to a message sent before copies were kept
+        let answers: &'static str = Box::leak(format!(
+            r#"{{"replies":[{{"id":"100-aa","local_id":"{local}","kind":"idea","title":"Camera","text":"Text","written":5,"reply":{{"text":"Done!","at":50}}}},
+               {{"id":"90-bb","local_id":null,"kind":"recomp","about":null,"title":"Daytona","text":"Please","written":4,"reply":{{"text":"Maybe","at":40}}}}]}}"#
+        ).into_boxed_str());
+        let (url, server) = mailbox(vec![(200, answers)]);
+        assert_eq!(collect(&url, &path).unwrap(), 2);
+        let seen = server.join().unwrap();
+        assert!(seen[0].starts_with("POST /v1/replies"));
+        assert!(seen[0].contains(&read(&path).sender));
+        let copies = sent(&path);
+        assert_eq!(copies.len(), 2);
+        let cam = copies.iter().find(|c| c.id == local).unwrap();
+        assert_eq!((cam.reply.as_ref().unwrap().text.as_str(), cam.inbox_id.as_deref(), cam.reply_seen), ("Done!", Some("100-aa"), false));
+        let old = copies.iter().find(|c| c.title == "Daytona").unwrap();
+        assert_eq!((old.id.as_str(), old.kind.as_str()), ("inbox-90-bb", "recomp"));
+        // Read: the same answers again are nothing new
+        mark_seen(&path, &[local.clone(), old.id.clone()]);
+        let (url, server) = mailbox(vec![(200, answers)]);
+        assert_eq!(collect(&url, &path).unwrap(), 0);
+        server.join().unwrap();
+        assert!(sent(&path).iter().all(|c| c.reply_seen));
+    }
+
+    #[test]
+    fn a_kept_message_is_marked_sent_when_it_goes() {
+        let path = temp("copyqueued");
+        let away = {
+            let l = TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}", l.local_addr().unwrap())
+        };
+        send(&away, &path, message("Later")).unwrap();
+        assert_eq!(sent(&path)[0].status, "queued");
+        let (url, server) = mailbox(vec![(200, CHALLENGE), (200, SENT)]);
+        assert_eq!(flush(&url, &path), 1);
+        server.join().unwrap();
+        let copies = sent(&path);
+        assert_eq!((copies.len(), copies[0].status.as_str()), (1, "sent"));
+    }
+
+    #[test]
+    fn old_copies_go_but_not_unread_answers() {
+        let mk = |n: u64, reply: bool, seen: bool| Sent {
+            id: n.to_string(), inbox_id: None, kind: "idea".into(), about: None, title: "t".into(), text: String::new(), written: n,
+            status: "sent".into(), reply: reply.then(|| Answer { text: "a".into(), at: n }), reply_seen: seen,
+        };
+        let mut list: Vec<Sent> = (0..SENT_MAX as u64 + 2).map(|n| mk(n, n == 0, false)).collect();
+        trim_sent(&mut list);
+        assert_eq!(list.len(), SENT_MAX);
+        assert_eq!(list[0].id, "0", "the unread answer stays");
+        assert_eq!(list[1].id, "3");
     }
 }

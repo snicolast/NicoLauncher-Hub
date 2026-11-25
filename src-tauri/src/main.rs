@@ -95,6 +95,9 @@ struct Snapshot {
     feedback_inbox: bool,
     /// Messages kept until the mailbox answers again.
     feedback_outbox: usize,
+    /// What was sent from the Feedback page, newest first, with the author's
+    /// answers.
+    feedback_sent: Vec<feedback::Sent>,
 }
 
 #[derive(Serialize)]
@@ -345,6 +348,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
             .collect(),
         feedback_inbox: registry.inbox().is_some(),
         feedback_outbox: feedback::waiting(&feedback::file_next_to(&hub.places.config)),
+        feedback_sent: feedback::sent(&feedback::file_next_to(&hub.places.config)),
     }
 }
 
@@ -401,6 +405,9 @@ struct FeedbackForm {
     text: String,
     contact: Option<String>,
     details: Vec<(String, String)>,
+    /// The mailbox's id of the message whose answer this one replies to.
+    #[serde(default)]
+    reply_to: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -432,6 +439,8 @@ fn send_feedback(hub: tauri::State<Hub>, message: FeedbackForm) -> FeedbackReply
         details: message.details,
         lang,
         written: 0,
+        local_id: None,
+        reply_to: message.reply_to,
     };
     match feedback::send(&inbox, &path, m) {
         Ok(feedback::Outcome::Sent) => reply("sent", None),
@@ -439,6 +448,25 @@ fn send_feedback(hub: tauri::State<Hub>, message: FeedbackForm) -> FeedbackReply
         Ok(feedback::Outcome::Limited) => reply("limited", None),
         Err(e) => reply("error", Some(e)),
     }
+}
+
+/// Asks the author's mailbox for answers to what this launcher sent. Its own
+/// call, after the refresh: a mailbox that is slow or away never holds up
+/// the rest. Nothing to tell when it fails: the answers wait for next time.
+#[tauri::command(async)]
+fn collect_replies(hub: tauri::State<Hub>) -> Snapshot {
+    let inbox = hub.registry.lock().unwrap().inbox().map(str::to_string);
+    if let Some(inbox) = inbox {
+        let _ = feedback::collect(&inbox, &feedback::file_next_to(&hub.places.config));
+    }
+    snapshot_of(&hub)
+}
+
+/// The user opened these answers.
+#[tauri::command]
+fn mark_replies_seen(hub: tauri::State<Hub>, ids: Vec<String>) -> Snapshot {
+    feedback::mark_seen(&feedback::file_next_to(&hub.places.config), &ids);
+    snapshot_of(&hub)
 }
 
 #[tauri::command]
@@ -1162,6 +1190,8 @@ fn main() {
             open_folder,
             system_info,
             send_feedback,
+            collect_replies,
+            mark_replies_seen,
             desktop_shortcut,
             uninstall,
             running,

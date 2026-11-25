@@ -1,8 +1,9 @@
 //! nico-inbox: snicolast's private mailbox for the launcher's ideas, recomp
 //! proposals and messages. It runs on one machine of his, behind Tailscale:
 //!
-//! - the public port (Tailscale Funnel) only takes messages: /v1/challenge,
-//!   /v1/message and /v1/ping;
+//! - the public port (Tailscale Funnel) only takes messages and hands each
+//!   launcher the answers to its own: /v1/challenge, /v1/message,
+//!   /v1/replies and /v1/ping;
 //! - the panel port (Tailscale serve, his machines only) shows them.
 //!
 //! The launcher is open source, so nothing in it is secret: a small sum
@@ -91,6 +92,7 @@ fn public(app: Arc<App>, server: Server) {
                 }
             }
             (Method::Post, "/message") => receive(&app, &mut req, &addr),
+            (Method::Post, "/replies") => replies(&app, &mut req, &addr),
             _ => status(404, "error", Some("not found")),
         };
         let _ = req.respond(reply);
@@ -139,6 +141,7 @@ fn receive(app: &App, req: &mut Request, addr: &str) -> Response<std::io::Cursor
         message: msg,
         read: false,
         archived: false,
+        reply: None,
     };
     if let Err(e) = app.store.save(&stored) {
         app.store.log(&format!("could not save a message: {e}"));
@@ -154,6 +157,52 @@ fn receive(app: &App, req: &mut Request, addr: &str) -> Response<std::io::Cursor
         });
     }
     status(200, "sent", None)
+}
+
+/// The answers to one launcher's messages. It asks with its sender id, which
+/// only it and this mailbox know (random, never shown anywhere public), so
+/// nobody else can read them. Only messages that have an answer are listed,
+/// with what the user wrote, so a launcher that kept no copy (older ones) can
+/// still show what the answer is about.
+fn replies(app: &App, req: &mut Request, addr: &str) -> Response<std::io::Cursor<Vec<u8>>> {
+    #[derive(serde::Deserialize)]
+    struct Ask {
+        sender: String,
+    }
+    let mut body = Vec::new();
+    if req.as_reader().take(4096).read_to_end(&mut body).is_err() {
+        return status(400, "error", Some("not a request"));
+    }
+    let Ok(ask) = serde_json::from_slice::<Ask>(&body) else {
+        return status(400, "error", Some("not a request"));
+    };
+    // The launcher's ids are 32 hex characters: anything else has no answers
+    if ask.sender.len() != 32 || !ask.sender.chars().all(|c| c.is_ascii_hexdigit()) {
+        return status(400, "error", Some("not a sender"));
+    }
+    let t = now();
+    if !app.limiter.lock().unwrap().lookup(addr, t) {
+        return status(429, "limited", None);
+    }
+    let blocked = app.store.blocked();
+    if blocked.keys.iter().any(|k| *k == ask.sender || k == addr) {
+        return json(200, serde_json::json!({ "replies": [] }));
+    }
+    let mut out = Vec::new();
+    for mut m in app.store.all().into_iter().filter(|m| m.message.sender == ask.sender && m.reply.is_some()) {
+        let r = m.reply.clone().unwrap();
+        out.push(serde_json::json!({
+            "id": m.id, "local_id": m.message.local_id, "kind": m.message.kind, "about": m.message.about,
+            "title": m.message.title, "text": m.message.text, "written": m.message.written.unwrap_or(m.received),
+            "reply": { "text": r.text, "at": r.at },
+        }));
+        if r.delivered.is_none() {
+            m.reply.as_mut().unwrap().delivered = Some(t);
+            let _ = app.store.save(&m);
+            app.store.log(&format!("answer to {} collected by its launcher", m.id));
+        }
+    }
+    json(200, serde_json::json!({ "replies": out }))
 }
 
 /// application/x-www-form-urlencoded, as the panel's forms send it.
@@ -205,8 +254,9 @@ fn panel(app: Arc<App>, server: Server) {
                     // The panel was restarted (new token), or another page tried: back to the list
                     Response::from_data(Vec::new()).with_status_code(303).with_header(header("Location", "/"))
                 } else {
-                    act(&app, get("do"), get("id"));
-                    let back = format!("/?view={}", get("view").chars().filter(char::is_ascii_alphabetic).collect::<String>());
+                    act(&app, get("do"), get("id"), get("text"));
+                    let id: String = get("id").chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').collect();
+                    let back = format!("/?view={}#{id}", get("view").chars().filter(char::is_ascii_alphabetic).collect::<String>());
                     Response::from_data(Vec::new()).with_status_code(303).with_header(header("Location", &back))
                 }
             }
@@ -216,7 +266,7 @@ fn panel(app: Arc<App>, server: Server) {
     }
 }
 
-fn act(app: &App, what: &str, id: &str) {
+fn act(app: &App, what: &str, id: &str, text: &str) {
     let store = &app.store;
     let change = |f: &dyn Fn(&mut Stored)| {
         if let Some(mut m) = store.get(id) {
@@ -230,6 +280,22 @@ fn act(app: &App, what: &str, id: &str) {
         "archive" => change(&|m| { m.archived = true; m.read = true; }),
         "unarchive" => change(&|m| m.archived = false),
         "delete" => store.delete(id),
+        // Writing an answer also marks the message read. An empty one removes it.
+        "reply" => {
+            let text = text.replace("\r\n", "\n");
+            let text = text.trim();
+            if text.is_empty() {
+                change(&|m| m.reply = None);
+            } else {
+                let text: String = text.chars().take(store::REPLY_MAX).collect();
+                change(&|m| {
+                    m.reply = Some(store::Reply { text: text.clone(), at: now(), delivered: None });
+                    m.read = true;
+                });
+                store.log(&format!("answered {id}"));
+            }
+        }
+        "unreply" => change(&|m| m.reply = None),
         "allread" => {
             for mut m in store.all().into_iter().filter(|m| !m.read) {
                 m.read = true;
@@ -312,5 +378,76 @@ mod tests {
         assert_eq!(f[2].1, "read all");
         assert_eq!(form("a=%E2%9C%93")[0].1, "✓");
         assert_eq!(form("a=%2")[0].1, "%2");
+    }
+
+    fn app(name: &str) -> Arc<App> {
+        let dir = std::env::temp_dir().join(format!("nico-inbox-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut config: Config = toml::from_str("").unwrap();
+        config.data = dir;
+        let store = Store::open(&config.data).unwrap();
+        Arc::new(App { config, store, limiter: Mutex::new(Limiter::default()), token: "tok".into() })
+    }
+
+    fn stored(id: &str, sender: &str, title: &str) -> Stored {
+        let message: Incoming = serde_json::from_value(serde_json::json!({
+            "sender": sender, "challenge": "c", "nonce": 0, "kind": "idea", "title": title, "text": "Please", "local_id": format!("l{id}"),
+        })).unwrap();
+        Stored { id: id.into(), received: 10, address: "1.2.3.4".into(), message, flags: vec![], read: false, archived: false, reply: None }
+    }
+
+    #[test]
+    fn hands_each_launcher_only_its_own_answers() {
+        let app = app("replies");
+        let me = "a".repeat(32);
+        let other = "b".repeat(32);
+        app.store.save(&stored("1-a", &me, "Camera")).unwrap();
+        app.store.save(&stored("2-b", &me, "No answer yet")).unwrap();
+        app.store.save(&stored("3-c", &other, "Someone else")).unwrap();
+        act(&app, "reply", "1-a", "  Done!\r\nThanks  ");
+        act(&app, "reply", "3-c", "Not for you");
+        let m = app.store.get("1-a").unwrap();
+        assert_eq!(m.reply.as_ref().unwrap().text, "Done!\nThanks");
+        assert!(m.read, "answering marks it read");
+        assert!(m.reply.as_ref().unwrap().delivered.is_none());
+
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/v1/replies", server.server_addr().to_ip().unwrap());
+        let a = app.clone();
+        std::thread::spawn(move || public(a, server));
+        let ask = |sender: &str| -> Result<serde_json::Value, u16> {
+            match ureq::post(&url).send_json(serde_json::json!({ "sender": sender })) {
+                Ok(r) => Ok(r.into_json().unwrap()),
+                Err(ureq::Error::Status(c, _)) => Err(c),
+                Err(e) => panic!("{e}"),
+            }
+        };
+        let got = ask(&me).unwrap();
+        let list = got["replies"].as_array().unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0]["id"], "1-a");
+        assert_eq!(list[0]["local_id"], "l1-a");
+        assert_eq!(list[0]["title"], "Camera");
+        assert_eq!(list[0]["reply"]["text"], "Done!\nThanks");
+        assert!(list[0].get("address").is_none() && list[0].get("sender").is_none());
+        assert!(app.store.get("1-a").unwrap().reply.unwrap().delivered.is_some());
+        assert_eq!(ask(&"c".repeat(32)).unwrap()["replies"].as_array().unwrap().len(), 0);
+        assert_eq!(ask("short").unwrap_err(), 400);
+        // Blocked: nothing
+        app.store.set_blocked(&store::Blocked { keys: vec![me.clone()] }).unwrap();
+        assert_eq!(ask(&me).unwrap()["replies"].as_array().unwrap().len(), 0);
+        // An empty answer removes it
+        act(&app, "reply", "1-a", "   ");
+        assert!(app.store.get("1-a").unwrap().reply.is_none());
+        let _ = std::fs::remove_dir_all(&app.config.data);
+    }
+
+    #[test]
+    fn asking_for_answers_is_limited() {
+        let mut l = Limiter::default();
+        assert!((0..60).all(|_| l.lookup("x", 1000)));
+        assert!(!l.lookup("x", 1000));
+        assert!(l.lookup("y", 1000));
+        assert!(l.lookup("x", 1000 + 3600));
     }
 }
