@@ -83,7 +83,17 @@ pub struct Sent {
     /// The user opened the answer.
     #[serde(default)]
     pub reply_seen: bool,
+    /// The emoji the user sent back, one of REACTIONS.
+    #[serde(default)]
+    pub reaction: Option<String>,
+    /// The mailbox knows the answer was read, with this reaction. False
+    /// while telling it waits for the mailbox.
+    #[serde(default)]
+    pub read_told: bool,
 }
+
+/// What a user may send back to an answer (nico-inbox takes only these).
+pub const REACTIONS: [&str; 6] = ["👍", "❤️", "😄", "🙏", "🎉", "🤔"];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Answer {
@@ -170,6 +180,8 @@ fn keep_copy(file: &mut File, m: &Message, status: &str) {
         status: status.to_string(),
         reply: None,
         reply_seen: false,
+        reaction: None,
+        read_told: false,
     });
     trim_sent(&mut file.sent);
 }
@@ -420,15 +432,20 @@ pub fn collect(inbox: &str, path: &Path) -> Result<usize> {
                     status: "sent".into(),
                     reply: None,
                     reply_seen: false,
+                    reaction: None,
+                    read_told: false,
                 });
                 file.sent.last_mut().unwrap()
             }
         };
         copy.inbox_id = Some(r.id);
         copy.status = "sent".into();
+        // A new or changed answer: to be read (again)
         if copy.reply.as_ref() != Some(&answer) {
             copy.reply = Some(answer);
             copy.reply_seen = false;
+            copy.reaction = None;
+            copy.read_told = false;
             fresh += 1;
         }
     }
@@ -437,14 +454,69 @@ pub fn collect(inbox: &str, path: &Path) -> Result<usize> {
     Ok(fresh)
 }
 
-/// The user opened these answers.
-pub fn mark_seen(path: &Path, ids: &[String]) {
+/// The user read this answer and closed it, with an emoji or none. The
+/// mailbox is told by `tell_read`.
+pub fn mark_seen(path: &Path, id: &str, reaction: Option<String>) {
+    let reaction = reaction.filter(|r| REACTIONS.contains(&r.as_str()));
     let _busy = BUSY.lock().unwrap_or_else(|e| e.into_inner());
     let mut file = read(path);
-    for c in file.sent.iter_mut().filter(|c| ids.contains(&c.id)) {
-        c.reply_seen = true;
+    if let Some(c) = file.sent.iter_mut().find(|c| c.id == id && c.reply.is_some()) {
+        if !c.reply_seen || c.reaction != reaction {
+            c.reply_seen = true;
+            c.reaction = reaction;
+            c.read_told = false;
+            write(path, &file);
+        }
+    }
+}
+
+/// Tells the mailbox which answers were read (and the emoji), for those it
+/// does not know yet. What fails waits for the next time. Returns how many
+/// it was told.
+pub fn tell_read(inbox: &str, path: &Path) -> usize {
+    let file = read(path);
+    let todo: Vec<(String, String, Option<String>)> = file
+        .sent
+        .iter()
+        .filter(|c| c.reply_seen && !c.read_told)
+        .filter_map(|c| Some((c.id.clone(), c.inbox_id.clone()?, c.reaction.clone())))
+        .collect();
+    if todo.is_empty() || file.sender.len() != 32 {
+        return 0;
+    }
+    let url = format!("{}/v1/read", inbox.trim_end_matches('/'));
+    let a = agent(15);
+    let mut told = Vec::new();
+    for (id, inbox_id, reaction) in todo {
+        match a.post(&url).send_json(serde_json::json!({ "sender": file.sender, "id": inbox_id, "reaction": reaction })) {
+            Ok(_) => told.push((id, reaction)),
+            // The author deleted it (or the mailbox refuses it): nobody left
+            // to tell. A mailbox too old to know of reading answers "not
+            // found" instead: that waits until it is updated
+            Err(ureq::Error::Status(code @ (400 | 404), r)) => {
+                let why = r.into_json::<Status>().ok().and_then(|s| s.error).unwrap_or_default();
+                if code == 400 || why == "no such answer" {
+                    told.push((id, reaction));
+                }
+            }
+            Err(_) => break,
+        }
+    }
+    if told.is_empty() {
+        return 0;
+    }
+    let _busy = BUSY.lock().unwrap_or_else(|e| e.into_inner());
+    let mut file = read(path);
+    let mut n = 0;
+    for c in file.sent.iter_mut() {
+        // Only if nothing changed meanwhile (another emoji chosen)
+        if told.iter().any(|(id, r)| *id == c.id && *r == c.reaction) && c.reply_seen {
+            c.read_told = true;
+            n += 1;
+        }
     }
     write(path, &file);
+    n
 }
 
 #[cfg(test)]
@@ -596,11 +668,34 @@ mod tests {
         let old = copies.iter().find(|c| c.title == "Daytona").unwrap();
         assert_eq!((old.id.as_str(), old.kind.as_str()), ("inbox-90-bb", "recomp"));
         // Read: the same answers again are nothing new
-        mark_seen(&path, &[local.clone(), old.id.clone()]);
+        mark_seen(&path, &local, Some("👍".into()));
+        mark_seen(&path, &old.id, Some("not an emoji".into()));
         let (url, server) = mailbox(vec![(200, answers)]);
         assert_eq!(collect(&url, &path).unwrap(), 0);
         server.join().unwrap();
-        assert!(sent(&path).iter().all(|c| c.reply_seen));
+        assert!(sent(&path).iter().all(|c| c.reply_seen && !c.read_told));
+        assert_eq!(sent(&path).iter().find(|c| c.id == local).unwrap().reaction.as_deref(), Some("👍"));
+        assert!(sent(&path).iter().find(|c| c.id == old.id).unwrap().reaction.is_none());
+        // The mailbox is told, once: the first time it is away, then it answers
+        let away = {
+            let l = TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}", l.local_addr().unwrap())
+        };
+        assert_eq!(tell_read(&away, &path), 0);
+        // A mailbox too old for it: still to tell
+        let (url, server) = mailbox(vec![(404, r#"{"status":"error","error":"not found"}"#), (404, r#"{"status":"error","error":"not found"}"#)]);
+        assert_eq!(tell_read(&url, &path), 0);
+        server.join().unwrap();
+        let (url, server) = mailbox(vec![(200, r#"{"status":"ok"}"#), (404, r#"{"status":"error","error":"no such answer"}"#)]);
+        assert_eq!(tell_read(&url, &path), 2);
+        let seen = server.join().unwrap();
+        assert!(seen[0].starts_with("POST /v1/read"));
+        assert!(seen.iter().any(|s| s.contains("\"100-aa\"") && s.contains("👍")));
+        assert!(sent(&path).iter().all(|c| c.read_told));
+        assert_eq!(tell_read("http://127.0.0.1:9", &path), 0, "nothing left to tell");
+        // Another emoji later is told again
+        mark_seen(&path, &local, Some("🎉".into()));
+        assert!(!sent(&path).iter().find(|c| c.id == local).unwrap().read_told);
     }
 
     #[test]
@@ -624,6 +719,7 @@ mod tests {
         let mk = |n: u64, reply: bool, seen: bool| Sent {
             id: n.to_string(), inbox_id: None, kind: "idea".into(), about: None, title: "t".into(), text: String::new(), written: n,
             status: "sent".into(), reply: reply.then(|| Answer { text: "a".into(), at: n }), reply_seen: seen,
+            reaction: None, read_told: false,
         };
         let mut list: Vec<Sent> = (0..SENT_MAX as u64 + 2).map(|n| mk(n, n == 0, false)).collect();
         trim_sent(&mut list);

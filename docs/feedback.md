@@ -102,6 +102,43 @@ it before it is collected means it never arrives.
 A mailbox older than this (no `/v1/replies`) just never has answers: the
 launcher asks again next time and says nothing.
 
+### Read, and an emoji back
+
+The answer window has a row of emojis (👍 ❤️ 😄 🙏 🎉 🤔); picking one is
+optional, and there is no text. When the user closes the window, the launcher
+tells the mailbox the answer was read:
+
+```
+POST {inbox}/v1/read
+{"sender": "…", "id": "1795462067-a1b2c3", "reaction": "❤️"}
+```
+
+`reaction` is one of those six or `null`. The mailbox answers 200, 404 (`no
+such answer`: not this sender's message, or no answer any more) or 400 (any
+other emoji). It keeps the time it was first read and the latest emoji, and
+sends a quiet notice ("❤️ Your answer was read"). The panel then shows Read
+and the emoji next to the answer: from then on the message can be archived or
+deleted, the user's launcher keeps its copy. Changing the emoji later sends it
+again; a changed answer is new, unread and without an emoji.
+
+The launcher remembers what it still has to tell (`read_told` in
+`feedback.json`) and retries after each refresh, so a closed window with no
+connection, or a mailbox older than 0.3.0 (no `/v1/read`), is told later.
+
+## The panel
+
+The panel is a mail client: folders on the left (Inbox, Unread, Important,
+To answer, Answered, Flagged, Archived, Blocked) with filters by kind and by
+game, the list in the middle with a search box (title, text, contact and the
+answer), and the open message on the right with its buttons (Important, Mark
+unread, Archive, Block, Delete) and the answer. Opening a message marks it
+read. Keys: `j`/`k` move through the list, `/` goes to the search. On a phone
+it is one column: the list, then the message.
+
+It is at `https://<machine>.<tailnet>.ts.net:8443/` from any machine of the
+tailnet: another PC only needs Tailscale installed and signed in with the
+same account.
+
 ## Setting up the mailbox (Windows, behind Tailscale)
 
 The machine needs to be on and in your tailnet. No port is opened on the
