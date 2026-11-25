@@ -2617,12 +2617,14 @@ async function installLauncher(read) {
 }
 
 // The launcher updated itself: on the first start of the new version, what
-// it brought (its news entries that start "Launcher 0.3.6:"), once. With
-// nothing to show once the news are in, it is marked seen quietly.
+// it brought (its news entries that start "Launcher 0.3.6:"), once. It waits
+// for the news from GitHub: the copy kept from the last start, shown at once
+// on Home, may not have this version's yet. With nothing to show once they
+// are in, it is marked seen quietly.
 let launcherShown = false;
 function noticeLauncherUpdate() {
   const up = snap.launcher_update;
-  if (!up || launcherShown || !snap.license_accepted || clClose || annClose || closeAsk || licenseBox) return;
+  if (!up || launcherShown || !snap.launcher_news_fresh || !snap.license_accepted || clClose || annClose || closeAsk || licenseBox) return;
   if (!up.changes.length) { if ((snap.launcher_news || []).length) { launcherShown = true; update('mark_launcher_seen'); } return; }
   launcherShown = true;
   const head = el('div', { class: 'ann-head cl-launcher' },
@@ -2852,7 +2854,8 @@ T.event.listen('task', async ({ payload }) => {
   // that is asked for
   if (snap && !snap.install_root && view === 'home') show('library');
   if (snap && snap.config_error) toast(`${t('settings_damaged')} ${snap.config_error}`);
-  // Project list and news from GitHub; the built-in list shows meanwhile
+  // Project list and news from GitHub; the built-in list and the news kept
+  // from the last start show meanwhile
   await refresh();
   const important = annUnseen().find((a) => a.level === 'important');
   if (important) openAnnouncements(important.id);

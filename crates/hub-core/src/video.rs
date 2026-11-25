@@ -2,12 +2,12 @@
 //! public feed on YouTube. Only its id, title and date are kept.
 
 use crate::{err, http_get, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// snicolast's channel (youtube.com/@snicolast).
 pub const FEED_URL: &str = "https://www.youtube.com/feeds/videos.xml?channel_id=UCrmeVYYAwMFHdXGRVSP1rwg";
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Video {
     /// The 11 characters after watch?v=, for the player inside the launcher.
     pub id: String,

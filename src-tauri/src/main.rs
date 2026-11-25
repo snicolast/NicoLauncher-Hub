@@ -5,6 +5,7 @@ use hub_core::achievements::{self, Achievement};
 use hub_core::announcements::{self, Announcement};
 use hub_core::art::{self, Art};
 use hub_core::build;
+use hub_core::cache::{self, Cache};
 use hub_core::config::{self, Config, Sort};
 use hub_core::diagnose::{self, Diagnosis, Fix};
 use hub_core::feedback;
@@ -21,6 +22,7 @@ use hub_core::video::{self, Video};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder};
@@ -38,6 +40,9 @@ struct Hub {
     registry: Mutex<Registry>,
     remote_news: Mutex<HashMap<String, Vec<Entry>>>,
     launcher_news: Mutex<Vec<Entry>>,
+    /// The launcher's news came from GitHub in this run, not from the copy
+    /// kept from the last one.
+    launcher_news_fresh: AtomicBool,
     latest_video: Mutex<Option<Video>>,
     announcements: Mutex<Vec<Announcement>>,
     task: Mutex<Option<Running>>,
@@ -71,6 +76,8 @@ struct Snapshot {
     busy: Option<String>,
     /// The launcher's own announcements, newest first (the home page).
     launcher_news: Vec<Entry>,
+    /// False while `launcher_news` is still the copy kept from the last run.
+    launcher_news_fresh: bool,
     /// The author's newest video on YouTube, when it could be read.
     latest_video: Option<Video>,
     /// The author's announcements this user should see, newest first.
@@ -316,6 +323,7 @@ fn snapshot_of(hub: &Hub) -> Snapshot {
         busy: hub.task.lock().unwrap().as_ref().map(|t| t.project.clone()),
         launcher_update: launcher_update(&config, &launcher_news),
         launcher_news,
+        launcher_news_fresh: hub.launcher_news_fresh.load(Ordering::Relaxed),
         latest_video: hub.latest_video.lock().unwrap().clone(),
         announcements,
         sort: config.sort,
@@ -440,26 +448,42 @@ fn snapshot(hub: tauri::State<Hub>) -> Snapshot {
 
 /// Reads the project list and each project's news from GitHub. Slow (network),
 /// so it runs off the main thread; what cannot be reached keeps its old value.
+/// Everything is asked at once: one slow answer no longer holds up the
+/// others, and the whole takes as long as the slowest one, not their sum.
 #[tauri::command(async)]
 fn refresh(hub: tauri::State<Hub>) -> Snapshot {
-    if let Ok(reg) = Registry::fetch() {
-        *hub.registry.lock().unwrap() = reg;
-    }
-    let projects = hub.registry.lock().unwrap().projects.clone();
-    for p in projects {
-        if let Ok(entries) = news::fetch(&p) {
-            hub.remote_news.lock().unwrap().insert(p.id.clone(), entries);
+    let hub: &Hub = &hub;
+    std::thread::scope(|s| {
+        s.spawn(|| {
+            if let Ok(entries) = news::fetch_launcher() {
+                *hub.launcher_news.lock().unwrap() = entries;
+                hub.launcher_news_fresh.store(true, Ordering::Relaxed);
+            }
+        });
+        s.spawn(|| {
+            if let Ok(Some(v)) = video::fetch_latest() {
+                *hub.latest_video.lock().unwrap() = Some(v);
+            }
+        });
+        s.spawn(|| {
+            if let Ok(list) = announcements::fetch() {
+                *hub.announcements.lock().unwrap() = list;
+            }
+        });
+        // The projects' news are where the project list says
+        if let Ok(reg) = Registry::fetch() {
+            *hub.registry.lock().unwrap() = reg;
         }
-    }
-    if let Ok(entries) = news::fetch_launcher() {
-        *hub.launcher_news.lock().unwrap() = entries;
-    }
-    if let Ok(Some(v)) = video::fetch_latest() {
-        *hub.latest_video.lock().unwrap() = Some(v);
-    }
-    if let Ok(list) = announcements::fetch() {
-        *hub.announcements.lock().unwrap() = list;
-    }
+        let projects = hub.registry.lock().unwrap().projects.clone();
+        for p in projects {
+            s.spawn(move || {
+                if let Ok(entries) = news::fetch(&p) {
+                    hub.remote_news.lock().unwrap().insert(p.id, entries);
+                }
+            });
+        }
+    });
+    save_cache(hub);
     // Messages for the author that waited for his mailbox: on their own
     // thread, so a mailbox that does not answer never slows the refresh
     let path = feedback::file_next_to(&hub.places.config);
@@ -468,7 +492,17 @@ fn refresh(hub: tauri::State<Hub>) -> Snapshot {
             std::thread::spawn(move || feedback::flush(&inbox, &path));
         }
     }
-    snapshot_of(&hub)
+    snapshot_of(hub)
+}
+
+/// Keeps what was read for the next start, which shows it while it asks again.
+fn save_cache(hub: &Hub) {
+    let cache = Cache {
+        launcher_news: hub.launcher_news.lock().unwrap().clone(),
+        news: hub.remote_news.lock().unwrap().clone(),
+        latest_video: hub.latest_video.lock().unwrap().clone(),
+    };
+    cache::save(&cache::file_next_to(&hub.places.config), &cache);
 }
 
 /// Looks on this PC for what the listed projects need to be built. It starts
@@ -1038,6 +1072,8 @@ fn built(p: &Project, dir: &std::path::Path, log: &mut dyn FnMut(&str)) {
 
 fn main() {
     let places = Places::here();
+    // What GitHub said last time, shown until it answers again
+    let cached = cache::load(&cache::file_next_to(&places.config));
     let (mut config, config_error) = match Config::load(&places.config) {
         Ok(c) => (c, None),
         Err(e) => (Config::default(), Some(e)),
@@ -1092,9 +1128,10 @@ fn main() {
             config: Mutex::new(config),
             config_error: Mutex::new(config_error),
             registry: Mutex::new(Registry::bundled()),
-            remote_news: Mutex::new(HashMap::new()),
-            launcher_news: Mutex::new(Vec::new()),
-            latest_video: Mutex::new(None),
+            remote_news: Mutex::new(cached.news),
+            launcher_news: Mutex::new(cached.launcher_news),
+            launcher_news_fresh: AtomicBool::new(false),
+            latest_video: Mutex::new(cached.latest_video),
             announcements: Mutex::new(Vec::new()),
             task: Mutex::new(None),
         })
@@ -1150,6 +1187,7 @@ mod tests {
             registry: Mutex::new(Registry::bundled()),
             remote_news: Mutex::new(HashMap::new()),
             launcher_news: Mutex::new(news::parse("[1] 2026-11-14\n- Launcher 0.3.6: something\n")),
+            launcher_news_fresh: AtomicBool::new(true),
             latest_video: Mutex::new(None),
             announcements: Mutex::new(Vec::new()),
             task: Mutex::new(None),

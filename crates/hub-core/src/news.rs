@@ -7,9 +7,9 @@
 //! ```
 
 use crate::{err, http_get, registry::Project, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Entry {
     pub number: u32,
     pub title: String,

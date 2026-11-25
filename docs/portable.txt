@@ -4,6 +4,7 @@ This file makes the launcher portable. While it sits next to NicoLauncher.exe,
 the launcher keeps everything of its own in this folder:
 
   config.json   its settings
+  cache.json    the last news it read, shown at once on the next start
   kit\          the build tools it downloads (the first game takes a while)
   webview\      the window's own data
 
