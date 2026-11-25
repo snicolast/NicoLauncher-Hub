@@ -106,7 +106,7 @@ fn answer(m: &Stored, token: &str, view: View) -> String {
     }
 }
 
-fn card(m: &Stored, token: &str, view: View, blocked: &Blocked, all: &[Stored]) -> String {
+fn card(m: &Stored, token: &str, view: View, blocked: &Blocked) -> String {
     let msg = &m.message;
     let about = about_name(m).map(|a| format!("<span class=about>{}</span>", esc(&a))).unwrap_or_default();
     let flags: String = m.flags.iter().map(|f| format!("<span class=flag>{}</span>", esc(f))).collect();
@@ -172,7 +172,7 @@ pub fn page(all: &[Stored], blocked: &Blocked, view: View, token: &str) -> Strin
                 "<div class=blockrow><code>{}</code>{}</div>", esc(k), button(token, view, k, "unblock", "Unblock", ""))).collect()
         }
     } else {
-        let list: Vec<String> = all.iter().filter(|m| view.shows(m)).map(|m| card(m, token, view, blocked, all)).collect();
+        let list: Vec<String> = all.iter().filter(|m| view.shows(m)).map(|m| card(m, token, view, blocked)).collect();
         if list.is_empty() {
             "<p class=empty>Nothing here.</p>".to_string()
         } else {
