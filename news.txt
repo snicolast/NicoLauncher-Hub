@@ -18,6 +18,11 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[24] 2026-11-26
+- Launcher 0.3.24: snicolast can now answer the ideas, proposals and messages you send from Feedback. The answer arrives in your launcher, and only you can see it
+- A green notice tells you when there is an answer, and Feedback lists everything you sent under Your messages, with the answers
+- Home shows the latest news as soon as the launcher opens, and loads the new ones faster
+
 [23] 2026-11-25
 - Launcher 0.3.23: when an install, update or build fails for a known reason, the launcher now says what happened in plain words, with a button that fixes it
 - It knows build tools removed by an antivirus, the wrong ROM file, old compiled files left by an update, a full disk, a file Windows is holding and no internet connection. Anything else still shows the log and Report this problem
