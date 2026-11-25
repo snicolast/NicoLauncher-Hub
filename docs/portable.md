@@ -7,6 +7,7 @@ AppData.
 | What | Installed | Portable |
 | --- | --- | --- |
 | Settings | `%APPDATA%\NicoLauncher\config.json` | `config.json` |
+| Last news read (shown at start) | `%APPDATA%\NicoLauncher\cache.json` | `cache.json` |
 | Build kit | `%LOCALAPPDATA%\NicoLauncher\kit` | `kit\` |
 | Window data (WebView2) | `%LOCALAPPDATA%\io.github.snicolast.nicolauncher` | `webview\` |
 | Updates | `NicoLauncher-setup.exe` | `NicoLauncher-portable.zip` |
