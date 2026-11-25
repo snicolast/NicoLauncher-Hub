@@ -3,7 +3,7 @@
 //!
 //! - the public port (Tailscale Funnel) only takes messages and hands each
 //!   launcher the answers to its own: /v1/challenge, /v1/message,
-//!   /v1/replies and /v1/ping;
+//!   /v1/replies, /v1/read and /v1/ping;
 //! - the panel port (Tailscale serve, his machines only) shows them.
 //!
 //! The launcher is open source, so nothing in it is secret: a small sum
@@ -93,6 +93,7 @@ fn public(app: Arc<App>, server: Server) {
             }
             (Method::Post, "/message") => receive(&app, &mut req, &addr),
             (Method::Post, "/replies") => replies(&app, &mut req, &addr),
+            (Method::Post, "/read") => read(&app, &mut req, &addr),
             _ => status(404, "error", Some("not found")),
         };
         let _ = req.respond(reply);
@@ -141,6 +142,7 @@ fn receive(app: &App, req: &mut Request, addr: &str) -> Response<std::io::Cursor
         message: msg,
         read: false,
         archived: false,
+        important: false,
         reply: None,
     };
     if let Err(e) = app.store.save(&stored) {
@@ -205,6 +207,60 @@ fn replies(app: &App, req: &mut Request, addr: &str) -> Response<std::io::Cursor
     json(200, serde_json::json!({ "replies": out }))
 }
 
+/// The user opened an answer and closed it again, maybe with an emoji: the
+/// panel shows it, and a quiet notice goes to the phone. Asked with the
+/// sender id, like the answers, so only the launcher that got it can say so.
+fn read(app: &App, req: &mut Request, addr: &str) -> Response<std::io::Cursor<Vec<u8>>> {
+    #[derive(serde::Deserialize)]
+    struct Told {
+        sender: String,
+        id: String,
+        #[serde(default)]
+        reaction: Option<String>,
+    }
+    let mut body = Vec::new();
+    if req.as_reader().take(4096).read_to_end(&mut body).is_err() {
+        return status(400, "error", Some("not a request"));
+    }
+    let Ok(told) = serde_json::from_slice::<Told>(&body) else {
+        return status(400, "error", Some("not a request"));
+    };
+    if told.reaction.as_deref().is_some_and(|r| !store::REACTIONS.contains(&r)) {
+        return status(400, "error", Some("unknown reaction"));
+    }
+    let t = now();
+    if !app.limiter.lock().unwrap().lookup(addr, t) {
+        return status(429, "limited", None);
+    }
+    let blocked = app.store.blocked();
+    if blocked.keys.iter().any(|k| *k == told.sender || k == addr) {
+        return status(200, "ok", None);
+    }
+    // Another launcher's message, or one deleted since: nothing to tell
+    let Some(mut m) = app.store.get(&told.id).filter(|m| m.message.sender == told.sender && m.reply.is_some()) else {
+        return status(404, "error", Some("no such answer"));
+    };
+    let r = m.reply.as_mut().unwrap();
+    let news = r.read.is_none() || r.reaction != told.reaction;
+    if r.read.is_none() {
+        r.read = Some(t);
+    }
+    r.reaction = told.reaction;
+    if news {
+        let _ = app.store.save(&m);
+        app.store.log(&format!("answer to {} read{}", m.id, m.reply.as_ref().unwrap().reaction.as_deref().map(|e| format!(" {e}")).unwrap_or_default()));
+        if let Some(ntfy) = app.config.ntfy.clone() {
+            let log_dir = app.config.data.clone();
+            notify::read(ntfy, m, move |line| {
+                if let Ok(s) = Store::open(&log_dir) {
+                    s.log(&line);
+                }
+            });
+        }
+    }
+    status(200, "ok", None)
+}
+
 /// application/x-www-form-urlencoded, as the panel's forms send it.
 fn form(body: &str) -> Vec<(String, String)> {
     fn decode(s: &str) -> String {
@@ -242,8 +298,13 @@ fn panel(app: Arc<App>, server: Server) {
         let (path, query) = url.split_once('?').unwrap_or((&url, ""));
         let reply = match (req.method(), path) {
             (Method::Get, "/") => {
-                let view = form(query).into_iter().find(|(k, _)| k == "view").map(|(_, v)| v).unwrap_or_default();
-                html(panel::page(&app.store.all(), &app.store.blocked(), panel::View::parse(&view), &app.token))
+                let q = panel::Query::parse(&form(query));
+                // Opening a message marks it read, like a mail client
+                if let Some(mut m) = app.store.get(&q.id).filter(|m| !m.read) {
+                    m.read = true;
+                    let _ = app.store.save(&m);
+                }
+                html(panel::page(&app.store.all(), &app.store.blocked(), &q, &app.token))
             }
             (Method::Post, "/act") => {
                 let mut body = String::new();
@@ -255,8 +316,7 @@ fn panel(app: Arc<App>, server: Server) {
                     Response::from_data(Vec::new()).with_status_code(303).with_header(header("Location", "/"))
                 } else {
                     act(&app, get("do"), get("id"), get("text"));
-                    let id: String = get("id").chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').collect();
-                    let back = format!("/?view={}#{id}", get("view").chars().filter(char::is_ascii_alphabetic).collect::<String>());
+                    let back = back_link(get("back"), get("do") == "delete");
                     Response::from_data(Vec::new()).with_status_code(303).with_header(header("Location", &back))
                 }
             }
@@ -264,6 +324,21 @@ fn panel(app: Arc<App>, server: Server) {
         };
         let _ = req.respond(reply);
     }
+}
+
+/// Where a button sends the panel back to: the page it was pressed on, as long
+/// as that is a plain link of this panel. After a delete, without the message.
+fn back_link(back: &str, deleted: bool) -> String {
+    let safe = back.starts_with("/?") && back.chars().all(|c| c.is_ascii_alphanumeric() || "/?=&%-_.~".contains(c));
+    if !safe {
+        return "/".into();
+    }
+    if !deleted {
+        return back.to_string();
+    }
+    let (_, qs) = back.split_at(2);
+    let rest: Vec<&str> = qs.split('&').filter(|p| !p.starts_with("id=") && !p.is_empty()).collect();
+    format!("/?{}", rest.join("&"))
 }
 
 fn act(app: &App, what: &str, id: &str, text: &str) {
@@ -279,6 +354,8 @@ fn act(app: &App, what: &str, id: &str, text: &str) {
         "unread" => change(&|m| m.read = false),
         "archive" => change(&|m| { m.archived = true; m.read = true; }),
         "unarchive" => change(&|m| m.archived = false),
+        "important" => change(&|m| m.important = true),
+        "unimportant" => change(&|m| m.important = false),
         "delete" => store.delete(id),
         // Writing an answer also marks the message read. An empty one removes it.
         "reply" => {
@@ -289,7 +366,7 @@ fn act(app: &App, what: &str, id: &str, text: &str) {
             } else {
                 let text: String = text.chars().take(store::REPLY_MAX).collect();
                 change(&|m| {
-                    m.reply = Some(store::Reply { text: text.clone(), at: now(), delivered: None });
+                    m.reply = Some(store::Reply { text: text.clone(), at: now(), delivered: None, read: None, reaction: None });
                     m.read = true;
                 });
                 store.log(&format!("answered {id}"));
@@ -393,7 +470,7 @@ mod tests {
         let message: Incoming = serde_json::from_value(serde_json::json!({
             "sender": sender, "challenge": "c", "nonce": 0, "kind": "idea", "title": title, "text": "Please", "local_id": format!("l{id}"),
         })).unwrap();
-        Stored { id: id.into(), received: 10, address: "1.2.3.4".into(), message, flags: vec![], read: false, archived: false, reply: None }
+        Stored { id: id.into(), received: 10, address: "1.2.3.4".into(), message, flags: vec![], read: false, archived: false, important: false, reply: None }
     }
 
     #[test]
@@ -433,6 +510,32 @@ mod tests {
         assert!(app.store.get("1-a").unwrap().reply.unwrap().delivered.is_some());
         assert_eq!(ask(&"c".repeat(32)).unwrap()["replies"].as_array().unwrap().len(), 0);
         assert_eq!(ask("short").unwrap_err(), 400);
+        // Read, with an emoji: only by the launcher that sent it, and only a known emoji
+        let read_url = url.replace("/v1/replies", "/v1/read");
+        let tell = |sender: &str, id: &str, reaction: Option<&str>| -> u16 {
+            match ureq::post(&read_url).send_json(serde_json::json!({ "sender": sender, "id": id, "reaction": reaction })) {
+                Ok(r) => r.status(),
+                Err(ureq::Error::Status(c, _)) => c,
+                Err(e) => panic!("{e}"),
+            }
+        };
+        assert_eq!(tell(&other, "1-a", None), 404, "not its message");
+        assert_eq!(tell(&me, "2-b", None), 404, "no answer yet");
+        assert_eq!(tell(&me, "1-a", Some("💩")), 400);
+        assert_eq!(tell(&me, "1-a", Some("👍")), 200);
+        let r = app.store.get("1-a").unwrap().reply.unwrap();
+        let first = r.read.unwrap();
+        assert_eq!(r.reaction.as_deref(), Some("👍"));
+        assert_eq!(tell(&me, "1-a", Some("❤️")), 200);
+        let r = app.store.get("1-a").unwrap().reply.unwrap();
+        assert_eq!((r.read, r.reaction.as_deref()), (Some(first), Some("❤️")), "a new emoji keeps the first time it was read");
+        let q = panel::Query::parse(&[("view".into(), "replied".into()), ("id".into(), "1-a".into())]);
+        let page = panel::page(&app.store.all(), &app.store.blocked(), &q, "tok");
+        assert!(page.contains("you can archive or delete") && page.contains("class=reaction") && page.contains("❤️"));
+        // A changed answer is new: not read yet
+        act(&app, "reply", "1-a", "Done, and more");
+        let r = app.store.get("1-a").unwrap().reply.unwrap();
+        assert!(r.read.is_none() && r.reaction.is_none());
         // Blocked: nothing
         app.store.set_blocked(&store::Blocked { keys: vec![me.clone()] }).unwrap();
         assert_eq!(ask(&me).unwrap()["replies"].as_array().unwrap().len(), 0);
@@ -440,6 +543,16 @@ mod tests {
         act(&app, "reply", "1-a", "   ");
         assert!(app.store.get("1-a").unwrap().reply.is_none());
         let _ = std::fs::remove_dir_all(&app.config.data);
+    }
+
+    #[test]
+    fn buttons_only_go_back_to_the_panel() {
+        assert_eq!(back_link("/?view=important&id=1-a", false), "/?view=important&id=1-a");
+        assert_eq!(back_link("/?view=important&id=1-a&q=cam", true), "/?view=important&q=cam");
+        assert_eq!(back_link("https://evil.example/", false), "/");
+        assert_eq!(back_link("//evil.example/?x", false), "/");
+        assert_eq!(back_link("/?q=<script>", false), "/");
+        assert_eq!(back_link("", false), "/");
     }
 
     #[test]

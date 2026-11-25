@@ -86,6 +86,9 @@ pub struct Stored {
     pub read: bool,
     #[serde(default)]
     pub archived: bool,
+    /// Starred by the author.
+    #[serde(default)]
+    pub important: bool,
     /// The author's answer, which the sender's launcher collects.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reply: Option<Reply>,
@@ -99,10 +102,20 @@ pub struct Reply {
     /// When the sender's launcher first collected it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub delivered: Option<u64>,
+    /// When the user opened it and closed it again in the launcher.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read: Option<u64>,
+    /// The emoji the user sent back with it, one of REACTIONS.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reaction: Option<String>,
 }
 
 /// Longest answer the panel keeps.
 pub const REPLY_MAX: usize = 5000;
+
+/// What a user may send back to an answer: one of these, or nothing. No
+/// text, so an answer stays an answer and not a conversation.
+pub const REACTIONS: [&str; 6] = ["👍", "❤️", "😄", "🙏", "🎉", "🤔"];
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Blocked {
@@ -224,7 +237,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("nico-inbox-test-{}", std::process::id()));
         let store = Store::open(&dir).unwrap();
         for (i, id) in ["100-a", "300-b", "200-c"].iter().enumerate() {
-            let m = Stored { id: id.to_string(), received: [100, 300, 200][i], address: "x".into(), message: msg("t", "x"), flags: vec![], read: false, archived: false, reply: None };
+            let m = Stored { id: id.to_string(), received: [100, 300, 200][i], address: "x".into(), message: msg("t", "x"), flags: vec![], read: false, archived: false, important: false, reply: None };
             store.save(&m).unwrap();
         }
         let ids: Vec<String> = store.all().into_iter().map(|m| m.id).collect();

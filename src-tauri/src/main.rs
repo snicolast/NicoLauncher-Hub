@@ -453,15 +453,24 @@ fn send_feedback(hub: tauri::State<Hub>, message: FeedbackForm) -> FeedbackReply
 fn collect_replies(hub: tauri::State<Hub>) -> Snapshot {
     let inbox = hub.registry.lock().unwrap().inbox().map(str::to_string);
     if let Some(inbox) = inbox {
-        let _ = feedback::collect(&inbox, &feedback::file_next_to(&hub.places.config));
+        let path = feedback::file_next_to(&hub.places.config);
+        let _ = feedback::collect(&inbox, &path);
+        // Answers read while the mailbox did not answer
+        feedback::tell_read(&inbox, &path);
     }
     snapshot_of(&hub)
 }
 
-/// The user opened these answers.
+/// The user read an answer and closed it, with an emoji or none. The mailbox
+/// is told on its own thread: closing the window never waits for it.
 #[tauri::command]
-fn mark_replies_seen(hub: tauri::State<Hub>, ids: Vec<String>) -> Snapshot {
-    feedback::mark_seen(&feedback::file_next_to(&hub.places.config), &ids);
+fn mark_reply_read(hub: tauri::State<Hub>, id: String, reaction: Option<String>) -> Snapshot {
+    let path = feedback::file_next_to(&hub.places.config);
+    feedback::mark_seen(&path, &id, reaction);
+    if let Some(inbox) = hub.registry.lock().unwrap().inbox().map(str::to_string) {
+        let path = path.clone();
+        std::thread::spawn(move || feedback::tell_read(&inbox, &path));
+    }
     snapshot_of(&hub)
 }
 
@@ -1187,7 +1196,7 @@ fn main() {
             system_info,
             send_feedback,
             collect_replies,
-            mark_replies_seen,
+            mark_reply_read,
             desktop_shortcut,
             uninstall,
             running,

@@ -18,6 +18,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[25] 2026-11-26
+- Launcher 0.3.25: when you read an answer from snicolast, you can send an emoji back (optional). When you close it, snicolast sees that you read it
+
 [24] 2026-11-26
 - Launcher 0.3.24: snicolast can now answer the ideas, proposals and messages you send from Feedback. The answer arrives in your launcher, and only you can see it
 - A green notice tells you when there is an answer, and Feedback lists everything you sent under Your messages, with the answers

@@ -186,7 +186,8 @@ const STR = {
     fbr_title: 'Your messages', fbr_text: 'What you sent from here. When snicolast answers, the answer appears here, and only you can see it.',
     fbr_replied: 'snicolast replied', fbr_sent: 'Sent', fbr_waiting: 'Waiting to send', fbr_new: 'New',
     fbr_head: 'snicolast replied', fbr_about: 'About your message',
-    fbr_private: 'Only you see this answer. It is not published anywhere.',
+    fbr_private: 'Only you see this answer. When you close it, snicolast sees that you read it, and your emoji if you chose one.',
+    fbr_react: 'Send an emoji back (optional)',
     fbr_toast: 'snicolast replied to "{title}"', fbr_toast_many: 'snicolast replied to {n} of your messages', fbr_read: 'Read',
     fbr_ann_label: 'Reply from snicolast', fbr_more: 'Show {n} more', fbr_empty: 'Nothing sent yet.',
     fbr_days: '{n} days ago',
@@ -370,7 +371,8 @@ const STR = {
     fbr_title: 'Tus mensajes', fbr_text: 'Lo que has enviado desde aquí. Cuando snicolast responda, la respuesta sale aquí y solo la ves tú.',
     fbr_replied: 'snicolast ha respondido', fbr_sent: 'Enviado', fbr_waiting: 'Esperando para enviarse', fbr_new: 'Nuevo',
     fbr_head: 'snicolast te ha respondido', fbr_about: 'Sobre tu mensaje',
-    fbr_private: 'Esta respuesta solo la ves tú. No se publica en ningún sitio.',
+    fbr_private: 'Esta respuesta solo la ves tú. Al cerrarla, snicolast sabrá que la has leído, y verá tu emoticono si elegiste uno.',
+    fbr_react: 'Envía un emoticono (opcional)',
     fbr_toast: 'snicolast ha respondido a «{title}»', fbr_toast_many: 'snicolast ha respondido a {n} de tus mensajes', fbr_read: 'Leer',
     fbr_ann_label: 'Respuesta de snicolast', fbr_more: 'Ver {n} más', fbr_empty: 'Aún no has enviado nada.',
     fbr_days: 'hace {n} días',
@@ -2259,6 +2261,8 @@ const shortName = (p) => p.name.replace(/ Native$/, '');
 // its own messages with its random sender id (never published), so only it
 // gets them. A new answer lights the Feedback item of the sidebar.
 const sentAll = () => (snap && snap.feedback_sent) || [];
+// What can be sent back to an answer (nico-inbox takes only these)
+const REACTIONS = ['👍', '❤️', '😄', '🙏', '🎉', '🤔'];
 const repliesUnseen = () => sentAll().filter((m) => m.reply && !m.reply_seen);
 let sentMore = false;
 
@@ -2287,7 +2291,7 @@ function renderSent() {
   const shown = sentMore ? list : list.slice(0, 4);
   const rows = shown.map((m) => {
     const fresh = m.reply && !m.reply_seen;
-    const state = m.reply ? el('span', { class: 'fbr-chip replied' + (fresh ? ' fresh' : '') }, icon('chat'), t('fbr_replied'))
+    const state = m.reply ? el('span', { class: 'fbr-chip replied' + (fresh ? ' fresh' : '') }, icon('chat'), t('fbr_replied'), m.reaction && !fresh ? el('span', { class: 'fbr-mine' }, m.reaction) : null)
       : m.status === 'queued' ? el('span', { class: 'fbr-chip later' }, icon('send'), t('fbr_waiting'))
       : el('span', { class: 'fbr-chip' }, icon('check'), t('fbr_sent'));
     return el('button', { class: 'fbr-row' + (fresh ? ' fresh' : '') + (m.reply ? '' : ' plain'), disabled: !m.reply, onclick: () => openReply(m.id) },
@@ -2306,11 +2310,19 @@ function openReply(id) {
   const m = sentAll().find((x) => x.id === id);
   if (!m || !m.reply || replyClose) return;
   const box = el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' });
+  // An emoji to send back, or none: no text, an answer is not a conversation
+  let picked = m.reaction || null;
+  // Closing tells snicolast it was read, with the emoji
   replyClose = async () => {
     replyClose = null;
     box.remove();
-    if (!m.reply_seen) await update('mark_replies_seen', { ids: [m.id] });
+    if (!m.reply_seen || picked !== (m.reaction || null)) await update('mark_reply_read', { id: m.id, reaction: picked });
   };
+  const react = el('div', { class: 'fbr-react' });
+  const drawReact = () => react.replaceChildren(el('span', { class: 'dim small' }, t('fbr_react')),
+    ...REACTIONS.map((e) => el('button', { type: 'button', class: 'fbr-emoji' + (picked === e ? ' on' : ''), 'aria-pressed': String(picked === e),
+      onclick: () => { picked = picked === e ? null : e; drawReact(); } }, e)));
+  drawReact();
   box.addEventListener('click', (e) => { if (e.target === box) replyClose(); });
   const answer = el('div', { class: 'fbr-answer' },
     el('div', { class: 'fbr-by' }, el('img', { src: 'img/snicolast.png', alt: 'snicolast', draggable: 'false' }), el('span', { class: 'dim small' }, sentAgo(m.reply.at))),
@@ -2323,6 +2335,7 @@ function openReply(id) {
       el('b', {}, m.title),
       m.text ? el('p', { class: 'dim' }, m.text) : null),
     answer,
+    react,
     el('p', { class: 'fb-go-note dim small' }, icon('lock'), t('fbr_private')),
     el('div', { class: 'modal-actions' },
       el('button', { class: 'btn primary', onclick: () => replyClose() }, t('close')))));

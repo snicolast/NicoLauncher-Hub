@@ -45,24 +45,43 @@ pub fn send(ntfy: Ntfy, m: Stored, log: impl Fn(String) + Send + 'static) {
         if !m.flags.is_empty() {
             tags.insert(0, "warning");
         }
-        // Published as JSON: titles with accents or "·" do not fit in HTTP headers
-        let (server, topic) = ntfy.url.trim_end_matches('/').rsplit_once('/').unwrap_or(("https://ntfy.sh", &ntfy.url));
-        let mut json = serde_json::json!({
-            "topic": topic,
-            "title": title,
-            "message": body,
-            "tags": tags,
-            "priority": if m.flags.is_empty() { 3 } else { 2 },
-        });
-        if let Some(click) = &ntfy.click {
-            json["click"] = format!("{}#{}", click.trim_end_matches('#'), m.id).into();
-        }
-        let mut req = ureq::post(server).timeout(std::time::Duration::from_secs(20));
-        if let Some(token) = ntfy.token.as_deref().filter(|t| !t.is_empty()) {
-            req = req.set("Authorization", &format!("Bearer {token}"));
-        }
-        if let Err(e) = req.send_json(json) {
+        let priority = if m.flags.is_empty() { 3 } else { 2 };
+        if let Err(e) = post(&ntfy, &title, &body, &tags, priority, &m.id) {
             log(format!("ntfy failed for {}: {e}", m.id));
         }
     });
+}
+
+/// A quiet notice that the user read an answer, with the emoji they sent.
+pub fn read(ntfy: Ntfy, m: Stored, log: impl Fn(String) + Send + 'static) {
+    std::thread::spawn(move || {
+        let reaction = m.reply.as_ref().and_then(|r| r.reaction.clone());
+        let title = match &reaction {
+            Some(e) => format!("{e} Your answer was read"),
+            None => "Your answer was read".to_string(),
+        };
+        if let Err(e) = post(&ntfy, &title, &m.message.title, &["white_check_mark"], 2, &m.id) {
+            log(format!("ntfy failed for {}: {e}", m.id));
+        }
+    });
+}
+
+fn post(ntfy: &Ntfy, title: &str, body: &str, tags: &[&str], priority: u8, id: &str) -> Result<(), String> {
+    // Published as JSON: titles with accents or "·" do not fit in HTTP headers
+    let (server, topic) = ntfy.url.trim_end_matches('/').rsplit_once('/').unwrap_or(("https://ntfy.sh", &ntfy.url));
+    let mut json = serde_json::json!({
+        "topic": topic,
+        "title": title,
+        "message": body,
+        "tags": tags,
+        "priority": priority,
+    });
+    if let Some(click) = &ntfy.click {
+        json["click"] = format!("{}#{}", click.trim_end_matches('#'), id).into();
+    }
+    let mut req = ureq::post(server).timeout(std::time::Duration::from_secs(20));
+    if let Some(token) = ntfy.token.as_deref().filter(|t| !t.is_empty()) {
+        req = req.set("Authorization", &format!("Bearer {token}"));
+    }
+    req.send_json(json).map(|_| ()).map_err(|e| e.to_string())
 }

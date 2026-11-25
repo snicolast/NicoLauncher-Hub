@@ -999,3 +999,10 @@ main { isolation: isolate; }
 .fbr-toast-x { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 7px; background: none; color: var(--dim); cursor: pointer; }
 .fbr-toast-x:hover { background: rgba(255, 255, 255, .08); color: var(--text); }
 .fbr-toast-x .ico { width: 14px; height: 14px; }
+
+.fbr-react { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.fbr-react > span { margin-right: 6px; }
+.fbr-emoji { width: 38px; height: 34px; display: grid; place-items: center; font-size: 18px; line-height: 1; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, .03); cursor: pointer; transition: transform .15s var(--ease), border-color .15s, background .15s; }
+.fbr-emoji:hover { transform: translateY(-2px); border-color: var(--line-2); background: rgba(255, 255, 255, .07); }
+.fbr-emoji.on { border-color: rgba(61, 220, 151, .7); background: rgba(61, 220, 151, .16); transform: scale(1.08); }
+.fbr-mine { margin-left: 4px; font-size: 14px; }
