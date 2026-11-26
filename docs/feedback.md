@@ -198,5 +198,8 @@ points at this machine. The sender's address is the last one in
 `X-Forwarded-For` (Tailscale writes it), so a client cannot pass off another.
 
 **Updating the program**: stop the task (`Stop-ScheduledTask -TaskName
-nico-inbox`), replace `nico-inbox.exe`, start it again. Messages and settings
-stay; Tailscale needs nothing new (`/v1` already covers the answers).
+nico-inbox`), replace `nico-inbox.exe`, run `icacls C:\nico-inbox\nico-inbox.exe
+/reset` (a file copied or moved over keeps its own permissions, and LOCAL
+SERVICE then cannot start it: task result 2147942405, access denied), start
+it again. Messages and settings stay; Tailscale needs nothing new (`/v1`
+already covers the answers).
