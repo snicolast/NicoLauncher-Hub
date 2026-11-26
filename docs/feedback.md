@@ -150,15 +150,19 @@ router: Tailscale Funnel carries the requests in.
    `config.toml`. Set `[ntfy] url` to `https://ntfy.sh/<a long random name>`
    and subscribe to that topic in the ntfy app on your phone. Keep the name
    private: anyone who knows it reads the notices.
-3. **Start with Windows**, as SYSTEM, restarted if it stops. In PowerShell
-   as administrator (not `schtasks /Create`: its tasks are stopped after 72
-   hours):
+3. **Start with Windows**, as the built-in LOCAL SERVICE account (almost no
+   rights on the machine: it may read the folder and write only in `data`),
+   restarted if it stops. In PowerShell as administrator (not
+   `schtasks /Create`: its tasks are stopped after 72 hours):
 
    ```powershell
+   New-Item -ItemType Directory -Force 'C:\nico-inbox\data' | Out-Null
+   icacls 'C:\nico-inbox' /grant '*S-1-5-19:(OI)(CI)RX'
+   icacls 'C:\nico-inbox\data' /grant '*S-1-5-19:(OI)(CI)M' /T
    $a = New-ScheduledTaskAction -Execute 'C:\nico-inbox\nico-inbox.exe' -Argument '--config "C:\nico-inbox\config.toml"' -WorkingDirectory 'C:\nico-inbox'
    $t = New-ScheduledTaskTrigger -AtStartup
    $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable
-   $p = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount
+   $p = New-ScheduledTaskPrincipal -UserId 'NT AUTHORITY\LOCALSERVICE' -LogonType ServiceAccount
    Register-ScheduledTask -TaskName 'nico-inbox' -Action $a -Trigger $t -Settings $s -Principal $p -Force
    Start-ScheduledTask -TaskName 'nico-inbox'
    ```
@@ -187,6 +191,11 @@ router: Tailscale Funnel carries the requests in.
 `data\inbox.log` says what came in, what was limited or dropped, and when ntfy
 failed. Messages (and their answers) are plain JSON files in `data\messages`: copy
 the folder to keep them.
+
+The panel only answers requests addressed to `127.0.0.1`, `localhost` or a
+`*.ts.net` name, so a web page cannot reach it through a name of its own that
+points at this machine. The sender's address is the last one in
+`X-Forwarded-For` (Tailscale writes it), so a client cannot pass off another.
 
 **Updating the program**: stop the task (`Stop-ScheduledTask -TaskName
 nico-inbox`), replace `nico-inbox.exe`, start it again. Messages and settings

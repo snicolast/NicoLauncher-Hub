@@ -61,18 +61,35 @@ fn status(code: u16, status: &str, error: Option<&str>) -> Response<std::io::Cur
     json(code, serde_json::json!({ "status": status, "error": error }))
 }
 
-/// The sender's address: the first one in X-Forwarded-For when a proxy on
-/// this machine (Tailscale) passed the request on, else the connection's.
+/// The sender's address: the one the proxy on this machine (Tailscale) saw,
+/// else the connection's. Tailscale writes X-Forwarded-For itself; a proxy
+/// that adds to what the client sent puts its own at the end, so the last
+/// one is the one to believe either way. Only a real IP address counts.
 fn address(app: &App, req: &Request) -> String {
     let direct = req.remote_addr().map(|a| a.ip().to_string()).unwrap_or_default();
     if app.config.trust_forwarded {
-        if let Some(h) = req.headers().iter().find(|h| h.field.equiv("X-Forwarded-For")) {
-            if let Some(first) = h.value.as_str().split(',').next().map(str::trim).filter(|s| !s.is_empty()) {
-                return first.to_string();
-            }
+        let forwarded = req.headers().iter().rfind(|h| h.field.equiv("X-Forwarded-For"));
+        if let Some(ip) = forwarded.and_then(|h| last_ip(h.value.as_str())) {
+            return ip;
         }
     }
     direct
+}
+
+fn last_ip(header: &str) -> Option<String> {
+    header.rsplit(',').next().and_then(|s| s.trim().parse::<std::net::IpAddr>().ok()).map(|ip| ip.to_string())
+}
+
+/// Whether a request to the panel names the panel: this machine, or its
+/// name in the tailnet. Anything else is another website reaching it through
+/// a name that points here (DNS rebinding), and gets nothing.
+fn own_host(req: &Request) -> bool {
+    let Some(h) = req.headers().iter().find(|h| h.field.equiv("Host")) else {
+        return false;
+    };
+    let host = h.value.as_str().trim().to_ascii_lowercase();
+    let name = if host.starts_with('[') { host.split(']').next().map(|s| format!("{s}]")).unwrap_or_default() } else { host.split(':').next().unwrap_or("").to_string() };
+    matches!(name.as_str(), "127.0.0.1" | "localhost" | "[::1]") || name.ends_with(".ts.net")
 }
 
 fn public(app: Arc<App>, server: Server) {
@@ -296,6 +313,10 @@ fn panel(app: Arc<App>, server: Server) {
     for mut req in server.incoming_requests() {
         let url = req.url().to_string();
         let (path, query) = url.split_once('?').unwrap_or((&url, ""));
+        if !own_host(&req) {
+            let _ = req.respond(html("<p>Not found</p>".into()).with_status_code(404));
+            continue;
+        }
         let reply = match (req.method(), path) {
             (Method::Get, "/") => {
                 let q = panel::Query::parse(&form(query));
@@ -543,6 +564,37 @@ mod tests {
         act(&app, "reply", "1-a", "   ");
         assert!(app.store.get("1-a").unwrap().reply.is_none());
         let _ = std::fs::remove_dir_all(&app.config.data);
+    }
+
+    #[test]
+    fn the_last_forwarded_address_counts() {
+        assert_eq!(last_ip("203.0.113.7").as_deref(), Some("203.0.113.7"));
+        assert_eq!(last_ip("1.2.3.4, 203.0.113.7").as_deref(), Some("203.0.113.7"), "what the client wrote comes first");
+        assert_eq!(last_ip("2001:db8::1").as_deref(), Some("2001:db8::1"));
+        assert_eq!(last_ip("evil, not-an-ip"), None);
+        assert_eq!(last_ip(""), None);
+    }
+
+    #[test]
+    fn the_panel_answers_only_to_its_own_names() {
+        let at = |host: &str| {
+            let server = Server::http("127.0.0.1:0").unwrap();
+            let port = server.server_addr().to_ip().unwrap().port();
+            let t = std::thread::spawn(move || {
+                let req = server.recv().unwrap();
+                let ok = own_host(&req);
+                let _ = req.respond(Response::empty(204));
+                ok
+            });
+            let _ = ureq::get(&format!("http://127.0.0.1:{port}/")).set("Host", host).call();
+            t.join().unwrap()
+        };
+        assert!(at("127.0.0.1:8788"));
+        assert!(at("localhost:8788"));
+        assert!(at("yoda.tail750d75.ts.net:8443"));
+        assert!(at("YODA.example.ts.net"));
+        assert!(!at("evil.example:8788"));
+        assert!(!at("ts.net.evil.example"));
     }
 
     #[test]

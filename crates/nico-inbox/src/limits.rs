@@ -12,6 +12,9 @@ const CHALLENGES_PER_HOUR: usize = 40;
 const CHALLENGES_MAX: usize = 20_000;
 /// Times one address may ask for its answers in an hour.
 const LOOKUPS_PER_HOUR: usize = 60;
+/// Addresses and senders remembered at once. Past this, the ones with
+/// nothing recent are forgotten; if that is not enough, new ones wait.
+const KEYS_MAX: usize = 20_000;
 
 #[derive(Default)]
 pub struct Limiter {
@@ -31,6 +34,9 @@ fn recent(list: &mut Vec<u64>, now: u64, window: u64) -> usize {
 impl Limiter {
     /// A new challenge for `address`, or None when it asked for too many.
     pub fn challenge(&mut self, address: &str, now: u64, token: String) -> Option<String> {
+        if !self.room(address, now) {
+            return None;
+        }
         let asked = self.asked.entry(address.to_string()).or_default();
         if recent(asked, now, HOUR) >= CHALLENGES_PER_HOUR {
             return None;
@@ -47,12 +53,32 @@ impl Limiter {
     /// Whether `address` may ask for its answers once more: a launcher asks
     /// when it starts and on Refresh, far less than this.
     pub fn lookup(&mut self, address: &str, now: u64) -> bool {
-        let asked = self.asked.entry(format!("replies {address}")).or_default();
+        let key = format!("replies {address}");
+        if !self.room(&key, now) {
+            return false;
+        }
+        let asked = self.asked.entry(key).or_default();
         if recent(asked, now, HOUR) >= LOOKUPS_PER_HOUR {
             return false;
         }
         asked.push(now);
         true
+    }
+
+    /// Whether `key` can be remembered: it already is, or there is room, after
+    /// forgetting what is old if needed. Keeps memory bounded whatever comes in.
+    fn room(&mut self, key: &str, now: u64) -> bool {
+        if self.asked.contains_key(key) || self.asked.len() + self.sent.len() < KEYS_MAX {
+            return true;
+        }
+        self.tidy(now);
+        self.asked.len() + self.sent.len() < KEYS_MAX
+    }
+
+    fn tidy(&mut self, now: u64) {
+        // Senders with nothing in the last day are forgotten
+        self.sent.retain(|_, v| v.iter().any(|t| now.saturating_sub(*t) < DAY));
+        self.asked.retain(|_, v| v.iter().any(|t| now.saturating_sub(*t) < HOUR));
     }
 
     /// Takes a challenge back: each one is good for one message.
@@ -66,7 +92,9 @@ impl Limiter {
             return false;
         }
         keys.iter().all(|k| {
-            let list = self.sent.entry(k.to_string()).or_default();
+            let Some(list) = self.sent.get_mut(*k) else {
+                return true;
+            };
             let day = recent(list, now, DAY);
             let hour = list.iter().filter(|t| now.saturating_sub(**t) < HOUR).count();
             hour < l.per_hour as usize && day < l.per_day as usize
@@ -78,9 +106,7 @@ impl Limiter {
         for k in keys {
             self.sent.entry(k.to_string()).or_default().push(now);
         }
-        // Senders with nothing in the last day are forgotten
-        self.sent.retain(|_, v| v.iter().any(|t| now.saturating_sub(*t) < DAY));
-        self.asked.retain(|_, v| v.iter().any(|t| now.saturating_sub(*t) < HOUR));
+        self.tidy(now);
     }
 }
 
@@ -124,5 +150,18 @@ mod tests {
         }
         assert!(lim.challenge("y", 200, "more".into()).is_none());
         assert!(lim.challenge("z", 200, "other".into()).is_some());
+    }
+
+    #[test]
+    fn memory_stays_bounded() {
+        let mut lim = Limiter::default();
+        for i in 0..KEYS_MAX + 500 {
+            lim.lookup(&format!("10.0.{}.{}", i / 256, i % 256), 1000);
+        }
+        assert!(lim.asked.len() <= KEYS_MAX);
+        assert!(!lim.lookup("new", 1001), "full of recent ones: new ones wait");
+        assert!(lim.lookup("10.0.0.1", 1001), "known ones still count");
+        assert!(lim.lookup("new", 1000 + HOUR + 1), "old ones are forgotten");
+        assert_eq!(lim.asked.len(), 1);
     }
 }
