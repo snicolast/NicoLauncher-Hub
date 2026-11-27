@@ -434,8 +434,8 @@ mod tests {
         // Without the list, as before
         assert!(Registry::parse(r#"{"schema":1,"projects":[{"id":"a","name":"A","repo":"o/r","branch":"main"}]}"#).unwrap().projects[0].credits.is_empty());
         let swt = Registry::bundled();
-        let ports: Vec<_> = swt.find("swtrilogy").unwrap().credits.iter().map(|c| (c.github.as_str(), c.os.as_deref())).collect();
-        assert_eq!(ports, [("Nutcasey", Some("macos")), ("vojenfr", Some("linux"))]);
+        let credits: Vec<_> = swt.find("swtrilogy").unwrap().credits.iter().map(|c| (c.github.as_str(), c.os.as_deref())).collect();
+        assert_eq!(credits, [("Nutcasey", Some("macos")), ("vojenfr", Some("linux")), ("BrianGilbert", None)]);
     }
 
     #[test]

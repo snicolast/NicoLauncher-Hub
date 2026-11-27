@@ -2,6 +2,25 @@
   "schema": 1,
   "announcements": [
     {
+      "id": "2026-11-swt-telemetry",
+      "date": "2026-11-28",
+      "expires": "2027-03-01",
+      "level": "info",
+      "game": "swtrilogy",
+      "label": "Testers wanted",
+      "title": "Nico SWT can now move motion rigs and haptics",
+      "body": [
+        "The latest Nico SWT update adds telemetry, made by Brian Gilbert, who already brought it to Nico SR2.",
+        "During the flights it sends your craft's motion, the shield, the score and every hit in the OGS-TS format (Open Game Standards), so motion rigs, haptic vests and other gear that read it can follow the game.",
+        "It is off by default. Turn it on in OPTIONS > EXPERIENCE > EXPERIMENTAL > TELEMETRY.",
+        "It has not been tried on a real rig yet. If you have one, tell us on GitHub how it goes."
+      ],
+      "buttons": [
+        { "label": "Tell us how it goes", "url": "https://github.com/snicolast/StarWarsTrilogyNative/issues" },
+        { "label": "About OGS-TS", "url": "https://github.com/Open-Game-Standards/OGS-Telemetry-Standard" }
+      ]
+    },
+    {
       "id": "2026-11-feedback-update-launcher",
       "date": "2026-11-24",
       "expires": "2027-06-01",
