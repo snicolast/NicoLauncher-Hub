@@ -29,7 +29,8 @@
       ],
       "credits": [
         { "github": "Nutcasey", "role": "port", "os": "macos" },
-        { "github": "vojenfr", "role": "port", "os": "linux" }
+        { "github": "vojenfr", "role": "port", "os": "linux" },
+        { "github": "BrianGilbert", "role": "OGS-TS telemetry" }
       ],
       "art": {
         "hero": "docs/img/death_star.jpg",
