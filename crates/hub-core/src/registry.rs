@@ -5,6 +5,7 @@
 use crate::requirements::Requires;
 use crate::{err, http_get, Result};
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 /// Where GitHub serves a file of the Hub repository, next to registry.json.
 pub fn hub_raw_url(rel: &str) -> String {
@@ -298,6 +299,26 @@ impl Registry {
         Registry::parse(&text)
     }
 
+    /// Adds the projects of a local list (registry.local.json next to the
+    /// config): one with the id of a listed project takes its place, the
+    /// others go at the end. For trying a project on one PC before it is in
+    /// the public list. A missing or broken file changes nothing.
+    pub fn with_local(mut self, path: &Path) -> Registry {
+        let Ok(text) = std::fs::read_to_string(path) else { return self };
+        match local_projects(&text) {
+            Ok(projects) => {
+                for p in projects {
+                    match self.projects.iter_mut().find(|q| q.id == p.id) {
+                        Some(q) => *q = p,
+                        None => self.projects.push(p),
+                    }
+                }
+            }
+            Err(e) => eprintln!("{}: {e}", path.display()),
+        }
+        self
+    }
+
     pub fn find(&self, id: &str) -> Option<&Project> {
         self.projects.iter().find(|p| p.id == id)
     }
@@ -307,6 +328,24 @@ impl Registry {
     pub fn teasers(&self) -> impl Iterator<Item = &Teaser> {
         self.coming_soon.iter().filter(|t| self.find(&t.id).is_none())
     }
+}
+
+/// Where the local list goes: next to the config.
+pub fn local_file_next_to(config: &Path) -> PathBuf {
+    config.with_file_name("registry.local.json")
+}
+
+/// The projects of a local list, checked like the public one's. Only
+/// `projects` is read; the rest of the file is left alone.
+fn local_projects(text: &str) -> Result<Vec<Project>> {
+    #[derive(Deserialize)]
+    struct Local {
+        #[serde(default)]
+        projects: serde_json::Value,
+    }
+    let local: Local = serde_json::from_str(text).map_err(err("Bad local registry"))?;
+    let full = serde_json::json!({ "schema": SCHEMA, "projects": local.projects });
+    Ok(Registry::parse(&full.to_string())?.projects)
 }
 
 /// An id fit for a folder name and a settings key.
@@ -395,6 +434,39 @@ mod tests {
         assert!(Registry::parse(&text(r#"{"id":"b","name":"B","art":{"hero":"../x.jpg"}}"#)).is_err());
         // A list without it, as before
         assert!(Registry::parse(r#"{"schema":1,"projects":[]}"#).unwrap().coming_soon.is_empty());
+    }
+
+    #[test]
+    fn a_local_list_adds_and_replaces_projects() {
+        let dir = std::env::temp_dir().join(format!("nico-local-registry-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = local_file_next_to(&dir.join("config.json"));
+        assert_eq!(path.file_name().unwrap(), "registry.local.json");
+        let base = || Registry::parse(r#"{"schema":1,"projects":[{"id":"a","name":"A","repo":"o/a","branch":"main"}],"coming_soon":[{"id":"b","name":"B"}]}"#).unwrap();
+
+        // No file: as it was
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(base().with_local(&path), base());
+
+        // A new one goes at the end and leaves the coming-soon list
+        std::fs::write(&path, r#"{"projects":[{"id":"b","name":"B","repo":"o/b","branch":"dev","exe":"B.exe"}]}"#).unwrap();
+        let reg = base().with_local(&path);
+        assert_eq!(reg.projects.iter().map(|p| p.id.as_str()).collect::<Vec<_>>(), ["a", "b"]);
+        assert_eq!(reg.find("b").unwrap().branch, "dev");
+        assert_eq!(reg.teasers().count(), 0);
+
+        // The same id takes the place of the listed one
+        std::fs::write(&path, r#"{"projects":[{"id":"a","name":"A test","repo":"o/a","branch":"test"}]}"#).unwrap();
+        let reg = base().with_local(&path);
+        assert_eq!(reg.projects.len(), 1);
+        assert_eq!(reg.find("a").unwrap().branch, "test");
+
+        // Broken or with a bad entry: nothing changes
+        for bad in ["{", r#"{"projects":[{"id":"../x","name":"X","repo":"o/x","branch":"main"}]}"#, r#"{"projects":[{"id":"x"}]}"#] {
+            std::fs::write(&path, bad).unwrap();
+            assert_eq!(base().with_local(&path), base());
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -12,7 +12,7 @@ use hub_core::feedback;
 use hub_core::news::{self, Entry};
 use hub_core::portable::{self, Places};
 use hub_core::project::{self, Script, State};
-use hub_core::registry::{Project, Registry};
+use hub_core::registry::{self, Project, Registry};
 use hub_core::requirements::{self, Check, Requires};
 use hub_core::runner::{self, Cancel};
 use hub_core::source;
@@ -505,7 +505,7 @@ fn refresh(hub: tauri::State<Hub>) -> Snapshot {
         });
         // The projects' news are where the project list says
         if let Ok(reg) = Registry::fetch() {
-            *hub.registry.lock().unwrap() = reg;
+            *hub.registry.lock().unwrap() = reg.with_local(&registry::local_file_next_to(&hub.places.config));
         }
         let projects = hub.registry.lock().unwrap().projects.clone();
         for p in projects {
@@ -1105,6 +1105,8 @@ fn built(p: &Project, dir: &std::path::Path, log: &mut dyn FnMut(&str)) {
 
 fn main() {
     let places = Places::here();
+    // Projects tried on this PC only, before they are in the public list
+    let registry = Registry::bundled().with_local(&registry::local_file_next_to(&places.config));
     // What GitHub said last time, shown until it answers again
     let cached = cache::load(&cache::file_next_to(&places.config));
     let (mut config, config_error) = match Config::load(&places.config) {
@@ -1160,7 +1162,7 @@ fn main() {
             places,
             config: Mutex::new(config),
             config_error: Mutex::new(config_error),
-            registry: Mutex::new(Registry::bundled()),
+            registry: Mutex::new(registry),
             remote_news: Mutex::new(cached.news),
             launcher_news: Mutex::new(cached.launcher_news),
             launcher_news_fresh: AtomicBool::new(false),
