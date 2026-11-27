@@ -18,6 +18,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[26] 2026-11-28
+- Launcher 0.3.26: clearer wording in the window that shows snicolast's answers, and groundwork for the next recomp
+
 [25] 2026-11-26
 - Launcher 0.3.25: when snicolast answers one of your messages, you can now send an emoji back if you like. Closing the answer also lets snicolast know it reached you, so nothing gets lost on the way
 

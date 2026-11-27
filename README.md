@@ -71,6 +71,7 @@ A Rust engine and a [Tauri 2](https://tauri.app) app with a plain HTML, CSS and 
 | `kit.json` | The build tools the launcher downloads, each pinned by SHA-256 |
 | `docs/manifest.md` | The `hub.toml` format a project uses to say how it is built |
 | `docs/portable.md` | Portable mode: where the launcher keeps its files, relative paths |
+| `docs/local-registry.md` | Trying a project on one PC before it is in `registry.json` |
 
 To build it you need [Rust](https://rustup.rs) and Node.js, on Windows:
 
