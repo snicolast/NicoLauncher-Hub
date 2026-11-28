@@ -2,6 +2,25 @@
   "schema": 1,
   "announcements": [
     {
+      "id": "2026-11-vc2-out",
+      "date": "2026-11-28",
+      "expires": "2027-01-31",
+      "level": "important",
+      "label": "New recomp",
+      "title": "Nico VC2 is out: Virtua Cop 2, native on PC",
+      "image": "art/announcements/2026-11-vc2-out.jpg",
+      "body": [
+        "The fourth recomp is here as an early preview: Virtua Cop 2, the 1995 arcade light-gun game, recompiled to C++ and running natively on PC.",
+        "- The three stages, from start to end, by one or two players",
+        "- True widescreen, smooth motion at high refresh rates and an HD HUD",
+        "- Light guns that work as a mouse (Sinden and others), mice and gamepads",
+        "To play, open Nico VC2 in your Library, press Install and choose your own vcop2.zip."
+      ],
+      "buttons": [
+        { "label": "Watch the trailer", "url": "https://www.youtube.com/watch?v=oXcqRix9cSA" }
+      ]
+    },
+    {
       "id": "2026-11-swt-telemetry",
       "date": "2026-11-28",
       "expires": "2027-03-01",
