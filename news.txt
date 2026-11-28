@@ -18,6 +18,10 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[28] 2026-11-28
+- Nico VC2 is out as an early preview: the 1995 arcade light-gun game Virtua Cop 2, recompiled to run natively on PC, with true widescreen, an HD HUD, light guns and two players
+- Open it in the Library, press Install and choose your own vcop2.zip
+
 [27] 2026-11-28
 - Launcher 0.3.27: if Windows is missing WebView2, which draws the launcher's window, the launcher now says which Microsoft download installs it and opens it for you
 
