@@ -36,13 +36,6 @@ pub struct Announcement {
     /// a URL; anything else is dropped.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
-    /// A YouTube video played in the window: its link (watch?v=, youtu.be/,
-    /// shorts/) or its 11-character id. A Shorts link plays upright, beside
-    /// the text. A link that cannot be read is dropped. Launchers older than
-    /// 0.3.27 ignore it: give the announcement a picture and a button to the
-    /// video for them.
-    #[serde(default, deserialize_with = "video_link", skip_serializing_if = "Option::is_none")]
-    pub video: Option<Video>,
     /// Plain text: a line is a paragraph, "- " starts an item of a list.
     #[serde(default)]
     pub body: Vec<String>,
@@ -59,60 +52,6 @@ pub struct Announcement {
 pub struct Button {
     pub label: String,
     pub url: String,
-}
-
-/// A YouTube video, as the window plays it.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Video {
-    /// The 11 characters YouTube names it by.
-    pub id: String,
-    /// A Short: taller than wide.
-    pub vertical: bool,
-    /// Its page on YouTube, for the browser.
-    pub url: String,
-}
-
-impl Video {
-    pub fn from_link(link: &str) -> Option<Video> {
-        let link = link.trim();
-        let ok = |id: &str| id.len() == 11 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
-        if ok(link) {
-            return Some(Video::new(link, false));
-        }
-        let rest = link.strip_prefix("https://").or_else(|| link.strip_prefix("http://"))?;
-        let (host, path) = rest.split_once('/')?;
-        let host = host.strip_prefix("www.").or_else(|| host.strip_prefix("m.")).unwrap_or(host);
-        let (id, vertical) = match host {
-            "youtu.be" => (path.split(['?', '&', '#', '/']).next()?, false),
-            "youtube.com" => {
-                if let Some(id) = path.strip_prefix("shorts/") {
-                    (id.split(['?', '&', '#', '/']).next()?, true)
-                } else {
-                    let query = path.strip_prefix("watch?")?;
-                    (query.split(['&', '#']).find_map(|kv| kv.strip_prefix("v="))?, false)
-                }
-            }
-            _ => return None,
-        };
-        ok(id).then(|| Video::new(id, vertical))
-    }
-
-    fn new(id: &str, vertical: bool) -> Video {
-        let url = if vertical { format!("https://www.youtube.com/shorts/{id}") } else { format!("https://www.youtube.com/watch?v={id}") };
-        Video { id: id.to_string(), vertical, url }
-    }
-}
-
-/// `video` in the file is a link; one that cannot be read leaves the
-/// announcement without a video, never without the announcement.
-fn video_link<'de, D: serde::Deserializer<'de>>(d: D) -> std::result::Result<Option<Video>, D::Error> {
-    let v = serde_json::Value::deserialize(d)?;
-    Ok(match v {
-        serde_json::Value::String(link) => Video::from_link(&link),
-        // What the launcher itself writes back (a copy of what it read)
-        serde_json::Value::Object(_) => serde_json::from_value::<Video>(v).ok().and_then(|x| Video::from_link(&x.url)),
-        _ => None,
-    })
 }
 
 fn info() -> String {
@@ -249,31 +188,6 @@ mod tests {
         assert_eq!(one("C:\\x.png"), None);
         assert_eq!(one("file:///C:/x.png"), None);
         assert_eq!(one(""), None);
-    }
-
-    #[test]
-    fn videos_from_youtube_links() {
-        let one = |video: &str| {
-            let text = format!(r#"{{"announcements":[{{"id":"a","title":"A","video":{video:?}}}]}}"#);
-            parse(&text).unwrap().remove(0).video
-        };
-        let short = one("https://www.youtube.com/shorts/abcDEF123_-?feature=share").unwrap();
-        assert_eq!((short.id.as_str(), short.vertical), ("abcDEF123_-", true));
-        assert_eq!(short.url, "https://www.youtube.com/shorts/abcDEF123_-");
-        for wide in ["https://www.youtube.com/watch?v=abcDEF123_-&t=10", "https://youtu.be/abcDEF123_-?si=x", "https://m.youtube.com/watch?feature=x&v=abcDEF123_-", "abcDEF123_-"] {
-            let v = one(wide).unwrap();
-            assert_eq!((v.id.as_str(), v.vertical), ("abcDEF123_-", false), "{wide}");
-            assert_eq!(v.url, "https://www.youtube.com/watch?v=abcDEF123_-");
-        }
-        for bad in ["", "https://example.com/watch?v=abcDEF123_-", "https://www.youtube.com/shorts/short", "https://www.youtube.com/watch?v=abc\"/x", "javascript:alert(1)", "https://www.youtube.com/@snicolast"] {
-            assert_eq!(one(bad), None, "{bad}");
-        }
-        // Not a string: no video, but the announcement stays
-        let list = parse(r#"{"announcements":[{"id":"a","title":"A","video":5}]}"#).unwrap();
-        assert_eq!(list[0].video, None);
-        // What the launcher sends to its window reads back the same
-        let back: Announcement = serde_json::from_str(&serde_json::to_string(&parse(r#"{"announcements":[{"id":"a","title":"A","video":"https://youtube.com/shorts/abcDEF123_-"}]}"#).unwrap()[0]).unwrap()).unwrap();
-        assert!(back.video.unwrap().vertical);
     }
 
     #[test]

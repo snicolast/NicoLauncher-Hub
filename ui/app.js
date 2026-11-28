@@ -545,20 +545,20 @@ function videoPicture(video) {
   next();
   return img;
 }
-// A YouTube player, and the way out when the video's owner does not let it
-// play elsewhere. `muted` starts it without sound, which Windows lets play
-// by itself; YouTube's own button turns the sound on. stop() before the
-// frame goes, so nothing keeps listening.
-function ytPlayer(video, { muted = false, onYouTube } = {}) {
+let videoClose = null;
+function watchVideo(video) {
+  const id = video.id || (/[?&]v=([\w-]{11})/.exec(video.url) || [])[1];
+  if (!id || !/^[\w-]{11}$/.test(id)) { openLink(video.url); return; }
+  if (videoClose) videoClose();
   const params = new URLSearchParams({ autoplay: '1', rel: '0', playsinline: '1', enablejsapi: '1', hl: lang });
-  if (muted) params.set('mute', '1');
   if (/^https?:/.test(location.origin)) params.set('origin', location.origin);
   const frame = el('iframe', {
-    src: `${YT_EMBED}/embed/${video.id}?${params}`, title: video.title || '',
+    src: `${YT_EMBED}/embed/${id}?${params}`, title: video.title,
     allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen', allowfullscreen: '',
     referrerpolicy: 'strict-origin-when-cross-origin',
   });
-  const screen = el('div', { class: 'vp-frame' + (video.vertical ? ' tall' : '') }, frame);
+  const screen = el('div', { class: 'vp-frame' }, frame);
+  const onYouTube = () => { close(); openLink(video.url); };
   const blocked = () => {
     if (screen.classList.contains('blocked')) return;
     screen.classList.add('blocked');
@@ -585,17 +585,6 @@ function ytPlayer(video, { muted = false, onYouTube } = {}) {
     pinger = setInterval(ping, 250);
     ping();
   });
-  const stop = () => { clearInterval(pinger); window.removeEventListener('message', onMessage); };
-  return { screen, stop };
-}
-
-let videoClose = null;
-function watchVideo(video) {
-  const id = video.id || (/[?&]v=([\w-]{11})/.exec(video.url) || [])[1];
-  if (!id || !/^[\w-]{11}$/.test(id)) { openLink(video.url); return; }
-  if (videoClose) videoClose();
-  const onYouTube = () => { close(); openLink(video.url); };
-  const player = ytPlayer({ ...video, id }, { onYouTube });
   const node = el('div', { class: 'modal video-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': video.title },
     el('div', { class: 'vp-box' },
       el('div', { class: 'vp-head' },
@@ -603,12 +592,13 @@ function watchVideo(video) {
           el('span', { class: 'dim small' }, [video.date && dayLabel(video.date), 'YouTube'].filter(Boolean).join(' · '))),
         el('button', { class: 'btn ghost small', onclick: onYouTube }, icon('external'), t('home_video_watch')),
         el('button', { class: 'vp-close', title: t('close'), 'aria-label': t('close'), onclick: () => close() }, icon('close'))),
-      player.screen));
+      screen));
   node.addEventListener('click', (e) => { if (e.target === node) close(); });
   function close() {
     if (videoClose !== close) return;
     videoClose = null;
-    player.stop();
+    clearInterval(pinger);
+    window.removeEventListener('message', onMessage);
     node.remove();   // the frame goes with it, and the sound stops
   }
   videoClose = close;
@@ -2594,12 +2584,9 @@ function openAnnouncements(startId) {
   let i = Math.max(0, all.findIndex((a) => a.id === (startId ?? annUnseen()[0]?.id)));
   const shown = new Set();
   const box = el('div', { class: 'modal ann', role: 'dialog', 'aria-modal': 'true' });
-  let player = null;
-  const stopVideo = () => { if (player) { player.stop(); player = null; } };
   annClose = async () => {
     annClose = null;
-    stopVideo();
-    box.remove();   // the video's frame goes with it, and its sound stops
+    box.remove();
     const ids = all.filter((a) => shown.has(a.id) && !a.seen).map((a) => a.id);
     if (ids.length) await update('mark_announcements_seen', { ids });
     else renderAnnounce();
@@ -2608,9 +2595,7 @@ function openAnnouncements(startId) {
   const draw = () => {
     const a = all[i];
     shown.add(a.id);
-    stopVideo();
     const p = a.game && snap.projects.find((x) => x.id === a.game);
-    if (a.video) { drawVideo(a, p); return; }
     const head = el('div', { class: 'ann-head' });
     // The game's picture and logo, or a large megaphone
     const usual = () => {
@@ -2654,63 +2639,9 @@ function openAnnouncements(startId) {
         el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => annClose() }, t('close')), ...links.reverse()))));
     (box.querySelector('.btn.primary') || box.querySelector('.ann-foot .btn.ghost:last-child'))?.focus();
   };
-  const pagerOf = () => all.length > 1 ? el('div', { class: 'ann-pager' },
-    el('button', { class: 'btn ghost small', 'aria-label': t('ann_prev'), disabled: i === 0, onclick: () => { i--; draw(); } }, icon('chevl')),
-    el('span', { class: 'dim small' }, t('ann_of', { i: i + 1, n: all.length })),
-    el('button', { class: 'btn ghost small', 'aria-label': t('ann_next'), disabled: i === all.length - 1, onclick: () => { i++; draw(); } }, icon('chevr'))) : el('span');
-  // With a video: it plays at once, without sound until the user turns it
-  // on in the player. A Short stands beside the text; a wide video goes on
-  // top, where the picture would be. The picture and a button to the same
-  // video are there for launchers that cannot play it: they are left out.
-  const drawVideo = (a, p) => {
-    const v = a.video;
-    const toYouTube = () => { annClose(); openLink(v.url); };
-    player = ytPlayer({
-      ...v, title: a.title,
-      thumbnails: ['maxresdefault', 'hq720', 'hqdefault'].map((n) => `https://i.ytimg.com/vi/${v.id}/${n}.jpg`),
-    }, { muted: true, onYouTube: toYouTube });
-    const x = el('button', { class: 'ann-x', 'aria-label': t('close'), onclick: () => annClose() });
-    x.innerHTML = '<svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg>';
-    const bar = el('div', { class: 'ann-bar' },
-      el('div', { class: 'ann-tags' },
-        el('span', { class: 'ann-badge' }, icon('megaphone'), a.label || t('ann_label')),
-        a.level === 'important' ? el('span', { class: 'ann-badge important' }, t('ann_important')) : null),
-      x);
-    const meta = el('div', { class: 'ann-meta' },
-      el('img', { src: 'img/snicolast.png', alt: 'snicolast', class: 'ann-by', draggable: 'false' }),
-      el('span', { class: 'dim' }, [a.date ? dateLabel(a.date) : null, p ? p.name : null].filter(Boolean).join(' · ')));
-    const links = (a.buttons || []).filter((btn) => !btn.url.includes(v.id)).slice(0, 2).map((btn, n) =>
-      el('button', { class: 'btn ' + (n === 0 ? 'primary' : ''), onclick: () => { openLink(btn.url); annClose(); } },
-        el('span', {}, btn.label), icon('external')));
-    const yt = el('button', { class: 'btn' + (links.length ? '' : ' primary'), onclick: toYouTube }, icon('external'), el('span', {}, t('home_video_watch')));
-    const main = el('div', { class: 'ann-main' }, meta, el('h2', {}, a.title), el('div', { class: 'ann-text' }, ...annBody(a.body || [])));
-    const foot = el('div', { class: 'ann-foot' }, pagerOf(),
-      el('div', { class: 'modal-actions' }, el('button', { class: 'btn ghost', onclick: () => annClose() }, t('close')), yt, ...links.reverse()));
-    const inner = v.vertical
-      ? el('div', { class: 'modal-box ann-box vid tall' + (a.level === 'important' ? ' important' : '') },
-        el('div', { class: 'ann-video' }, player.screen),
-        el('div', { class: 'ann-side' }, bar, main, foot))
-      : el('div', { class: 'modal-box ann-box vid' + (a.level === 'important' ? ' important' : '') },
-        bar, el('div', { class: 'ann-video' }, player.screen), main, foot);
-    box.replaceChildren(inner);
-    (box.querySelector('.ann-foot .btn.primary') || box.querySelector('.ann-foot .btn.ghost'))?.focus();
-  };
   draw();
   document.body.append(box);
 }
-
-// An important announcement opens by itself: at start, and when one arrives
-// while the launcher is open. Not over another window of the launcher, and
-// not while the user is in a game or another program: then when they come
-// back to the launcher. Each one once; closing it marks it as seen anyway.
-const annOpenedAlone = new Set();
-function openImportant() {
-  const a = annUnseen().find((x) => x.level === 'important' && !annOpenedAlone.has(x.id));
-  if (!a || annClose || !document.hasFocus() || document.querySelector('.modal')) return;
-  annOpenedAlone.add(a.id);
-  openAnnouncements(a.id);
-}
-window.addEventListener('focus', () => setTimeout(openImportant, 400));
 
 // What an update brings: every news entry newer than the version the user
 // has, newest first, so skipping a few updates loses nothing. Shown when
@@ -2972,7 +2903,6 @@ async function refresh() {
     lastRefresh = Date.now();
   } finally { refreshing = false; }
   collectReplies();
-  openImportant();
   if (selfUpdate && selfUpdate.installing) return;
   try { selfUpdate = await invoke('check_launcher_update'); render(); } catch (e) { /* offline, or no release yet */ }
 }
@@ -3063,5 +2993,6 @@ T.event.listen('task', async ({ payload }) => {
   // Project list and news from GitHub; the built-in list and the news kept
   // from the last start show meanwhile
   await refresh();
-  openImportant();
+  const important = annUnseen().find((a) => a.level === 'important');
+  if (important) openAnnouncements(important.id);
 })();
