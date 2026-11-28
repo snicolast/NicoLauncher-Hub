@@ -1104,6 +1104,14 @@ fn built(p: &Project, dir: &std::path::Path, log: &mut dyn FnMut(&str)) {
 }
 
 fn main() {
+    // Without WebView2 there is no window to show anything in. Tauri's own
+    // message sends people to a page where most downloads install nothing:
+    // this one names the right one (hub-core webview.rs).
+    #[cfg(windows)]
+    if let Err(e) = tauri::webview_version() {
+        hub_core::webview::explain_missing(&e.to_string());
+        return;
+    }
     let places = Places::here();
     // Projects tried on this PC only, before they are in the public list
     let registry = Registry::bundled().with_local(&registry::local_file_next_to(&places.config));

@@ -18,6 +18,9 @@
 #   # ...          a comment, never shown
 # Newest entry at the top.
 
+[27] 2026-11-28
+- Launcher 0.3.27: if Windows is missing WebView2, which draws the launcher's window, the launcher now says which Microsoft download installs it and opens it for you
+
 [26] 2026-11-28
 - Launcher 0.3.26: clearer wording in the window that shows snicolast's answers, and groundwork for the next recomp
 
