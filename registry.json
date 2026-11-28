@@ -95,20 +95,34 @@
         "hub_icon": "art/icons/segarally2.png",
         "screens": ["docs/img/village.jpg", "docs/img/forest.jpg", "docs/img/snow.jpg"]
       }
-    }
-  ],
-  "coming_soon": [
+    },
     {
       "id": "virtuacop2",
       "name": "Nico VC2",
       "tagline": "An unofficial recomp of the 1995 arcade light-gun game Virtua Cop 2.",
-      "description": "The next recomp: the original arcade code, recompiled to C++ to run natively on PC. More soon.",
-      "tags": ["Sega Model 2", "1995", "Light gun"],
+      "description": "Not an emulator: the original code, recompiled to C++, with a modern Vulkan renderer. True widescreen, smooth motion, an HD HUD, light guns and two players. Early preview.",
+      "tags": ["Sega Model 2", "1995", "Light gun", "Vulkan"],
+      "repo": "snicolast/nicovc2",
+      "branch": "main",
+      "exe": "VirtuaCop2.exe",
+      "news": "news.txt",
+      "input": {
+        "label": "vcop2.zip"
+      },
+      "scripts": {
+        "install": "install.bat",
+        "build": "build.bat",
+        "update": "update.bat"
+      },
+      "requires": { "python": "3.10", "cmake": "3.20", "msvc": true },
+      "update_state": "out/update",
       "art": {
-        "hero": "art/soon/virtuacop2.jpg",
-        "logo": "art/logos/virtuacop2.png",
-        "icon": "art/icons/virtuacop2.png"
+        "hero": "docs/img/stage1_street_aim.jpg",
+        "hub_logo": "art/logos/virtuacop2.png",
+        "hub_icon": "art/icons/virtuacop2.png",
+        "screens": ["docs/img/stage1_street_aim.jpg", "docs/img/stage2_harbor.jpg", "docs/img/stage1_car_chase.jpg"]
       }
     }
-  ]
+  ],
+  "coming_soon": []
 }
