@@ -18,7 +18,19 @@ pub struct SystemInfo {
 /// what any game asks, and nothing started for it.
 #[cfg(windows)]
 pub fn info() -> SystemInfo {
-    let os = windows_registry::LOCAL_MACHINE
+    let os = os();
+    // The processor's name as Windows shows it, from the same place
+    let cpu_name = windows_registry::LOCAL_MACHINE
+        .open(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0")
+        .and_then(|key| key.get_string("ProcessorNameString"))
+        .unwrap_or_default();
+    SystemInfo { os, gpu: describe_gpus(&adapters()), cpu: describe_cpu(&cpu_name, threads()) }
+}
+
+/// "Windows 11 Home 24H2 (build 26100)", from the registry
+#[cfg(windows)]
+pub fn os() -> String {
+    windows_registry::LOCAL_MACHINE
         .open(r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
         .map(|key| {
             let get = |name: &str| key.get_string(name).unwrap_or_default();
@@ -26,13 +38,7 @@ pub fn info() -> SystemInfo {
             let release = Some(get("DisplayVersion")).filter(|r| !r.is_empty()).unwrap_or_else(|| get("ReleaseId"));
             describe_os(&get("ProductName"), &release, &get("CurrentBuildNumber"))
         })
-        .unwrap_or_else(|_| UNKNOWN.to_string());
-    // The processor's name as Windows shows it, from the same place
-    let cpu_name = windows_registry::LOCAL_MACHINE
-        .open(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0")
-        .and_then(|key| key.get_string("ProcessorNameString"))
-        .unwrap_or_default();
-    SystemInfo { os, gpu: describe_gpus(&adapters()), cpu: describe_cpu(&cpu_name, threads()) }
+        .unwrap_or_else(|_| UNKNOWN.to_string())
 }
 
 fn threads() -> Option<usize> {
