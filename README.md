@@ -33,6 +33,7 @@ Updates are one click: an **Update** button shows up when a game has something n
 ## You need
 
 - Windows 10 or 11 (64-bit), internet and a few GB free.
+- Microsoft Edge WebView2, which draws the launcher's window. Windows 10 and 11 already have it, and the installer adds it if it is missing.
 - **Your own ROM file for each game.** Not included, and we can't tell you where to get one.
 
 Nothing else: no Visual Studio, no Python. The launcher brings its own tools.
@@ -48,6 +49,7 @@ Nothing else: no Visual Studio, no Python. The launcher brings its own tools.
 <summary><b>Something went wrong?</b></summary>
 
 - Most of the time, pressing **Install** again is enough (after an internet cut, for example).
+- The launcher says **WebView2** is missing? Install Microsoft's [Evergreen Bootstrapper](https://go.microsoft.com/fwlink/p/?LinkId=2124703). The *Fixed Version* and the SDK install nothing.
 - Still failing? Press **Show log**, then **Copy log**, and open an issue in that game's repository with the log pasted in.
 - Problems with the launcher itself go to [Issues](https://github.com/snicolast/NicoLauncher-Hub/issues) here.
 - To remove a game, open it and press **Uninstall**. Only the game's folder is deleted.

@@ -26,6 +26,7 @@ pub mod source;
 pub mod system;
 pub mod update;
 pub mod video;
+pub mod webview;
 
 /// Sent with every HTTP request. Generic on purpose: nothing about the user.
 pub const USER_AGENT: &str = "NicoLauncher";

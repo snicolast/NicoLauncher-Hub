@@ -45,7 +45,8 @@ the old one becomes `NicoLauncher.exe.old` and is deleted on the next start.
 ## What it needs
 
 - WebView2, which Windows 10 and 11 already have. The installer would install
-  it when missing; the portable zip cannot.
+  it when missing; the portable zip cannot. Without it the launcher says so and
+  offers Microsoft's Evergreen Bootstrapper, which installs it.
 - A folder the user can write to, without `[` `]` or `;` in its path (the
   build tools cannot work from one).
 - No Start menu entry or uninstaller: deleting the folder removes it.
